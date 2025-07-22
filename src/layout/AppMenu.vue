@@ -22,6 +22,18 @@ const menuItems = [
         requiredLevel: null // Everyone can access
       },
       {
+        label: "Foydalanuvchilarni boshqarish",
+        icon: 'pi pi-fw pi-user',
+        items: [
+          {
+            label: "Bir martalik chipta",
+            icon: 'pi pi-fw pi-tags',
+            to: '/chipta',
+            requiredLevel: 'admin'
+          },
+        ]
+      },
+      {
         label: 'Dissertatsiya',
         icon: 'pi pi-fw pi-book',
         items: [
@@ -41,18 +53,7 @@ const menuItems = [
         ]
       },
 
-      {
-        label: "Foydalanuvchilarni boshqarish",
-        icon: 'pi pi-fw pi-user',
-        items: [
-          {
-            label: "Bir martalik chipta",
-            icon: 'pi pi-fw pi-tags',
-            to: '/chipta',
-            requiredLevel: 'admin'
-          },
-        ]
-      },
+
 
     ]
   },
