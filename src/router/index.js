@@ -1,211 +1,270 @@
-import AppLayout from "@/layout/AppLayout.vue"
 import { createRouter, createWebHistory } from "vue-router"
-import authService from "@/service/auth.service"
-
-const routes = [
-  {
-    path: "/",
-    component: AppLayout,
-    meta: { requiresAuth: true },
-    children: [
-      {
-        path: "/",
-        name: "dashboard",
-        component: () => import("@/views/Dashboard.vue"),
-      },
-      {
-        path: "/rate",
-        name: "Ekspertlar bahosi",
-        component: () => import("@/views/pages/rate.vue"),
-      },
-      {
-        path: "/experts",
-        name: "Expertlar",
-        component: () => import("@/views/pages/experts.vue"),
-        meta: { requiredLevel: "admin" },
-      },
-      {
-        path: "/expert_add",
-        name: "Expert qo'shish",
-        component: () => import("@/views/pages/expert_add.vue"),
-        meta: { requiredLevel: "admin" },
-      },
-      {
-        path: "/expert_edit/:id",
-        name: "Ekpertni o'zgartirish",
-        component: () => import("@/views/pages/expert_edit.vue"),
-        meta: { requiredLevel: "admin" },
-      },
-      {
-        path: "/contestants",
-        name: "Ishtirokchilar",
-        component: () => import("@/views/pages/contestants.vue"),
-      },
-      {
-        path: "/contestant_add",
-        name: "Ishtirokchi qo'shish",
-        component: () => import("@/views/pages/contestant_add.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/contestant_edit/:id",
-        name: "Ishtirokchini o'zgartirish",
-        component: () => import("@/views/pages/contestant_edit.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/diss",
-        name: "Dissertatsiyalar",
-        component: () => import("@/views/pages/diss.vue"),
-      },
-      {
-        path: "/add",
-        name: "add",
-        component: () => import("@/views/pages/add.vue"),
-      },
-      {
-        path: "/diss_add",
-        name: "Dissertatsiya qo'shish",
-        component: () => import("@/views/pages/diss_add.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/diss_edit/:uuid",
-        name: "Dissertatsiya o'zgartirish",
-        component: () => import("@/views/pages/diss_edit.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/rate-website/:id",
-        name: "Veb-saytni baholash",
-        component: () => import("@/views/pages/rate-website.vue"),
-        meta: { requiredLevel: "expert" },
-      },
-      // Add the new rating-results route
-      {
-        path: "/rating-results",
-        name: "Baholash natijalari",
-        component: () => import("@/views/pages/rating-results.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/jadval",
-        name: "Baholash jadvali",
-        component: () => import("@/views/pages/jadval.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/auto-evaluation",
-        name: "Avtomatik baholash",
-        component: () => import("@/views/pages/auto-evaluation.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      // Add the user evaluation route
-      {
-        path: "/user-evaluation",
-        name: "Foydalanuvchi baholash",
-        component: () => import("@/views/pages/user-evaluation.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      // Add new manual correction routes with SEPARATE components
-      {
-        path: "/user-correction",
-        name: "User baholarini to'g'rilash",
-        component: () => import("@/views/pages/user-correction.vue"), // SEPARATE FILE
-        meta: { requiredLevel: "rais" },
-      },
-      {
-        path: "/auto-correction",
-        name: "Avtomatik bahoni to'g'rilash",
-        component: () => import("@/views/pages/auto-correction.vue"), // SEPARATE FILE
-        meta: { requiredLevel: "rais" },
-      },
-      // Add new Plausible debug route
-      {
-        path: "/collect-data",
-        name: "Ma'lumot yig'ish",
-        component: () => import("@/views/pages/collect-data.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-      // Add library locations route
-      {
-        path: "/library-locations",
-        name: "Kutubxona joylashuvlari",
-        component: () => import("@/views/pages/library-locations.vue"),
-        meta: { requiredLevel: "rais" },
-      },
-    ],
-  },
-  {
-    path: "/landing",
-    name: "landing",
-    component: () => import("@/views/pages/Landing.vue"),
-  },
-  {
-    path: "/pages/notfound",
-    name: "notfound",
-    component: () => import("@/views/pages/NotFound.vue"),
-  },
-  {
-    path: "/auth/login",
-    name: "login",
-    component: () => import("@/views/pages/auth/Login.vue"),
-    meta: { requiresAuth: false },
-  },
-  {
-    path: "/auth/access",
-    name: "accessDenied",
-    component: () => import("@/views/pages/auth/Access.vue"),
-    meta: { requiresAuth: false },
-  },
-  {
-    path: "/auth/error",
-    name: "error",
-    component: () => import("@/views/pages/auth/Error.vue"),
-    meta: { requiresAuth: false },
-  },
-]
+import AppLayout from "@/layout/AppLayout.vue"
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
-})
-
-// Add a global navigation guard
-router.beforeEach((to, from, next) => {
-  // Check if route requires authentication
-  if (to.matched.some((record) => record.meta.requiresAuth !== false)) {
-    // Check if user is authenticated
-    if (!authService.isAuthenticated()) {
-      next({ name: "login" })
-      return
-    }
-
-    // Check if route requires specific access level
-    const requiredLevel = to.meta.requiredLevel
-    if (requiredLevel && !authService.hasAccess(requiredLevel)) {
-      next({ name: "accessDenied" })
-      return
-    }
-  } else if (to.name === "login" && authService.isAuthenticated()) {
-    // Redirect to dashboard if already logged in
-    next({ name: "dashboard" })
-    return
-  }
-
-  // Check if we need to redirect to experts page after admin return
-  const redirectToExperts = localStorage.getItem("redirectToExperts")
-  if (redirectToExperts === "true") {
-    localStorage.removeItem("redirectToExperts")
-
-    // Only redirect if we're not already going to /experts
-    if (to.path !== "/experts") {
-      next("/experts")
-      return
-    }
-  }
-
-  next()
+  routes: [
+    {
+      path: "/",
+      component: AppLayout,
+      children: [
+        {
+          path: "/",
+          name: "dashboard",
+          component: () => import("@/views/Dashboard.vue"),
+        },
+        {
+          path: "/pages/crud",
+          name: "crud",
+          component: () => import("@/views/pages/Crud.vue"),
+        },
+        {
+          path: "/pages/empty",
+          name: "empty",
+          component: () => import("@/views/pages/Empty.vue"),
+        },
+        {
+          path: "/pages/landing",
+          name: "landing",
+          component: () => import("@/views/pages/Landing.vue"),
+        },
+        {
+          path: "/pages/notfound",
+          name: "notfound",
+          component: () => import("@/views/pages/NotFound.vue"),
+        },
+        {
+          path: "/documentation",
+          name: "documentation",
+          component: () => import("@/views/pages/Documentation.vue"),
+        },
+        // Experts routes
+        {
+          path: "/experts",
+          name: "experts",
+          component: () => import("@/views/pages/experts.vue"),
+        },
+        {
+          path: "/expert_add",
+          name: "expert_add",
+          component: () => import("@/views/pages/expert_add.vue"),
+        },
+        {
+          path: "/expert_edit/:id",
+          name: "expert_edit",
+          component: () => import("@/views/pages/expert_edit.vue"),
+        },
+        // Contestants routes
+        {
+          path: "/contestants",
+          name: "contestants",
+          component: () => import("@/views/pages/contestants.vue"),
+        },
+        {
+          path: "/contestant_add",
+          name: "contestant_add",
+          component: () => import("@/views/pages/contestant_add.vue"),
+        },
+        {
+          path: "/contestant_edit/:id",
+          name: "contestant_edit",
+          component: () => import("@/views/pages/contestant_edit.vue"),
+        },
+        // Dissertation routes
+        {
+          path: "/diss",
+          name: "diss",
+          component: () => import("@/views/pages/diss.vue"),
+        },
+        {
+          path: "/diss_add",
+          name: "diss_add",
+          component: () => import("@/views/pages/diss_add.vue"),
+        },
+        {
+          path: "/diss_edit/:uuid",
+          name: "diss_edit",
+          component: () => import("@/views/pages/diss_edit.vue"),
+        },
+        // Rating routes
+        {
+          path: "/rate",
+          name: "rate",
+          component: () => import("@/views/pages/rate.vue"),
+        },
+        {
+          path: "/rate-website",
+          name: "rate-website",
+          component: () => import("@/views/pages/rate-website.vue"),
+        },
+        {
+          path: "/rating-results",
+          name: "rating-results",
+          component: () => import("@/views/pages/rating-results.vue"),
+        },
+        // Evaluation routes
+        {
+          path: "/auto-evaluation",
+          name: "auto-evaluation",
+          component: () => import("@/views/pages/auto-evaluation.vue"),
+        },
+        {
+          path: "/user-evaluation",
+          name: "user-evaluation",
+          component: () => import("@/views/pages/user-evaluation.vue"),
+        },
+        {
+          path: "/auto-correction",
+          name: "auto-correction",
+          component: () => import("@/views/pages/auto-correction.vue"),
+        },
+        {
+          path: "/user-correction",
+          name: "user-correction",
+          component: () => import("@/views/pages/user-correction.vue"),
+        },
+        // Library locations
+        {
+          path: "/library-locations",
+          name: "library-locations",
+          component: () => import("@/views/pages/library-locations.vue"),
+        },
+        // Data collection
+        {
+          path: "/collect-data",
+          name: "collect-data",
+          component: () => import("@/views/pages/collect-data.vue"),
+        },
+        // Table/Jadval
+        {
+          path: "/jadval",
+          name: "jadval",
+          component: () => import("@/views/pages/jadval.vue"),
+        },
+        // Add page
+        {
+          path: "/add",
+          name: "add",
+          component: () => import("@/views/pages/add.vue"),
+        },
+        // Debug page
+        {
+          path: "/plausible-debug",
+          name: "plausible-debug",
+          component: () => import("@/views/pages/plausible-debug.vue"),
+        },
+        // NEW TICKET ROUTES
+        {
+          path: "/tickets",
+          name: "tickets",
+          component: () => import("@/views/pages/tickets.vue"),
+        },
+        {
+          path: "/ticket_add",
+          name: "ticket_add",
+          component: () => import("@/views/pages/ticket_add.vue"),
+        },
+        // UI Kit routes
+        {
+          path: "/uikit/formlayout",
+          name: "formlayout",
+          component: () => import("@/views/uikit/FormLayout.vue"),
+        },
+        {
+          path: "/uikit/input",
+          name: "input",
+          component: () => import("@/views/uikit/InputDoc.vue"),
+        },
+        {
+          path: "/uikit/button",
+          name: "button",
+          component: () => import("@/views/uikit/ButtonDoc.vue"),
+        },
+        {
+          path: "/uikit/table",
+          name: "table",
+          component: () => import("@/views/uikit/TableDoc.vue"),
+        },
+        {
+          path: "/uikit/list",
+          name: "list",
+          component: () => import("@/views/uikit/ListDoc.vue"),
+        },
+        {
+          path: "/uikit/tree",
+          name: "tree",
+          component: () => import("@/views/uikit/TreeDoc.vue"),
+        },
+        {
+          path: "/uikit/panel",
+          name: "panel",
+          component: () => import("@/views/uikit/PanelsDoc.vue"),
+        },
+        {
+          path: "/uikit/overlay",
+          name: "overlay",
+          component: () => import("@/views/uikit/OverlayDoc.vue"),
+        },
+        {
+          path: "/uikit/media",
+          name: "media",
+          component: () => import("@/views/uikit/MediaDoc.vue"),
+        },
+        {
+          path: "/uikit/message",
+          name: "message",
+          component: () => import("@/views/uikit/MessagesDoc.vue"),
+        },
+        {
+          path: "/uikit/file",
+          name: "file",
+          component: () => import("@/views/uikit/FileDoc.vue"),
+        },
+        {
+          path: "/uikit/chart",
+          name: "chart",
+          component: () => import("@/views/uikit/ChartDoc.vue"),
+        },
+        {
+          path: "/uikit/misc",
+          name: "misc",
+          component: () => import("@/views/uikit/MiscDoc.vue"),
+        },
+        {
+          path: "/uikit/timeline",
+          name: "timeline",
+          component: () => import("@/views/uikit/TimelineDoc.vue"),
+        },
+        {
+          path: "/uikit/menu",
+          name: "menu",
+          component: () => import("@/views/uikit/MenuDoc.vue"),
+        },
+      ],
+    },
+    // Auth routes (outside of AppLayout)
+    {
+      path: "/auth/login",
+      name: "login",
+      component: () => import("@/views/pages/auth/Login.vue"),
+    },
+    {
+      path: "/auth/access",
+      name: "accessDenied",
+      component: () => import("@/views/pages/auth/Access.vue"),
+    },
+    {
+      path: "/auth/error",
+      name: "error",
+      component: () => import("@/views/pages/auth/Error.vue"),
+    },
+    // Catch all route - must be last
+    {
+      path: "/:pathMatch(.*)*",
+      name: "notFound",
+      component: () => import("@/views/pages/NotFound.vue"),
+    },
+  ],
 })
 
 export default router

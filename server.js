@@ -46,7 +46,6 @@ const vakolat = mongoose.createConnection(process.env.DB_CURRENT, {
 })
 vakolat.on("connected", () => console.log("Connected to vakolat"))
 
-
 const yoqlama = mongoose.createConnection(process.env.DB_DISS, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -58,7 +57,6 @@ const nazorat = mongoose.createConnection(process.env.DB_NAZORAT, {
   useUnifiedTopology: true,
 })
 nazorat.on("connected", () => console.log("Connected to nazorat"))
-
 
 const userSchema = new mongoose.Schema({
   nickname: { type: String, required: true, unique: true },
@@ -178,21 +176,15 @@ const User = vakolat.model("User", userSchema)
 const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
 const WebsiteRating = vakolat.model("WebsiteRating", ratingModel.websiteRatingSchema)
 const AutoRating = vakolat.model("AutoRating", autoRatingSchema)
+
 // Register the UserRating model
 const UserRating = vakolat.model("UserRating", userRatingModel.userRatingSchema)
+
 // Register the SurveyVote model
 const SurveyVote = vakolat.model("SurveyVote", surveyVoteModel.surveyVoteSchema)
+
 // Register the PlausibleCache model
 const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plausibleCacheSchema)
-
-// Import route modules
-const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
-const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
-const contestantRoutes = require("./routes/contestants.routes")(vakolat)
-const ratingRoutes = require("./routes/ratings.routes")(vakolat)
-const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache) // Remove LibraryLocation
-// Import survey routes
-const surveyRoutes = require("./routes/survey.routes")(vakolat)
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -219,7 +211,6 @@ const upload = multer({
 app.get("/diss/cats", async (req, res) => {
   try {
     const razdelData = await Categories.find() // Fetch all documents
-
     res.json(razdelData) // Send the data as JSON response
   } catch (error) {
     res.status(500).json({ message: error.message }) // Handle errors
@@ -248,10 +239,6 @@ app.get("/diss_list/:page?", async (req, res) => {
       .skip(skip)
       .select("title uuid author code is_deleted")
 
-    // .limit(limit);
-    // Get total count of documents
-    // const totalRecords = await Documents.countDocuments();
-
     res.json({ results })
   } catch (error) {
     res.status(500).json({ error: "Error fetching research works", details: error.message })
@@ -270,6 +257,21 @@ app.get("/diss_info/:uuid?", async (req, res) => {
 
 const folderplace = path.resolve(__dirname, "goal")
 const uploadFolder = path.resolve(__dirname, "uploads")
+
+// Add file serving route for PDF files
+app.get("/diss_file/:uuid", (req, res) => {
+  const uuid = req.params.uuid
+  const filePath = path.join(folderplace, `${uuid}.pdf`)
+
+  // Check if file exists
+  if (fs.existsSync(filePath)) {
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", `inline; filename="${uuid}.pdf"`)
+    res.sendFile(filePath)
+  } else {
+    res.status(404).json({ error: "File not found" })
+  }
+})
 
 app.post("/diss_save/:uuid", async (req, res) => {
   try {
@@ -301,6 +303,7 @@ app.post("/diss_save", async (req, res) => {
     const requestData = req.body
     const generatedUuid = uuidv4()
     const originalFilename = requestData.filename
+
     requestData.uuid = generatedUuid
     requestData.owner_id = 1
     requestData.filename = `${generatedUuid}.pdf`
@@ -329,20 +332,188 @@ app.post("/diss_save", async (req, res) => {
   }
 })
 
+// Import route modules AFTER models are created
+const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
+const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
+const contestantRoutes = require("./routes/contestants.routes")(vakolat)
+const ratingRoutes = require("./routes/ratings.routes")(vakolat)
+const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
+const surveyRoutes = require("./routes/survey.routes")(vakolat)
+
+// Create tickets routes function
+const createTicketsRoutes = () => {
+  const express = require("express")
+  const QRCode = require("qrcode")
+  const router = express.Router()
+
+  // Helper function to generate ticket ID
+  function generateTicketId(ticketNumber) {
+    return `GUL${ticketNumber.toString().padStart(10, "0")}`
+  }
+
+  // Helper function to get next ticket number
+  async function getNextTicketNumber() {
+    try {
+      const lastTicket = await Tickets.findOne().sort({ ticketNumber: -1 })
+      return lastTicket ? lastTicket.ticketNumber + 1 : 1
+    } catch (error) {
+      console.error("Error getting next ticket number:", error)
+      return 1
+    }
+  }
+
+  // GET all tickets
+  router.get("/", async (req, res) => {
+    try {
+      const tickets = await Tickets.find().sort({ createdAt: -1 })
+      res.json(tickets)
+    } catch (error) {
+      console.error("Error fetching tickets:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  // GET ticket by ID
+  router.get("/:id", async (req, res) => {
+    try {
+      const ticket = await Tickets.findOne({ ticketId: req.params.id })
+      if (!ticket) {
+        return res.status(404).json({ error: "Chipta topilmadi" })
+      }
+      res.json(ticket)
+    } catch (error) {
+      console.error("Error fetching ticket:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  // POST create new ticket
+  router.post("/", async (req, res) => {
+    try {
+      const { fullname, passport } = req.body
+
+      if (!fullname || !passport) {
+        return res.status(400).json({ error: "Ism va pasport ma'lumotlari talab qilinadi" })
+      }
+
+      // Validate passport format
+      const passportRegex = /^[A-Z]{2}\d{7}$/
+      if (!passportRegex.test(passport.replace(/\s/g, ""))) {
+        return res.status(400).json({ error: "Pasport formati noto'g'ri" })
+      }
+
+      // Check if user with same passport already exists
+      const existingTicket = await Tickets.findOne({ passport: passport.trim() })
+
+      if (existingTicket) {
+        // Update existing ticket's date
+        existingTicket.date = new Date()
+        existingTicket.updatedAt = new Date()
+        existingTicket.updatedBy = "system"
+        await existingTicket.save()
+
+        return res.json({
+          ticketId: existingTicket.ticketId,
+          message: "Mavjud chipta yangilandi",
+          isUpdate: true,
+        })
+      }
+
+      // Create new ticket
+      const ticketNumber = await getNextTicketNumber()
+      const ticketId = generateTicketId(ticketNumber)
+
+      const newTicket = new Tickets({
+        ticketId,
+        fullname: fullname.trim(),
+        passport: passport.trim(),
+        date: new Date(),
+        ticketNumber,
+        createdBy: "system",
+      })
+
+      await newTicket.save()
+
+      res.status(201).json({
+        ticketId: newTicket.ticketId,
+        message: "Chipta muvaffaqiyatli yaratildi",
+        isUpdate: false,
+      })
+    } catch (error) {
+      console.error("Error creating ticket:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  // GET QR code for ticket
+  router.get("/:id/qr", async (req, res) => {
+    try {
+      const ticket = await Tickets.findOne({ ticketId: req.params.id })
+      if (!ticket) {
+        return res.status(404).json({ error: "Chipta topilmadi" })
+      }
+
+      const qrData = `${ticket.ticketId}|${ticket.fullname}|${ticket.passport}|${ticket.date.toISOString().split("T")[0]}`
+      const qrCode = await QRCode.toDataURL(qrData, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
+      })
+
+      res.json({ qrCode })
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  // GET ticket count for passport
+  router.get("/count/:passport", async (req, res) => {
+    try {
+      const count = await Tickets.countDocuments({ passport: req.params.passport })
+      res.json({ count })
+    } catch (error) {
+      console.error("Error getting ticket count:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  // DELETE ticket
+  router.delete("/:id", async (req, res) => {
+    try {
+      const ticket = await Tickets.findOneAndDelete({ ticketId: req.params.id })
+      if (!ticket) {
+        return res.status(404).json({ error: "Chipta topilmadi" })
+      }
+      res.json({ message: "Chipta o'chirildi" })
+    } catch (error) {
+      console.error("Error deleting ticket:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  return router
+}
+
 // Register routes
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
 app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
-// Register survey routes at /survey path
 app.use("/survey", surveyRoutes)
+
+// Register tickets routes
+app.use("/api/tickets", createTicketsRoutes())
 
 if (process.env.npm_lifecycle_event === "start") {
   console.log("PRODUCTION")
-
   const distPath = path.join(__dirname, "dist")
   app.use(express.static(distPath))
+
   app.get("*", (req, res) => {
     res.sendFile(path.join(distPath, "index.html"))
   })
@@ -353,5 +524,19 @@ if (process.env.npm_lifecycle_event === "start") {
 }
 
 app.listen(7777, () => {
-console.log('Server is running on \x1b[34mhttp://localhost:7777\x1b[0m')
+  console.log("Server is running on \x1b[34mhttp://localhost:7777\x1b[0m")
 })
+
+// Export models for use in other files
+module.exports = {
+  Documents,
+  Categories,
+  Tickets,
+  WebsiteRating,
+  AutoRating,
+  UserRating,
+  SurveyVote,
+  PlausibleCache,
+  User,
+  Contestant,
+}
