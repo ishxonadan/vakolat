@@ -453,7 +453,7 @@ const createTicketsRoutes = () => {
         return res.status(404).json({ error: "Chipta topilmadi" })
       }
 
-      const qrData = `${ticket.ticketId}|${ticket.fullname}|${ticket.passport}|${ticket.date.toISOString().split("T")[0]}`
+      const qrData = ticket.ticketId // Only the ticket ID
       const qrCode = await QRCode.toDataURL(qrData, {
         width: 200,
         margin: 2,

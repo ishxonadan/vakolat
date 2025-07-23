@@ -53,22 +53,14 @@
         
         <div class="ticket-container">
           <div class="ticket-preview print-only" id="ticket-print">
-            <!-- Header with building icon and library name -->
+            <!-- Header with library logo and name -->
             <div class="ticket-header">
-              <div class="building-section">
-                <svg width="60" height="45" viewBox="0 0 60 45" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="5" y="28" width="50" height="14" stroke="black" stroke-width="1.2" fill="none"/>
-                  <rect x="15" y="18" width="8" height="10" stroke="black" stroke-width="1.2" fill="none"/>
-                  <rect x="26" y="18" width="10" height="10" stroke="black" stroke-width="1.2" fill="none"/>
-                  <rect x="38" y="18" width="8" height="10" stroke="black" stroke-width="1.2" fill="none"/>
-                  <rect x="20" y="10" width="20" height="8" stroke="black" stroke-width="1.2" fill="none"/>
-                  <path d="M12 28 L30 6 L48 28" stroke="black" stroke-width="1.2" fill="none"/>
-                  <circle cx="30" cy="21" r="3" stroke="black" stroke-width="1.2" fill="none"/>
-                </svg>
+              <div class="logo-section">
+                <LibraryLogo />
               </div>
               <div class="library-info">
-                <div class="library-title">Alisher Navoiy nomidagi</div>
-                <div class="library-subtitle">O'zbekiston Milliy kutubxonasi</div>
+                <div class="library-title-line1">Alisher Navoiy nomidagi</div>
+                <div class="library-title-line2">O'zbekiston Milliy kutubxonasi</div>
               </div>
             </div>
             
@@ -87,6 +79,7 @@
               
               <div class="center-section">
                 <img v-if="qrCode" :src="qrCode" alt="QR Code" class="qr-code" />
+                <img v-if="barcode" :src="barcode" alt="Barcode" class="barcode" />
               </div>
               
               <div class="right-section">
@@ -143,6 +136,9 @@ import { ref, reactive } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 import apiService from '@/service/api.service';
+import LibraryLogo from '@/components/LibraryLogo.vue';
+import { getLibraryLogoSvg } from '@/utils/logo.js';
+import { generateBarcode } from '@/utils/barcode.js';
 
 const toast = useToast();
 const router = useRouter();
@@ -150,6 +146,7 @@ const router = useRouter();
 const loading = ref(false);
 const generatedTicket = ref(null);
 const qrCode = ref('');
+const barcode = ref('');
 const isUpdate = ref(false);
 
 const form = reactive({
@@ -212,6 +209,9 @@ const createTicket = async () => {
     const qrResponse = await apiService.get(`/tickets/${response.ticketId}/qr`);
     qrCode.value = qrResponse.qrCode;
     
+    // Generate barcode
+    barcode.value = generateBarcode(ticketDetails.ticketId);
+    
     isUpdate.value = response.isUpdate;
     
     toast.add({ 
@@ -239,191 +239,253 @@ const printTicket = () => {
   const ticketElement = document.getElementById('ticket-print');
   
   if (printWindow && ticketElement) {
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Chipta - ${generatedTicket.value.ticketId}</title>
-          <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            
-            body {
-              font-family: Arial, sans-serif;
-              background: white;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              padding: 10px;
-            }
-            
-            .ticket-preview {
-              width: 480px;
-              height: 300px;
-              border: 2px solid #000;
-              background: white;
-              font-family: Arial, sans-serif;
-              padding: 15px;
-              display: flex;
-              flex-direction: column;
-              box-sizing: border-box;
-            }
-            
-            .ticket-header {
-              display: flex;
-              align-items: flex-start;
-              margin-bottom: 15px;
-              gap: 10px;
-            }
-            
-            .building-section {
-              flex-shrink: 0;
-            }
-            
-            .library-info {
-              flex: 1;
-              text-align: left;
-            }
-            
-            .library-title {
-              font-size: 14px;
-              font-weight: bold;
-              line-height: 1.1;
-              margin-bottom: 2px;
-            }
-            
-            .library-subtitle {
-              font-size: 12px;
-              font-weight: bold;
-              line-height: 1.1;
-            }
-            
-            .ticket-title-section {
-              text-align: center;
-              margin-bottom: 20px;
-            }
-            
-            .title-main {
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 3px;
-            }
-            
-            .title-russian {
-              font-size: 14px;
-              margin-bottom: 2px;
-            }
-            
-            .title-english {
-              font-size: 14px;
-            }
-            
-            .ticket-content {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              margin-bottom: 15px;
-              flex: 1;
-            }
-            
-            .left-section {
-              flex: 1;
-              text-align: left;
-              padding-right: 10px;
-            }
-            
-            .user-name {
-              font-size: 13px;
-              font-weight: bold;
-              word-wrap: break-word;
-            }
-            
-            .center-section {
-              flex: 0 0 auto;
-              display: flex;
-              justify-content: center;
-            }
-            
-            .qr-code {
-              width: 80px;
-              height: 80px;
-              display: block;
-            }
-            
-            .right-section {
-              flex: 1;
-              text-align: right;
-              padding-left: 10px;
-            }
-            
-            .order-label {
-              font-size: 9px;
-              margin-bottom: 2px;
-            }
-            
-            .order-value {
-              font-size: 18px;
-              font-weight: bold;
-            }
-            
-            .ticket-id-section {
-              text-align: center;
-              font-family: monospace;
-              font-size: 14px;
-              font-weight: bold;
-              margin-bottom: 12px;
-            }
-            
-            .ticket-footer {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
-            }
-            
-            .validity-labels {
-              text-align: left;
-              font-size: 9px;
-              line-height: 1.1;
-            }
-            
-            .validity-date {
-              font-size: 12px;
-              font-weight: bold;
-            }
-            
-            @media print {
-              body {
-                padding: 0;
-                margin: 0;
-                min-height: auto;
-              }
-              
-              .ticket-preview {
-                width: 480px !important;
-                height: 300px !important;
-                border: 2px solid #000 !important;
-                margin: 0;
-                page-break-inside: avoid;
-              }
-              
-              @page {
-                margin: 0.5cm;
-                size: A4;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${ticketElement.outerHTML}
-        </body>
-      </html>
-    `);
+    // Create the HTML structure using DOM methods instead of document.write
+    const html = printWindow.document.createElement('html');
+    const head = printWindow.document.createElement('head');
+    const body = printWindow.document.createElement('body');
     
-    printWindow.document.close();
+    // Add title
+    const title = printWindow.document.createElement('title');
+    title.textContent = `Chipta - ${generatedTicket.value.ticketId}`;
+    head.appendChild(title);
+    
+    // Add styles
+    const style = printWindow.document.createElement('style');
+    style.textContent = `
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: Arial, sans-serif;
+        background: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 10px;
+      }
+      
+      .ticket-preview {
+        width: 250px !important;
+        height: 350px !important;
+        border: none !important;
+        background: white;
+        font-family: Arial, sans-serif;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+      }
+      
+      .ticket-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 8px;
+        gap: 6px;
+      }
+      
+      .logo-section {
+        flex-shrink: 0;
+      }
+      
+      .library-info {
+        flex: 1;
+        text-align: left;
+      }
+      
+      .library-title-line1 {
+        font-size: 11px;
+        font-weight: bold;
+        line-height: 1.1;
+        margin-bottom: 1px;
+      }
+
+      .library-title-line2 {
+        font-size: 11px;
+        font-weight: bold;
+        line-height: 1.1;
+      }
+      
+      .ticket-title-section {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      
+      .title-main {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 2px;
+      }
+      
+      .title-russian {
+        font-size: 12px;
+        margin-bottom: 1px;
+      }
+      
+      .title-english {
+        font-size: 12px;
+      }
+      
+      .ticket-content {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        flex: 1;
+      }
+      
+      .left-section {
+        flex: 1;
+        text-align: left;
+        padding-right: 8px;
+      }
+      
+      .user-name {
+        font-size: 11px;
+        font-weight: bold;
+        word-wrap: break-word;
+      }
+      
+      .center-section {
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+      
+      .qr-code {
+        width: 100px;
+        height: 100px;
+        display: block;
+      }
+      
+      .barcode {
+        width: 100px;
+        height: 20px;
+        display: block;
+      }
+      
+      .right-section {
+        flex: 1;
+        text-align: center;
+        padding-left: 8px;
+      }
+      
+      .order-label {
+        font-size: 9px;
+        margin-bottom: 2px;
+      }
+      
+      .order-value {
+        font-size: 14px;
+        font-weight: bold;
+      }
+      
+      .ticket-id-section {
+        text-align: center;
+        font-family: monospace;
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      
+      .ticket-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      
+      .validity-labels {
+        text-align: left;
+        font-size: 9px;
+        line-height: 1.1;
+      }
+      
+      .validity-date {
+        font-size: 12px;
+        font-weight: bold;
+      }
+      
+      @media print {
+        body {
+          padding: 0;
+          margin: 0;
+          min-height: auto;
+        }
+        
+        .ticket-preview {
+          width: 250px !important;
+          height: 350px !important;
+          border: none !important;
+          margin: 0;
+          page-break-inside: avoid;
+        }
+        
+        @page {
+          margin: 0.5cm;
+          size: A4;
+        }
+      }
+    `;
+    head.appendChild(style);
+    
+    // Create ticket content
+    const ticketDiv = printWindow.document.createElement('div');
+    ticketDiv.className = 'ticket-preview';
+    ticketDiv.innerHTML = `
+      <div class="ticket-header">
+        <div class="logo-section">
+          ${getLibraryLogoSvg()}
+        </div>
+        <div class="library-info">
+          <div class="library-title-line1">Alisher Navoiy nomidagi</div>
+          <div class="library-title-line2">O'zbekiston Milliy kutubxonasi</div>
+        </div>
+      </div>
+      
+      <div class="ticket-title-section">
+        <div class="title-main">Bir martalik chipta</div>
+        <div class="title-russian">Разовый билет</div>
+        <div class="title-english">One-time ticket</div>
+      </div>
+
+      <div class="ticket-content">
+        <div class="left-section">
+          <div class="user-name">${generatedTicket.value.fullname}</div>
+        </div>
+        
+        <div class="center-section">
+          <img src="${qrCode.value}" alt="QR Code" class="qr-code" />
+          <img src="${barcode.value}" alt="Barcode" class="barcode" />
+        </div>
+        
+        <div class="right-section">
+          <div class="order-label">Tartib raqami</div>
+          <div class="order-value">${generatedTicket.value.ticketNumber}</div>
+        </div>
+      </div>
+
+      <div class="ticket-id-section">${generatedTicket.value.ticketId}</div>
+
+      <div class="ticket-footer">
+        <div class="validity-labels">
+          <div>Amal qilish kuni:</div>
+          <div>Действителен на:</div>
+          <div>Valid on</div>
+        </div>
+        <div class="validity-date">${formatDate(generatedTicket.value.date)}</div>
+      </div>
+    `;
+    
+    body.appendChild(ticketDiv);
+    html.appendChild(head);
+    html.appendChild(body);
+    printWindow.document.appendChild(html);
+    
     printWindow.focus();
     
     // Wait for content to load, then print
@@ -439,6 +501,7 @@ const createAnother = () => {
   form.passport = '';
   generatedTicket.value = null;
   qrCode.value = '';
+  barcode.value = '';
   isUpdate.value = false;
 };
 
@@ -459,12 +522,12 @@ const goToTickets = () => {
 }
 
 .ticket-preview {
-  width: 480px;
-  height: 300px;
-  border: 2px solid #000;
+  width: 250px;
+  height: 370px;
+  border: none;
   background: white;
   font-family: Arial, sans-serif;
-  padding: 15px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -473,11 +536,11 @@ const goToTickets = () => {
 .ticket-header {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 15px;
-  gap: 10px;
+  margin-bottom: 8px;
+  gap: 6px;
 }
 
-.building-section {
+.logo-section {
   flex-shrink: 0;
 }
 
@@ -486,55 +549,55 @@ const goToTickets = () => {
   text-align: left;
 }
 
-.library-title {
-  font-size: 14px;
+.library-title-line1 {
+  font-size: 11px;
   font-weight: bold;
   line-height: 1.1;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
-.library-subtitle {
-  font-size: 12px;
+.library-title-line2 {
+  font-size: 11px;
   font-weight: bold;
   line-height: 1.1;
 }
 
 .ticket-title-section {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .title-main {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
-  margin-bottom: 3px;
-}
-
-.title-russian {
-  font-size: 14px;
   margin-bottom: 2px;
 }
 
+.title-russian {
+  font-size: 12px;
+  margin-bottom: 1px;
+}
+
 .title-english {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .ticket-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   flex: 1;
 }
 
 .left-section {
   flex: 1;
   text-align: left;
-  padding-right: 10px;
+  padding-right: 8px;
 }
 
 .user-name {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: bold;
   word-wrap: break-word;
 }
@@ -542,19 +605,27 @@ const goToTickets = () => {
 .center-section {
   flex: 0 0 auto;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
 }
 
 .qr-code {
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
+  display: block;
+}
+
+.barcode {
+  width: 100px;
+  height: 20px;
   display: block;
 }
 
 .right-section {
   flex: 1;
-  text-align: right;
-  padding-left: 10px;
+  text-align: center;
+  padding-left: 8px;
 }
 
 .order-label {
@@ -563,16 +634,16 @@ const goToTickets = () => {
 }
 
 .order-value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
 }
 
 .ticket-id-section {
   text-align: center;
   font-family: monospace;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .ticket-footer {
