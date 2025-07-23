@@ -56,16 +56,14 @@
             <!-- Header with building icon and library name -->
             <div class="ticket-header">
               <div class="building-section">
-                <svg width="80" height="60" viewBox="0 0 80 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="5" y="35" width="70" height="18" stroke="black" stroke-width="1.5" fill="none"/>
-                  <rect x="20" y="22" width="12" height="13" stroke="black" stroke-width="1.5" fill="none"/>
-                  <rect x="35" y="22" width="15" height="13" stroke="black" stroke-width="1.5" fill="none"/>
-                  <rect x="52" y="22" width="12" height="13" stroke="black" stroke-width="1.5" fill="none"/>
-                  <rect x="28" y="12" width="28" height="10" stroke="black" stroke-width="1.5" fill="none"/>
-                  <path d="M15 35 L42 8 L70 35" stroke="black" stroke-width="1.5" fill="none"/>
-                  <circle cx="42" cy="28" r="4" stroke="black" stroke-width="1.5" fill="none"/>
-                  <rect x="32" y="25" width="6" height="10" stroke="black" stroke-width="1" fill="none"/>
-                  <rect x="46" y="25" width="6" height="10" stroke="black" stroke-width="1" fill="none"/>
+                <svg width="60" height="45" viewBox="0 0 60 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="5" y="28" width="50" height="14" stroke="black" stroke-width="1.2" fill="none"/>
+                  <rect x="15" y="18" width="8" height="10" stroke="black" stroke-width="1.2" fill="none"/>
+                  <rect x="26" y="18" width="10" height="10" stroke="black" stroke-width="1.2" fill="none"/>
+                  <rect x="38" y="18" width="8" height="10" stroke="black" stroke-width="1.2" fill="none"/>
+                  <rect x="20" y="10" width="20" height="8" stroke="black" stroke-width="1.2" fill="none"/>
+                  <path d="M12 28 L30 6 L48 28" stroke="black" stroke-width="1.2" fill="none"/>
+                  <circle cx="30" cy="21" r="3" stroke="black" stroke-width="1.2" fill="none"/>
                 </svg>
               </div>
               <div class="library-info">
@@ -260,16 +258,16 @@ const printTicket = () => {
               justify-content: center;
               align-items: center;
               min-height: 100vh;
-              padding: 20px;
+              padding: 10px;
             }
             
             .ticket-preview {
-              width: 600px;
-              height: 400px;
-              border: 3px solid #000;
+              width: 480px;
+              height: 300px;
+              border: 2px solid #000;
               background: white;
               font-family: Arial, sans-serif;
-              padding: 25px;
+              padding: 15px;
               display: flex;
               flex-direction: column;
               box-sizing: border-box;
@@ -278,8 +276,8 @@ const printTicket = () => {
             .ticket-header {
               display: flex;
               align-items: flex-start;
-              margin-bottom: 25px;
-              gap: 15px;
+              margin-bottom: 15px;
+              gap: 10px;
             }
             
             .building-section {
@@ -292,54 +290,54 @@ const printTicket = () => {
             }
             
             .library-title {
-              font-size: 18px;
+              font-size: 14px;
               font-weight: bold;
-              line-height: 1.2;
-              margin-bottom: 3px;
+              line-height: 1.1;
+              margin-bottom: 2px;
             }
             
             .library-subtitle {
-              font-size: 16px;
+              font-size: 12px;
               font-weight: bold;
-              line-height: 1.2;
+              line-height: 1.1;
             }
             
             .ticket-title-section {
               text-align: center;
-              margin-bottom: 30px;
+              margin-bottom: 20px;
             }
             
             .title-main {
-              font-size: 28px;
-              font-weight: bold;
-              margin-bottom: 5px;
-            }
-            
-            .title-russian {
               font-size: 20px;
+              font-weight: bold;
               margin-bottom: 3px;
             }
             
+            .title-russian {
+              font-size: 14px;
+              margin-bottom: 2px;
+            }
+            
             .title-english {
-              font-size: 20px;
+              font-size: 14px;
             }
             
             .ticket-content {
               display: flex;
               align-items: center;
               justify-content: space-between;
-              margin-bottom: 25px;
+              margin-bottom: 15px;
               flex: 1;
             }
             
             .left-section {
               flex: 1;
               text-align: left;
-              padding-right: 15px;
+              padding-right: 10px;
             }
             
             .user-name {
-              font-size: 16px;
+              font-size: 13px;
               font-weight: bold;
               word-wrap: break-word;
             }
@@ -351,33 +349,33 @@ const printTicket = () => {
             }
             
             .qr-code {
-              width: 120px;
-              height: 120px;
+              width: 80px;
+              height: 80px;
               display: block;
             }
             
             .right-section {
               flex: 1;
               text-align: right;
-              padding-left: 15px;
+              padding-left: 10px;
             }
             
             .order-label {
-              font-size: 12px;
-              margin-bottom: 3px;
+              font-size: 9px;
+              margin-bottom: 2px;
             }
             
             .order-value {
-              font-size: 24px;
+              font-size: 18px;
               font-weight: bold;
             }
             
             .ticket-id-section {
               text-align: center;
               font-family: monospace;
-              font-size: 20px;
+              font-size: 14px;
               font-weight: bold;
-              margin-bottom: 20px;
+              margin-bottom: 12px;
             }
             
             .ticket-footer {
@@ -388,12 +386,12 @@ const printTicket = () => {
             
             .validity-labels {
               text-align: left;
-              font-size: 12px;
-              line-height: 1.2;
+              font-size: 9px;
+              line-height: 1.1;
             }
             
             .validity-date {
-              font-size: 16px;
+              font-size: 12px;
               font-weight: bold;
             }
             
@@ -401,18 +399,20 @@ const printTicket = () => {
               body {
                 padding: 0;
                 margin: 0;
+                min-height: auto;
               }
               
               .ticket-preview {
-                width: 100%;
-                height: auto;
-                border: 3px solid #000 !important;
+                width: 480px !important;
+                height: 300px !important;
+                border: 2px solid #000 !important;
                 margin: 0;
+                page-break-inside: avoid;
               }
               
               @page {
-                margin: 1cm;
-                size: A4 landscape;
+                margin: 0.5cm;
+                size: A4;
               }
             }
           </style>
@@ -459,12 +459,12 @@ const goToTickets = () => {
 }
 
 .ticket-preview {
-  width: 600px;
-  height: 400px;
-  border: 3px solid #000;
+  width: 480px;
+  height: 300px;
+  border: 2px solid #000;
   background: white;
   font-family: Arial, sans-serif;
-  padding: 25px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -473,8 +473,8 @@ const goToTickets = () => {
 .ticket-header {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 25px;
-  gap: 15px;
+  margin-bottom: 15px;
+  gap: 10px;
 }
 
 .building-section {
@@ -487,54 +487,54 @@ const goToTickets = () => {
 }
 
 .library-title {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
-  line-height: 1.2;
-  margin-bottom: 3px;
+  line-height: 1.1;
+  margin-bottom: 2px;
 }
 
 .library-subtitle {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: bold;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .ticket-title-section {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .title-main {
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.title-russian {
   font-size: 20px;
+  font-weight: bold;
   margin-bottom: 3px;
 }
 
+.title-russian {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
 .title-english {
-  font-size: 20px;
+  font-size: 14px;
 }
 
 .ticket-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 25px;
+  margin-bottom: 15px;
   flex: 1;
 }
 
 .left-section {
   flex: 1;
   text-align: left;
-  padding-right: 15px;
+  padding-right: 10px;
 }
 
 .user-name {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: bold;
   word-wrap: break-word;
 }
@@ -546,33 +546,33 @@ const goToTickets = () => {
 }
 
 .qr-code {
-  width: 120px;
-  height: 120px;
+  width: 80px;
+  height: 80px;
   display: block;
 }
 
 .right-section {
   flex: 1;
   text-align: right;
-  padding-left: 15px;
+  padding-left: 10px;
 }
 
 .order-label {
-  font-size: 12px;
-  margin-bottom: 3px;
+  font-size: 9px;
+  margin-bottom: 2px;
 }
 
 .order-value {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: bold;
 }
 
 .ticket-id-section {
   text-align: center;
   font-family: monospace;
-  font-size: 20px;
+  font-size: 14px;
   font-weight: bold;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .ticket-footer {
@@ -583,12 +583,12 @@ const goToTickets = () => {
 
 .validity-labels {
   text-align: left;
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 9px;
+  line-height: 1.1;
 }
 
 .validity-date {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: bold;
 }
 
