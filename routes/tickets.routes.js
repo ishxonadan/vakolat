@@ -8,18 +8,66 @@ module.exports = (nazorat, Tickets) => {
     return `GUL${ticketNumber.toString().padStart(10, "0")}`
   }
 
-  // Helper function to get next ticket number
-  async function getNextTicketNumber() {
+  // Helper function to get next global ticket number (never resets)
+  async function getNextGlobalTicketNumber() {
     try {
       const lastTicket = await Tickets.findOne().sort({ ticketNumber: -1 })
       return lastTicket ? lastTicket.ticketNumber + 1 : 1
     } catch (error) {
-      console.error("Error getting next ticket number:", error)
+      console.error("Error getting next global ticket number:", error)
       return 1
     }
   }
 
-  // GET all tickets
+  // Helper function to get next daily order number (resets each day)
+  async function getNextDailyOrderNumber() {
+    try {
+      const today = new Date()
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+
+      console.log("Getting daily order number for date range:", startOfDay, "to", endOfDay)
+
+      // Find all tickets created today
+      const todayTickets = await Tickets.find({
+        createdAt: {
+          $gte: startOfDay,
+          $lt: endOfDay,
+        },
+      })
+
+      console.log("Found tickets for today:", todayTickets.length)
+
+      // Filter tickets that have valid dailyOrderNumber and sort them
+      const validTickets = todayTickets
+        .filter((ticket) => {
+          const hasValidNumber =
+            ticket.dailyOrderNumber && !isNaN(ticket.dailyOrderNumber) && typeof ticket.dailyOrderNumber === "number"
+          console.log(
+            `Ticket ${ticket.ticketId}: dailyOrderNumber = ${ticket.dailyOrderNumber}, valid = ${hasValidNumber}`,
+          )
+          return hasValidNumber
+        })
+        .sort((a, b) => b.dailyOrderNumber - a.dailyOrderNumber)
+
+      console.log("Valid tickets with dailyOrderNumber:", validTickets.length)
+
+      if (validTickets.length === 0) {
+        console.log("No valid tickets found, returning 1")
+        return 1
+      }
+
+      const nextNumber = validTickets[0].dailyOrderNumber + 1
+      console.log("Next daily order number will be:", nextNumber)
+
+      return nextNumber
+    } catch (error) {
+      console.error("Error getting next daily order number:", error)
+      return 1
+    }
+  }
+
+  // GET all tickets (all entries including updates)
   router.get("/", async (req, res) => {
     try {
       const tickets = await Tickets.find().sort({ createdAt: -1 })
@@ -30,10 +78,10 @@ module.exports = (nazorat, Tickets) => {
     }
   })
 
-  // GET ticket by ID
+  // GET ticket by ID (get the latest entry for this ticket ID)
   router.get("/:id", async (req, res) => {
     try {
-      const ticket = await Tickets.findOne({ ticketId: req.params.id })
+      const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
       if (!ticket) {
         return res.status(404).json({ error: "Chipta topilmadi" })
       }
@@ -44,21 +92,7 @@ module.exports = (nazorat, Tickets) => {
     }
   })
 
-  // GET ticket by passport
-  router.get("/passport/:passport", async (req, res) => {
-    try {
-      const ticket = await Tickets.findOne({ passport: req.params.passport })
-      if (!ticket) {
-        return res.status(404).json({ error: "Chipta topilmadi" })
-      }
-      res.json(ticket)
-    } catch (error) {
-      console.error("Error fetching ticket by passport:", error)
-      res.status(500).json({ error: error.message })
-    }
-  })
-
-  // POST create new ticket
+  // POST create new ticket or add new entry for existing user
   router.post("/", async (req, res) => {
     try {
       const { fullname, passport } = req.body
@@ -74,42 +108,69 @@ module.exports = (nazorat, Tickets) => {
       }
 
       // Check if user with same passport already exists
-      const existingTicket = await Tickets.findOne({ passport: passport.trim() })
+      const existingTicket = await Tickets.findOne({ passport: passport.trim() }).sort({ createdAt: -1 })
+
+      let ticketId,
+        globalTicketNumber,
+        isUpdate = false,
+        nameChanged = false
 
       if (existingTicket) {
-        // Update existing ticket's date and fullname
-        existingTicket.fullname = fullname.trim()
-        existingTicket.date = new Date()
-        existingTicket.updatedAt = new Date()
-        existingTicket.updatedBy = "system"
-        await existingTicket.save()
-
-        return res.json({
-          ticketId: existingTicket.ticketId,
-          message: "Mavjud chipta yangilandi",
-          isUpdate: true,
-        })
+        // Reuse the same ticket ID and global number for existing user
+        ticketId = existingTicket.ticketId
+        globalTicketNumber = existingTicket.ticketNumber
+        isUpdate = true
+        nameChanged = existingTicket.fullname !== fullname.trim()
+      } else {
+        // Create new ticket ID for new user
+        globalTicketNumber = await getNextGlobalTicketNumber()
+        ticketId = generateTicketId(globalTicketNumber)
       }
 
-      // Create new ticket
-      const ticketNumber = await getNextTicketNumber()
-      const ticketId = generateTicketId(ticketNumber)
+      // Always get a new daily order number - ensure it's a valid number
+      console.log("Getting daily order number...")
+      const dailyOrderNumber = await getNextDailyOrderNumber()
+      console.log("Got daily order number:", dailyOrderNumber, "type:", typeof dailyOrderNumber)
 
-      const newTicket = new Tickets({
+      // Additional validation to ensure dailyOrderNumber is valid
+      if (
+        isNaN(dailyOrderNumber) ||
+        dailyOrderNumber === null ||
+        dailyOrderNumber === undefined ||
+        typeof dailyOrderNumber !== "number"
+      ) {
+        console.error("Invalid daily order number:", dailyOrderNumber, "type:", typeof dailyOrderNumber)
+        return res.status(500).json({ error: "Tartib raqamini yaratishda xatolik" })
+      }
+
+      console.log("Creating ticket with dailyOrderNumber:", dailyOrderNumber)
+
+      // Always create a NEW ticket entry (never update existing ones)
+      const newTicketEntry = new Tickets({
         ticketId,
         fullname: fullname.trim(),
         passport: passport.trim(),
         date: new Date(),
-        ticketNumber,
+        ticketNumber: globalTicketNumber,
+        dailyOrderNumber: dailyOrderNumber,
         createdBy: "system",
+        isUpdate: isUpdate, // Track if this is an update entry
+        nameChanged: nameChanged, // Track if name was changed
       })
 
-      await newTicket.save()
+      await newTicketEntry.save()
+
+      const message = isUpdate
+        ? nameChanged
+          ? "Chipta yangilandi va ism o'zgartirildi"
+          : "Mavjud chipta yangilandi"
+        : "Chipta muvaffaqiyatli yaratildi"
 
       res.status(201).json({
-        ticketId: newTicket.ticketId,
-        message: "Chipta muvaffaqiyatli yaratildi",
-        isUpdate: false,
+        ticketId: newTicketEntry.ticketId,
+        message: message,
+        isUpdate: isUpdate,
+        nameChanged: nameChanged,
       })
     } catch (error) {
       console.error("Error creating ticket:", error)
@@ -117,46 +178,17 @@ module.exports = (nazorat, Tickets) => {
     }
   })
 
-  // PUT update ticket fullname
-  router.put("/:id", async (req, res) => {
-    try {
-      const { fullname } = req.body
-
-      if (!fullname) {
-        return res.status(400).json({ error: "Ism talab qilinadi" })
-      }
-
-      const ticket = await Tickets.findOne({ ticketId: req.params.id })
-      if (!ticket) {
-        return res.status(404).json({ error: "Chipta topilmadi" })
-      }
-
-      ticket.fullname = fullname.trim()
-      ticket.updatedAt = new Date()
-      ticket.updatedBy = "system"
-      await ticket.save()
-
-      res.json({
-        message: "Ism muvaffaqiyatli yangilandi",
-        ticket: ticket,
-      })
-    } catch (error) {
-      console.error("Error updating ticket:", error)
-      res.status(500).json({ error: error.message })
-    }
-  })
-
   // GET QR code for ticket
   router.get("/:id/qr", async (req, res) => {
     try {
-      const ticket = await Tickets.findOne({ ticketId: req.params.id })
+      const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
       if (!ticket) {
         return res.status(404).json({ error: "Chipta topilmadi" })
       }
 
       const qrData = ticket.ticketId // Only the ticket ID - no name/surname
       const qrCode = await QRCode.toDataURL(qrData, {
-        width: 500, // Increased from 400 to 500
+        width: 400, // Increased from 300 to 400
         margin: 1,
         color: {
           dark: "#000000",

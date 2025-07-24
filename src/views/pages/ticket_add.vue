@@ -12,18 +12,6 @@
         
         <form @submit.prevent="createTicket" class="space-y-4">
           <div>
-            <label for="fullname" class="block text-sm font-medium mb-2">F.I.Sh *</label>
-            <InputText 
-              id="fullname" 
-              v-model="form.fullname" 
-              placeholder="To'liq ism familiya" 
-              class="w-full"
-              :class="{ 'p-invalid': errors.fullname }"
-            />
-            <small v-if="errors.fullname" class="p-error">{{ errors.fullname }}</small>
-          </div>
-
-          <div>
             <label for="passport" class="block text-sm font-medium mb-2">Pasport seriya va raqami *</label>
             <InputText 
               id="passport" 
@@ -32,14 +20,46 @@
               class="w-full"
               :class="{ 'p-invalid': errors.passport }"
               @input="formatPassport"
+              @blur="checkExistingUser"
             />
             <small v-if="errors.passport" class="p-error">{{ errors.passport }}</small>
             <small class="text-gray-500">Masalan: AA1234567</small>
           </div>
 
+          <div>
+            <label for="fullname" class="block text-sm font-medium mb-2">
+              F.I.Sh *
+              <span v-if="isAutoFilled" class="text-xs text-blue-600 ml-2">(avtomatik to'ldirildi)</span>
+            </label>
+            <InputText 
+              id="fullname" 
+              v-model="form.fullname" 
+              placeholder="To'liq ism familiya" 
+              class="w-full"
+              :class="{ 
+                'p-invalid': errors.fullname,
+                'border-blue-300 bg-blue-50': isAutoFilled && !isNameChanged
+              }"
+              @input="onNameChange"
+            />
+            <small v-if="errors.fullname" class="p-error">{{ errors.fullname }}</small>
+            <small v-if="isNameChanged" class="text-orange-600">
+              Ism o'zgartirildi - saqlanganda ma'lumotlar bazasida yangilanadi
+            </small>
+          </div>
+
+          <div v-if="existingUser" class="p-3 bg-blue-50 border border-blue-200 rounded">
+            <p class="text-sm text-blue-800">
+              <i class="pi pi-info-circle mr-2"></i>
+              Bu foydalanuvchi avval {{ existingUser.ticketHistory.length }} marta chipta olgan.
+              <br>
+              Ticket ID: <strong>{{ existingUser.ticketId }}</strong>
+            </p>
+          </div>
+
           <Button 
             type="submit" 
-            label="Chipta yaratish" 
+            :label="existingUser ? 'Yangi chipta yaratish' : 'Chipta yaratish'"
             icon="pi pi-plus" 
             :loading="loading"
             class="w-full"
@@ -49,7 +69,9 @@
 
       <!-- Preview Section -->
       <div v-if="generatedTicket" class="card">
-        <h3 class="text-lg font-semibold mb-4">Yaratilgan chipta</h3>
+        <h3 class="text-lg font-semibold mb-4">
+          {{ isExistingTicket ? 'Bugungi chipta' : 'Yaratilgan chipta' }}
+        </h3>
         
         <div class="ticket-container">
           <div class="ticket-preview print-only" id="ticket-print">
@@ -79,12 +101,11 @@
               
               <div class="center-section">
                 <img v-if="qrCode" :src="qrCode" alt="QR Code" class="qr-code" />
-                <img v-if="barcode" :src="barcode" alt="Barcode" class="barcode" />
               </div>
               
               <div class="right-section">
                 <div class="order-label">Tartib raqami</div>
-                <div class="order-value">{{ generatedTicket.ticketNumber }}</div>
+                <div class="order-value">{{ generatedTicket.dailyOrderNumber }}</div>
               </div>
             </div>
 
@@ -120,10 +141,17 @@
           />
         </div>
 
-        <div v-if="isUpdate" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded no-print">
+        <div v-if="isExistingTicket" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded no-print">
+          <p class="text-sm text-blue-800">
+            <i class="pi pi-info-circle mr-2"></i>
+            Bu foydalanuvchi bugun allaqachon chipta olgan. Yuqorida bugungi chipta ko'rsatilgan.
+          </p>
+        </div>
+
+        <div v-else-if="isUpdate" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded no-print">
           <p class="text-sm text-yellow-800">
             <i class="pi pi-info-circle mr-2"></i>
-            Bu pasport bilan avval ro'yxatdan o'tilgan. Chipta sanasi yangilandi.
+            {{ updateMessage }}
           </p>
         </div>
       </div>
@@ -138,7 +166,6 @@ import { useRouter } from 'vue-router';
 import apiService from '@/service/api.service';
 import LibraryLogo from '@/components/LibraryLogo.vue';
 import { getLibraryLogoSvg } from '@/utils/logo.js';
-import { generateBarcode } from '@/utils/barcode.js';
 
 const toast = useToast();
 const router = useRouter();
@@ -146,8 +173,9 @@ const router = useRouter();
 const loading = ref(false);
 const generatedTicket = ref(null);
 const qrCode = ref('');
-const barcode = ref('');
 const isUpdate = ref(false);
+const isExistingTicket = ref(false);
+const updateMessage = ref('');
 
 const form = reactive({
   fullname: '',
@@ -158,6 +186,11 @@ const errors = reactive({
   fullname: '',
   passport: ''
 });
+
+const isAutoFilled = ref(false);
+const isNameChanged = ref(false);
+const existingUser = ref(null);
+const originalName = ref('');
 
 const validateForm = () => {
   errors.fullname = '';
@@ -190,36 +223,89 @@ const formatPassport = (event) => {
   form.passport = value;
 };
 
+const checkExistingUser = async () => {
+  if (!form.passport.trim() || form.passport.length < 9) return;
+  
+  try {
+    // Check if user exists in LibraryUsers
+    const response = await apiService.get(`/tickets/user/${form.passport.trim()}`);
+    
+    existingUser.value = response;
+    form.fullname = response.fullname;
+    originalName.value = response.fullname;
+    isAutoFilled.value = true;
+    isNameChanged.value = false;
+    
+    toast.add({ 
+      severity: 'info', 
+      summary: 'Ma\'lumot', 
+      detail: `Bu foydalanuvchi avval ${response.ticketHistory.length} marta chipta olgan. Ism avtomatik to'ldirildi.`, 
+      life: 4000 
+    });
+  } catch (error) {
+    if (error.response?.status === 404) {
+      // User doesn't exist - reset form
+      existingUser.value = null;
+      isAutoFilled.value = false;
+      isNameChanged.value = false;
+      originalName.value = '';
+    } else {
+      console.error('Error checking existing user:', error);
+    }
+  }
+};
+
+const onNameChange = () => {
+  if (isAutoFilled.value && originalName.value) {
+    isNameChanged.value = form.fullname !== originalName.value;
+  }
+};
+
 const createTicket = async () => {
   if (!validateForm()) return;
   
   try {
     loading.value = true;
+
+    const payload = {
+      passport: form.passport.trim(),
+      fullname: form.fullname.trim()
+    };
+
+    const response = await apiService.post('/tickets', payload);
     
-    const response = await apiService.post('/tickets', {
-      fullname: form.fullname.trim(),
-      passport: form.passport.trim()
-    });
-    
-    // Get full ticket details
-    const ticketDetails = await apiService.get(`/tickets/${response.ticketId}`);
-    generatedTicket.value = ticketDetails;
+    // Check if this is an existing ticket for today
+    if (response.isExisting) {
+      // Show existing ticket
+      generatedTicket.value = response.existingTicket;
+      isExistingTicket.value = true;
+      isUpdate.value = false;
+      
+      toast.add({ 
+        severity: 'info', 
+        summary: 'Ma\'lumot', 
+        detail: response.message, 
+        life: 4000 
+      });
+    } else {
+      // Get full ticket details for new ticket
+      const ticketDetails = await apiService.get(`/tickets/${response.ticketId}`);
+      generatedTicket.value = ticketDetails;
+      isExistingTicket.value = false;
+      isUpdate.value = response.isUpdate;
+      updateMessage.value = response.message;
+      
+      toast.add({ 
+        severity: 'success', 
+        summary: 'Muvaffaqiyat', 
+        detail: response.message, 
+        life: 3000 
+      });
+    }
     
     // Get QR code
-    const qrResponse = await apiService.get(`/tickets/${response.ticketId}/qr`);
+    const qrResponse = await apiService.get(`/tickets/${generatedTicket.value.ticketId}/qr`);
     qrCode.value = qrResponse.qrCode;
-    
-    // Generate barcode
-    barcode.value = generateBarcode(ticketDetails.ticketId);
-    
-    isUpdate.value = response.isUpdate;
-    
-    toast.add({ 
-      severity: 'success', 
-      summary: 'Muvaffaqiyat', 
-      detail: response.message, 
-      life: 3000 
-    });
     
   } catch (error) {
     toast.add({ 
@@ -236,9 +322,8 @@ const createTicket = async () => {
 const printTicket = () => {
   // Create a new window with only the ticket content
   const printWindow = window.open('', '_blank');
-  const ticketElement = document.getElementById('ticket-print');
   
-  if (printWindow && ticketElement) {
+  if (printWindow) {
     // Create the HTML structure using DOM methods instead of document.write
     const html = printWindow.document.createElement('html');
     const head = printWindow.document.createElement('head');
@@ -270,7 +355,7 @@ const printTicket = () => {
       
       .ticket-preview {
         width: 250px !important;
-        height: 350px !important;
+        height: 300px !important;
         border: none !important;
         background: white;
         font-family: Arial, sans-serif;
@@ -321,12 +406,12 @@ const printTicket = () => {
       }
       
       .title-russian {
-        font-size: 12px;
+        font-size: 14px;
         margin-bottom: 1px;
       }
       
       .title-english {
-        font-size: 12px;
+        font-size: 14px;
       }
       
       .ticket-content {
@@ -352,20 +437,13 @@ const printTicket = () => {
       .center-section {
         flex: 0 0 auto;
         display: flex;
-        flex-direction: column;
+        justify-content: center;
         align-items: center;
-        gap: 5px;
       }
       
       .qr-code {
-        width: 100px;
-        height: 100px;
-        display: block;
-      }
-      
-      .barcode {
-        width: 100px;
-        height: 20px;
+        width: 80px;
+        height: 80px;
         display: block;
       }
       
@@ -376,7 +454,7 @@ const printTicket = () => {
       }
       
       .order-label {
-        font-size: 9px;
+        font-size: 11px;
         margin-bottom: 2px;
       }
       
@@ -401,7 +479,7 @@ const printTicket = () => {
       
       .validity-labels {
         text-align: left;
-        font-size: 9px;
+        font-size: 11px;
         line-height: 1.1;
       }
       
@@ -419,7 +497,7 @@ const printTicket = () => {
         
         .ticket-preview {
           width: 250px !important;
-          height: 350px !important;
+          height: 300px !important;
           border: none !important;
           margin: 0;
           page-break-inside: avoid;
@@ -460,12 +538,11 @@ const printTicket = () => {
         
         <div class="center-section">
           <img src="${qrCode.value}" alt="QR Code" class="qr-code" />
-          <img src="${barcode.value}" alt="Barcode" class="barcode" />
         </div>
         
         <div class="right-section">
           <div class="order-label">Tartib raqami</div>
-          <div class="order-value">${generatedTicket.value.ticketNumber}</div>
+          <div class="order-value">${generatedTicket.value.dailyOrderNumber}</div>
         </div>
       </div>
 
@@ -501,8 +578,13 @@ const createAnother = () => {
   form.passport = '';
   generatedTicket.value = null;
   qrCode.value = '';
-  barcode.value = '';
   isUpdate.value = false;
+  isExistingTicket.value = false;
+  isAutoFilled.value = false;
+  isNameChanged.value = false;
+  existingUser.value = null;
+  originalName.value = '';
+  updateMessage.value = '';
 };
 
 const formatDate = (date) => {
@@ -523,7 +605,7 @@ const goToTickets = () => {
 
 .ticket-preview {
   width: 250px;
-  height: 370px;
+  height: 320px;
   border: none;
   background: white;
   font-family: Arial, sans-serif;
@@ -574,12 +656,12 @@ const goToTickets = () => {
 }
 
 .title-russian {
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 1px;
 }
 
 .title-english {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .ticket-content {
@@ -605,20 +687,13 @@ const goToTickets = () => {
 .center-section {
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 5px;
 }
 
 .qr-code {
-  width: 100px;
-  height: 100px;
-  display: block;
-}
-
-.barcode {
-  width: 100px;
-  height: 20px;
+  width: 80px;
+  height: 80px;
   display: block;
 }
 
@@ -629,7 +704,7 @@ const goToTickets = () => {
 }
 
 .order-label {
-  font-size: 9px;
+  font-size: 11px;
   margin-bottom: 2px;
 }
 
@@ -654,7 +729,7 @@ const goToTickets = () => {
 
 .validity-labels {
   text-align: left;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.1;
 }
 

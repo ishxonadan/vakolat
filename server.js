@@ -141,24 +141,47 @@ const razdelSchema = new mongoose.Schema({
   razdel_id: Number,
 })
 
-// Ticket Schema
+// NEW: Library Users Schema (Collection 1 - User info + ticket history)
+const libraryUserSchema = new mongoose.Schema(
+  {
+    passport: { type: String, required: true, unique: true },
+    fullname: { type: String, required: true },
+    ticketId: { type: String, required: true, unique: true }, // IQ format - never changes
+    globalTicketNumber: { type: Number, required: true, unique: true }, // Global counter
+    ticketHistory: [
+      {
+        date: { type: Date, required: true },
+        dailyOrderNumber: { type: Number, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true },
+)
+
+// NEW: Tickets Schema (Collection 2 - Individual ticket entries)
 const ticketSchema = new mongoose.Schema(
   {
-    ticketId: { type: String, required: true, unique: true },
-    fullname: { type: String, required: true },
+    ticketId: { type: String, required: true }, // IQ format - NOT unique (same user, different days)
     passport: { type: String, required: true },
-    date: { type: Date, required: true },
-    ticketNumber: { type: Number, required: true },
-    createdAt: { type: Date, default: Date.now },
-    createdBy: { type: String, required: true },
-    updatedAt: { type: Date },
-    updatedBy: { type: String },
+    fullname: { type: String, required: true },
+    date: { type: Date, required: true }, // The ticket date
+    dailyOrderNumber: { type: Number, required: true }, // Daily counter (resets each day)
+    globalTicketNumber: { type: Number, required: true }, // Global counter (never resets)
+    isUpdate: { type: Boolean, default: false }, // Track if this is an update entry
+    nameChanged: { type: Boolean, default: false }, // Track if name was changed
+    createdAt: { type: Date, default: Date.now }, // When this entry was created
   },
   { timestamps: true },
 )
 
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
+
+// NEW: Create both models
+const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
 const Tickets = nazorat.model("Ticket", ticketSchema)
 
 // Import the rating models
@@ -206,6 +229,32 @@ const upload = multer({
     }
     cb(null, true)
   },
+})
+
+// Add endpoint to fix database indexes
+app.get("/api/admin/fix-indexes", async (req, res) => {
+  try {
+    console.log("Fixing database indexes...")
+
+    // Drop the unique index on ticketId if it exists
+    try {
+      await Tickets.collection.dropIndex("ticketId_1")
+      console.log("Dropped unique index on ticketId")
+    } catch (error) {
+      console.log("Index ticketId_1 doesn't exist or already dropped")
+    }
+
+    // Ensure proper indexes exist
+    await Tickets.collection.createIndex({ passport: 1, date: 1 }) // For daily checks
+    await Tickets.collection.createIndex({ createdAt: -1 }) // For sorting
+    await Tickets.collection.createIndex({ ticketId: 1, createdAt: -1 }) // For finding latest ticket
+
+    console.log("Database indexes fixed successfully")
+    res.json({ message: "Database indexes fixed successfully" })
+  } catch (error) {
+    console.error("Error fixing indexes:", error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 app.get("/diss/cats", async (req, res) => {
@@ -340,29 +389,117 @@ const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
 const surveyRoutes = require("./routes/survey.routes")(vakolat)
 
-// Create tickets routes function
+// Create tickets routes with NEW logic
 const createTicketsRoutes = () => {
   const express = require("express")
   const QRCode = require("qrcode")
   const router = express.Router()
 
-  // Helper function to generate ticket ID
+  // Helper function to generate ticket ID in IQ format
   function generateTicketId(ticketNumber) {
-    return `GUL${ticketNumber.toString().padStart(10, "0")}`
+    return `IQ${ticketNumber.toString().padStart(10, "0")}`
   }
 
-  // Helper function to get next ticket number
-  async function getNextTicketNumber() {
+  // Helper function to get next global ticket number (never resets)
+  async function getNextGlobalTicketNumber() {
     try {
-      const lastTicket = await Tickets.findOne().sort({ ticketNumber: -1 })
-      return lastTicket ? lastTicket.ticketNumber + 1 : 1
+      const lastUser = await LibraryUsers.findOne().sort({ globalTicketNumber: -1 })
+      return lastUser ? lastUser.globalTicketNumber + 1 : 1
     } catch (error) {
-      console.error("Error getting next ticket number:", error)
+      console.error("Error getting next global ticket number:", error)
       return 1
     }
   }
 
-  // GET all tickets
+  // Helper function to get today's date string in YYYY-MM-DD format
+  function getTodayDateString() {
+    const today = new Date()
+    // Ensure we're working with local date, not UTC
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, "0")
+    const day = String(today.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
+  // Helper function to get date string from Date object in YYYY-MM-DD format
+  function getDateString(date) {
+    const d = new Date(date)
+    // Ensure we're working with local date, not UTC
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
+  // Helper function to get today's ticket for a passport (if exists)
+  async function getTodaysTicket(passport) {
+    try {
+      const todayDateString = getTodayDateString()
+
+      console.log(`=== CHECKING TODAY'S TICKET ===`)
+      console.log(`Passport: ${passport}`)
+      console.log(`Today's date string: ${todayDateString}`)
+
+      // Find all tickets for this passport
+      const allTickets = await Tickets.find({ passport: passport })
+      console.log(`Found ${allTickets.length} total tickets for this passport`)
+
+      // Check each ticket's date
+      for (const ticket of allTickets) {
+        const ticketDateString = getDateString(ticket.date)
+        console.log(
+          `Ticket ${ticket._id}: date=${ticketDateString}, today=${todayDateString}, match=${ticketDateString === todayDateString}`,
+        )
+
+        if (ticketDateString === todayDateString) {
+          console.log(`✅ FOUND TODAY'S TICKET:`, ticket._id)
+          return ticket
+        }
+      }
+
+      console.log(`❌ NO TICKET FOUND FOR TODAY`)
+      return null
+    } catch (error) {
+      console.error("Error getting today's ticket:", error)
+      return null
+    }
+  }
+
+  // Helper function to get next daily order number (resets each day)
+  async function getNextDailyOrderNumber() {
+    try {
+      const todayDateString = getTodayDateString()
+
+      console.log(`=== GETTING DAILY ORDER NUMBER ===`)
+      console.log(`Today's date string: ${todayDateString}`)
+
+      // Find all tickets for today
+      const allTickets = await Tickets.find({})
+      const todayTickets = allTickets.filter((ticket) => {
+        const ticketDateString = getDateString(ticket.date)
+        return ticketDateString === todayDateString
+      })
+
+      console.log(`Found ${todayTickets.length} tickets for today`)
+
+      if (todayTickets.length === 0) {
+        console.log("No tickets for today, returning order number 1")
+        return 1
+      }
+
+      // Get the highest daily order number for today
+      const maxOrderNumber = Math.max(...todayTickets.map((t) => t.dailyOrderNumber || 0))
+      const nextNumber = maxOrderNumber + 1
+
+      console.log(`Max order number today: ${maxOrderNumber}, next will be: ${nextNumber}`)
+      return nextNumber
+    } catch (error) {
+      console.error("Error getting next daily order number:", error)
+      return 1
+    }
+  }
+
+  // GET all tickets (all entries including updates) - sorted by createdAt DESC
   router.get("/", async (req, res) => {
     try {
       const tickets = await Tickets.find().sort({ createdAt: -1 })
@@ -373,10 +510,10 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // GET ticket by ID
+  // GET ticket by ID (get the latest entry for this ticket ID)
   router.get("/:id", async (req, res) => {
     try {
-      const ticket = await Tickets.findOne({ ticketId: req.params.id })
+      const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
       if (!ticket) {
         return res.status(404).json({ error: "Chipta topilmadi" })
       }
@@ -387,7 +524,21 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // POST create new ticket
+  // GET user by passport (for auto-fill)
+  router.get("/user/:passport", async (req, res) => {
+    try {
+      const user = await LibraryUsers.findOne({ passport: req.params.passport })
+      if (!user) {
+        return res.status(404).json({ error: "Foydalanuvchi topilmadi" })
+      }
+      res.json(user)
+    } catch (error) {
+      console.error("Error fetching user:", error)
+      res.status(500).json({ error: error.message })
+    }
+  })
+
+  // POST create new ticket or return existing ticket for today
   router.post("/", async (req, res) => {
     try {
       const { fullname, passport } = req.body
@@ -402,42 +553,106 @@ const createTicketsRoutes = () => {
         return res.status(400).json({ error: "Pasport formati noto'g'ri" })
       }
 
-      // Check if user with same passport already exists
-      const existingTicket = await Tickets.findOne({ passport: passport.trim() })
+      const cleanPassport = passport.trim()
+      const cleanFullname = fullname.trim()
 
-      if (existingTicket) {
-        // Update existing ticket's date
-        existingTicket.date = new Date()
-        existingTicket.updatedAt = new Date()
-        existingTicket.updatedBy = "system"
-        await existingTicket.save()
+      console.log(`\n🎫 TICKET REQUEST for passport: ${cleanPassport}`)
 
-        return res.json({
-          ticketId: existingTicket.ticketId,
-          message: "Mavjud chipta yangilandi",
-          isUpdate: true,
+      // FIRST: Check if user has ticket for TODAY
+      const todaysTicket = await getTodaysTicket(cleanPassport)
+
+      if (todaysTicket) {
+        console.log(`✅ RETURNING EXISTING TICKET FOR TODAY`)
+        return res.status(200).json({
+          ticketId: todaysTicket.ticketId,
+          message: "Bu foydalanuvchi bugun allaqachon chipta olgan. Bugungi chipta ko'rsatilmoqda.",
+          isExisting: true,
+          existingTicket: todaysTicket,
         })
       }
 
-      // Create new ticket
-      const ticketNumber = await getNextTicketNumber()
-      const ticketId = generateTicketId(ticketNumber)
+      console.log(`🆕 NO TICKET FOR TODAY - CREATING NEW ONE`)
 
-      const newTicket = new Tickets({
-        ticketId,
-        fullname: fullname.trim(),
-        passport: passport.trim(),
-        date: new Date(),
-        ticketNumber,
-        createdBy: "system",
+      // Check if user exists in LibraryUsers
+      let libraryUser = await LibraryUsers.findOne({ passport: cleanPassport })
+      let isUpdate = false
+      let nameChanged = false
+
+      if (libraryUser) {
+        // Existing user - creating ticket for new day
+        console.log(`👤 EXISTING USER: ${libraryUser.ticketId}`)
+        isUpdate = true
+        nameChanged = libraryUser.fullname !== cleanFullname
+
+        // Update user info if name changed
+        if (nameChanged) {
+          console.log(`📝 NAME CHANGED: "${libraryUser.fullname}" -> "${cleanFullname}"`)
+          libraryUser.fullname = cleanFullname
+          libraryUser.updatedAt = new Date()
+          await libraryUser.save()
+        }
+      } else {
+        // New user - create in LibraryUsers
+        console.log(`🆕 NEW USER - CREATING`)
+        const globalTicketNumber = await getNextGlobalTicketNumber()
+        const ticketId = generateTicketId(globalTicketNumber)
+
+        libraryUser = new LibraryUsers({
+          passport: cleanPassport,
+          fullname: cleanFullname,
+          ticketId: ticketId,
+          globalTicketNumber: globalTicketNumber,
+          ticketHistory: [],
+        })
+
+        await libraryUser.save()
+        console.log(`✅ NEW USER CREATED: ${libraryUser.ticketId}`)
+      }
+
+      // Get daily order number for today
+      const dailyOrderNumber = await getNextDailyOrderNumber()
+
+      // Create today's date at start of day (00:00:00) - day specific, not 24-hour
+      const today = new Date()
+      const ticketDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
+
+      console.log(`📅 TICKET DATE (day-specific): ${getDateString(ticketDate)} 00:00:00`)
+      console.log(`🔢 DAILY ORDER NUMBER: ${dailyOrderNumber}`)
+
+      // Add to ticket history in LibraryUsers
+      libraryUser.ticketHistory.push({
+        date: ticketDate,
+        dailyOrderNumber: dailyOrderNumber,
+        createdAt: new Date(),
+      })
+      await libraryUser.save()
+
+      // Create new ticket entry
+      const newTicketEntry = new Tickets({
+        ticketId: libraryUser.ticketId,
+        passport: cleanPassport,
+        fullname: cleanFullname,
+        date: ticketDate,
+        dailyOrderNumber: dailyOrderNumber,
+        globalTicketNumber: libraryUser.globalTicketNumber,
+        isUpdate: isUpdate,
+        nameChanged: nameChanged,
       })
 
-      await newTicket.save()
+      await newTicketEntry.save()
+      console.log(`✅ NEW TICKET CREATED: ${newTicketEntry._id}`)
+
+      const message = isUpdate
+        ? nameChanged
+          ? "Chipta yangilandi va ism o'zgartirildi"
+          : "Mavjud foydalanuvchi uchun yangi chipta yaratildi"
+        : "Yangi foydalanuvchi va chipta yaratildi"
 
       res.status(201).json({
-        ticketId: newTicket.ticketId,
-        message: "Chipta muvaffaqiyatli yaratildi",
-        isUpdate: false,
+        ticketId: libraryUser.ticketId,
+        message: message,
+        isUpdate: isUpdate,
+        nameChanged: nameChanged,
       })
     } catch (error) {
       console.error("Error creating ticket:", error)
@@ -448,15 +663,15 @@ const createTicketsRoutes = () => {
   // GET QR code for ticket
   router.get("/:id/qr", async (req, res) => {
     try {
-      const ticket = await Tickets.findOne({ ticketId: req.params.id })
+      const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
       if (!ticket) {
         return res.status(404).json({ error: "Chipta topilmadi" })
       }
 
       const qrData = ticket.ticketId // Only the ticket ID
       const qrCode = await QRCode.toDataURL(qrData, {
-        width: 200,
-        margin: 2,
+        width: 400,
+        margin: 1,
         color: {
           dark: "#000000",
           light: "#FFFFFF",
@@ -473,7 +688,8 @@ const createTicketsRoutes = () => {
   // GET ticket count for passport
   router.get("/count/:passport", async (req, res) => {
     try {
-      const count = await Tickets.countDocuments({ passport: req.params.passport })
+      const user = await LibraryUsers.findOne({ passport: req.params.passport })
+      const count = user ? user.ticketHistory.length : 0
       res.json({ count })
     } catch (error) {
       console.error("Error getting ticket count:", error)
@@ -531,6 +747,7 @@ app.listen(7777, () => {
 module.exports = {
   Documents,
   Categories,
+  LibraryUsers,
   Tickets,
   WebsiteRating,
   AutoRating,

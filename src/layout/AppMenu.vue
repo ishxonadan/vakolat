@@ -28,7 +28,7 @@ const menuItems = [
           {
             label: "Bir martalik chipta",
             icon: 'pi pi-fw pi-tags',
-            to: '/chipta',
+            to: '/tickets',
             requiredLevel: 'admin'
           },
         ]

@@ -17,7 +17,11 @@
     >
       <Column field="ticketId" header="Chipta ID" sortable>
         <template #body="slotProps">
-          <span class="font-mono font-semibold">{{ slotProps.data.ticketId }}</span>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-semibold">{{ slotProps.data.ticketId }}</span>
+            <Tag v-if="slotProps.data.isUpdate" severity="info" value="Yangilangan" class="text-xs" />
+            <Tag v-if="slotProps.data.nameChanged" severity="warning" value="Ism o'zgargan" class="text-xs" />
+          </div>
         </template>
       </Column>
       <Column field="fullname" header="F.I.Sh" sortable />
@@ -26,14 +30,24 @@
           <span class="font-mono">{{ slotProps.data.passport }}</span>
         </template>
       </Column>
-      <Column field="date" header="Sana" sortable>
+      <Column field="dailyOrderNumber" header="Tartib raqami" sortable>
+        <template #body="slotProps">
+          <span class="font-semibold text-blue-600">{{ slotProps.data.dailyOrderNumber }}</span>
+        </template>
+      </Column>
+      <Column field="date" header="Chipta sanasi" sortable>
         <template #body="slotProps">
           {{ formatDate(slotProps.data.date) }}
         </template>
       </Column>
-      <Column field="createdAt" header="Yaratilgan" sortable>
+      <Column field="createdAt" header="Yaratilgan/Yangilangan" sortable>
         <template #body="slotProps">
-          {{ formatDateTime(slotProps.data.createdAt) }}
+          <div class="text-sm">
+            <div>{{ formatDateTime(slotProps.data.createdAt) }}</div>
+            <div v-if="slotProps.data.isUpdate" class="text-xs text-gray-500">
+              (Yangilangan)
+            </div>
+          </div>
         </template>
       </Column>
       <Column header="Amallar">
@@ -92,7 +106,7 @@
             
             <div class="right-section">
               <div class="order-label">Tartib raqami</div>
-              <div class="order-value">{{ selectedTicket.ticketNumber }}</div>
+              <div class="order-value">{{ selectedTicket.dailyOrderNumber }}</div>
             </div>
           </div>
 
@@ -112,6 +126,14 @@
 
         <div class="mt-4 text-xs text-gray-500 text-center no-print">
           <p>Bu pasport bilan {{ ticketCount }} marta ro'yxatdan o'tilgan</p>
+          <p v-if="selectedTicket.isUpdate" class="text-orange-600 mt-1">
+            <i class="pi pi-info-circle mr-1"></i>
+            Bu chipta yangilangan
+          </p>
+          <p v-if="selectedTicket.nameChanged" class="text-blue-600 mt-1">
+            <i class="pi pi-user-edit mr-1"></i>
+            Bu yangilanishda ism o'zgartirilgan
+          </p>
         </div>
       </div>
     </Dialog>
@@ -405,8 +427,8 @@ c38 0 72 -3 76 -7 4 -4 23 -6 42 -4 l34 3 0 -206 c0 -179 2 -206 15 -206 14 0
 16 27 15 208 -1 142 2 207 9 206 6 -1 28 -2 49 -2 l37 -2 -3 -205 c-4 -204 -4
 -205 18 -205 21 0 21 2 19 207 -1 134 2 208 9 211 6 2 13 -1 16 -7 4 -5 22 -7
 41 -4 l35 6 0 -207 c0 -179 2 -206 15 -206 14 0 16 27 15 208 -1 181 0 207 14
-210 9 2 16 -1 16 -7 0 -6 12 -8 30 -4 l30 6 0 -207 c0 -179 2 -206 15 -206 14 0
-16 27 15 208 l-2 207 31 3 c19 2 31 9 31 18 0 8 10 14 23 14 l22 0 -2 -242z
+210 9 2 16 -1 16 -7 0 -6 12 -8 30 -4 l30 6 0 -207 c0 -179 2 -206 15 -206 14
+0 16 27 15 208 l-2 207 31 3 c19 2 31 9 31 18 0 8 10 14 23 14 l22 0 -2 -242z
 m250 135 c4 -58 7 -170 7 -247 l0 -141 -112 1 -113 1 -3 247 -2 246 108 0 109
 0 6 -107z m141 86 c-44 -20 -104 -80 -104 -104 0 -8 -4 -15 -8 -15 -6 0 -7 94
 -2 138 0 1 35 2 78 1 l77 -1 -41 -19z m547 -228 l1 -243 -113 -1 -114 -1 -1
@@ -452,7 +474,7 @@ l0 25 500 0 c276 0 500 -4 500 -9z m1450 -17 l0 -25 -77 5 c-162 12 -298 18
                 
                 <div class="right-section">
                   <div class="order-label">Tartib raqami</div>
-                  <div class="order-value">${ticket.ticketNumber}</div>
+                  <div class="order-value">${ticket.dailyOrderNumber}</div>
                 </div>
               </div>
 
