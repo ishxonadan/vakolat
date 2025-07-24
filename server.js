@@ -725,6 +725,74 @@ app.use("/survey", surveyRoutes)
 // Register tickets routes
 app.use("/api/tickets", createTicketsRoutes())
 
+// Public ticket check API (no auth required, but secret password and payload must be provided)
+app.post("/api/public/check-ticket", async (req, res) => {
+  try {
+    const { ticketId, secret } = req.body
+
+    // First check: Validate that secret password is provided and correct
+    if (!secret || secret !== "simsim") {
+      console.log(`🚫 UNAUTHORIZED ACCESS ATTEMPT: ${req.ip} - Wrong or missing secret`)
+      return res.status(401).json({
+        error: "Ruxsat berilmagan",
+        message: "Unauthorized access. Invalid or missing secret key.",
+      })
+    }
+
+    // Second check: Validate that ticketId is provided in payload
+    if (!ticketId) {
+      return res.status(400).json({
+        error: "Chipta ID talab qilinadi",
+        message: "Ticket ID is required in request body",
+      })
+    }
+
+    // Third check: Validate ticket ID format (should be IQ followed by 10 digits)
+    const ticketIdRegex = /^IQ\d{10}$/
+    if (!ticketIdRegex.test(ticketId)) {
+      return res.status(400).json({
+        error: "Chipta ID formati noto'g'ri",
+        message: "Invalid ticket ID format. Expected format: IQ1234567890",
+      })
+    }
+
+    console.log(`🔍 AUTHORIZED TICKET CHECK: ${ticketId} from ${req.ip}`)
+
+    // Find the most recent ticket entry for this ID
+    const ticket = await Tickets.findOne({ ticketId: ticketId }).sort({ createdAt: -1 })
+
+    if (!ticket) {
+      return res.status(404).json({
+        error: "Chipta topilmadi",
+        message: "Ticket not found",
+        ticketId: ticketId,
+      })
+    }
+
+    // Return ticket information
+    const response = {
+      success: true,
+      ticket: {
+        ticketId: ticket.ticketId,
+        fullname: ticket.fullname,
+        date: ticket.date,
+        dailyOrderNumber: ticket.dailyOrderNumber,
+        isValid: true, // You can add more validation logic here if needed
+      },
+      message: "Chipta topildi",
+    }
+
+    console.log(`✅ TICKET FOUND: ${ticket.ticketId} - ${ticket.fullname} (authorized access)`)
+    res.json(response)
+  } catch (error) {
+    console.error("Error checking ticket:", error)
+    res.status(500).json({
+      error: "Server xatosi",
+      message: "Internal server error while checking ticket",
+    })
+  }
+})
+
 if (process.env.npm_lifecycle_event === "start") {
   console.log("PRODUCTION")
   const distPath = path.join(__dirname, "dist")
