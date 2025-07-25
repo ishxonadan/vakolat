@@ -7,9 +7,9 @@ import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    logLevel: 'silent',
+    logLevel: 'error',
     build: {
-        outDir: '../dist',
+        outDir: './dist',
         emptyOutDir: true
       },
 
