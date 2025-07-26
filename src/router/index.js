@@ -40,36 +40,21 @@ const router = createRouter({
         },
         // Experts routes
         {
-          path: "/experts",
-          name: "experts",
-          component: () => import("@/views/pages/experts.vue"),
+          path: "/vakillar",
+          name: "vakillar",
+          component: () => import("@/views/pages/vakillar.vue"),
         },
         {
-          path: "/expert_add",
-          name: "expert_add",
-          component: () => import("@/views/pages/expert_add.vue"),
+          path: "/vakil_add",
+          name: "vakil_add",
+          component: () => import("@/views/pages/vakil_add.vue"),
         },
         {
-          path: "/expert_edit/:id",
-          name: "expert_edit",
-          component: () => import("@/views/pages/expert_edit.vue"),
+          path: "/vakil_edit/:id",
+          name: "vakil_edit",
+          component: () => import("@/views/pages/vakil_edit.vue"),
         },
-        // Contestants routes
-        {
-          path: "/contestants",
-          name: "contestants",
-          component: () => import("@/views/pages/contestants.vue"),
-        },
-        {
-          path: "/contestant_add",
-          name: "contestant_add",
-          component: () => import("@/views/pages/contestant_add.vue"),
-        },
-        {
-          path: "/contestant_edit/:id",
-          name: "contestant_edit",
-          component: () => import("@/views/pages/contestant_edit.vue"),
-        },
+
         // Dissertation routes
         {
           path: "/diss",
@@ -87,43 +72,7 @@ const router = createRouter({
           component: () => import("@/views/pages/diss_edit.vue"),
         },
         // Rating routes
-        {
-          path: "/rate",
-          name: "rate",
-          component: () => import("@/views/pages/rate.vue"),
-        },
-        {
-          path: "/rate-website",
-          name: "rate-website",
-          component: () => import("@/views/pages/rate-website.vue"),
-        },
-        {
-          path: "/rating-results",
-          name: "rating-results",
-          component: () => import("@/views/pages/rating-results.vue"),
-        },
-        // Evaluation routes
-        {
-          path: "/auto-evaluation",
-          name: "auto-evaluation",
-          component: () => import("@/views/pages/auto-evaluation.vue"),
-        },
-        {
-          path: "/user-evaluation",
-          name: "user-evaluation",
-          component: () => import("@/views/pages/user-evaluation.vue"),
-        },
-        {
-          path: "/auto-correction",
-          name: "auto-correction",
-          component: () => import("@/views/pages/auto-correction.vue"),
-        },
-        {
-          path: "/user-correction",
-          name: "user-correction",
-          component: () => import("@/views/pages/user-correction.vue"),
-        },
-        // Library locations
+       
         {
           path: "/library-locations",
           name: "library-locations",

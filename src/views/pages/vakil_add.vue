@@ -32,7 +32,7 @@ async function saveData() {
     lastname: lastname.value,
     position: position.value,
     password: password.value,
-    level: 'expert',
+    level: 'vakil',
     language: 'uz'
   };
   
@@ -47,7 +47,7 @@ async function saveData() {
     });
     
     setTimeout(() => {
-      router.push('/experts');
+      router.push('/vakillar');
     }, 2000);
   } catch (error) {
     let errorMsg = "Serverdan xato javob keldi";

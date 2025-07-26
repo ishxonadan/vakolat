@@ -47,7 +47,7 @@ const menuItems = [
           {
             label: "Vakillar",
             icon: 'pi pi-fw pi-user',
-            to: '/experts',
+            to: '/vakillar',
             requiredLevel: 'admin'
           },
         ]

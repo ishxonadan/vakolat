@@ -83,7 +83,7 @@ async function saveData() {
     });
     
     setTimeout(() => {
-      router.push('/experts');
+      router.push('/vakillar');
     }, 2000);
   } catch (error) {
     console.error('Error updating expert:', error);

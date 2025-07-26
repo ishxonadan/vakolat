@@ -141,18 +141,18 @@ const razdelSchema = new mongoose.Schema({
   razdel_id: Number,
 })
 
-// NEW: Library Users Schema (Collection 1 - User info + ticket history)
+// COLLECTION 1: Library Users (stores user info + passport + ticket history)
 const libraryUserSchema = new mongoose.Schema(
   {
-    passport: { type: String, required: true, unique: true },
+    passport: { type: String, required: true, unique: true }, // Passport is unique per user
     fullname: { type: String, required: true },
-    ticketId: { type: String, required: true, unique: true }, // IQ format - never changes
-    globalTicketNumber: { type: Number, required: true, unique: true }, // Global counter
+    ticketId: { type: String, required: true, unique: true }, // IQ format - NEVER changes for this user
+    globalTicketNumber: { type: Number, required: true, unique: true }, // Global counter - NEVER resets
     ticketHistory: [
       {
-        date: { type: Date, required: true },
-        dailyOrderNumber: { type: Number, required: true },
-        createdAt: { type: Date, default: Date.now },
+        date: { type: Date, required: true }, // Date of ticket (NORMALIZED to start of day)
+        dailyOrderNumber: { type: Number, required: true }, // Daily counter (resets each day)
+        createdAt: { type: Date, default: Date.now }, // When this history entry was created
       },
     ],
     createdAt: { type: Date, default: Date.now },
@@ -161,18 +161,18 @@ const libraryUserSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// NEW: Tickets Schema (Collection 2 - Individual ticket entries)
+// COLLECTION 2: Tickets (individual ticket entries - NOT unique by ticketId)
 const ticketSchema = new mongoose.Schema(
   {
     ticketId: { type: String, required: true }, // IQ format - NOT unique (same user, different days)
     passport: { type: String, required: true },
     fullname: { type: String, required: true },
-    date: { type: Date, required: true }, // The ticket date
+    date: { type: Date, required: true }, // The ticket date (NORMALIZED to start of day)
     dailyOrderNumber: { type: Number, required: true }, // Daily counter (resets each day)
     globalTicketNumber: { type: Number, required: true }, // Global counter (never resets)
     isUpdate: { type: Boolean, default: false }, // Track if this is an update entry
     nameChanged: { type: Boolean, default: false }, // Track if name was changed
-    createdAt: { type: Date, default: Date.now }, // When this entry was created
+    createdAt: { type: Date, default: Date.now }, // When this entry was created (actual timestamp)
   },
   { timestamps: true },
 )
@@ -180,7 +180,7 @@ const ticketSchema = new mongoose.Schema(
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
 
-// NEW: Create both models
+// Create both models
 const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
 const Tickets = nazorat.model("Ticket", ticketSchema)
 
@@ -231,28 +231,40 @@ const upload = multer({
   },
 })
 
-// Add endpoint to fix database indexes
+// CRITICAL: Fix database indexes - remove unique constraint on ticketId
 app.get("/api/admin/fix-indexes", async (req, res) => {
   try {
-    console.log("Fixing database indexes...")
+    console.log("🔧 FIXING DATABASE INDEXES...")
 
-    // Drop the unique index on ticketId if it exists
+    // Drop ALL indexes on ticketId to remove unique constraint
     try {
       await Tickets.collection.dropIndex("ticketId_1")
-      console.log("Dropped unique index on ticketId")
+      console.log("✅ Dropped unique index ticketId_1")
     } catch (error) {
-      console.log("Index ticketId_1 doesn't exist or already dropped")
+      console.log("ℹ️ Index ticketId_1 doesn't exist or already dropped")
     }
 
-    // Ensure proper indexes exist
+    try {
+      await Tickets.collection.dropIndex({ ticketId: 1 })
+      console.log("✅ Dropped ticketId index")
+    } catch (error) {
+      console.log("ℹ️ ticketId index doesn't exist or already dropped")
+    }
+
+    // Create proper indexes (without unique constraint on ticketId)
     await Tickets.collection.createIndex({ passport: 1, date: 1 }) // For daily checks
     await Tickets.collection.createIndex({ createdAt: -1 }) // For sorting
-    await Tickets.collection.createIndex({ ticketId: 1, createdAt: -1 }) // For finding latest ticket
+    await Tickets.collection.createIndex({ ticketId: 1, createdAt: -1 }) // For finding latest ticket (NOT unique)
 
-    console.log("Database indexes fixed successfully")
-    res.json({ message: "Database indexes fixed successfully" })
+    console.log("✅ Created proper indexes")
+    console.log("🎯 Database indexes fixed successfully - ticketId is now NON-UNIQUE")
+
+    res.json({
+      message: "Database indexes fixed successfully",
+      details: "ticketId unique constraint removed - same user can have multiple tickets for different days",
+    })
   } catch (error) {
-    console.error("Error fixing indexes:", error)
+    console.error("❌ Error fixing indexes:", error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -389,7 +401,7 @@ const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
 const surveyRoutes = require("./routes/survey.routes")(vakolat)
 
-// Create tickets routes with NEW logic
+// Create tickets routes with CORRECTED calendar day logic
 const createTicketsRoutes = () => {
   const express = require("express")
   const QRCode = require("qrcode")
@@ -400,7 +412,7 @@ const createTicketsRoutes = () => {
     return `IQ${ticketNumber.toString().padStart(10, "0")}`
   }
 
-  // Helper function to get next global ticket number (never resets)
+  // Helper function to get next global ticket number (NEVER resets)
   async function getNextGlobalTicketNumber() {
     try {
       const lastUser = await LibraryUsers.findOne().sort({ globalTicketNumber: -1 })
@@ -411,76 +423,57 @@ const createTicketsRoutes = () => {
     }
   }
 
-  // Helper function to get today's date string in YYYY-MM-DD format
-  function getTodayDateString() {
-    const today = new Date()
-    // Ensure we're working with local date, not UTC
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, "0")
-    const day = String(today.getDate()).padStart(2, "0")
-    return `${year}-${month}-${day}`
+  // CRITICAL: Normalize date to start of calendar day (00:00:00.000)
+  function normalizeToCalendarDay(date = new Date()) {
+    const normalized = new Date(date)
+    normalized.setHours(0, 0, 0, 0) // Set to 00:00:00.000
+    return normalized
   }
 
-  // Helper function to get date string from Date object in YYYY-MM-DD format
-  function getDateString(date) {
-    const d = new Date(date)
-    // Ensure we're working with local date, not UTC
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, "0")
-    const day = String(d.getDate()).padStart(2, "0")
-    return `${year}-${month}-${day}`
+  // Helper function to get today normalized to start of day
+  function getTodayNormalized() {
+    return normalizeToCalendarDay(new Date())
   }
 
-  // Helper function to get today's ticket for a passport (if exists)
-  async function getTodaysTicket(passport) {
+  // Helper function to check if user has ticket for TODAY (calendar day)
+  async function hasTicketForToday(passport) {
     try {
-      const todayDateString = getTodayDateString()
+      const todayNormalized = getTodayNormalized()
 
-      console.log(`=== CHECKING TODAY'S TICKET ===`)
-      console.log(`Passport: ${passport}`)
-      console.log(`Today's date string: ${todayDateString}`)
+      console.log(`🔍 Checking if ${passport} has ticket for calendar day: ${todayNormalized.toISOString()}`)
 
-      // Find all tickets for this passport
-      const allTickets = await Tickets.find({ passport: passport })
-      console.log(`Found ${allTickets.length} total tickets for this passport`)
+      // Find ticket with EXACT date match (normalized to start of day)
+      const todaysTicket = await Tickets.findOne({
+        passport: passport,
+        date: todayNormalized, // Exact match for normalized date
+      }).sort({ createdAt: -1 })
 
-      // Check each ticket's date
-      for (const ticket of allTickets) {
-        const ticketDateString = getDateString(ticket.date)
-        console.log(
-          `Ticket ${ticket._id}: date=${ticketDateString}, today=${todayDateString}, match=${ticketDateString === todayDateString}`,
-        )
-
-        if (ticketDateString === todayDateString) {
-          console.log(`✅ FOUND TODAY'S TICKET:`, ticket._id)
-          return ticket
-        }
+      if (todaysTicket) {
+        console.log(`✅ FOUND TODAY'S TICKET: ${todaysTicket.ticketId} (date: ${todaysTicket.date.toISOString()})`)
+        return todaysTicket
       }
 
-      console.log(`❌ NO TICKET FOUND FOR TODAY`)
+      console.log(`❌ NO TICKET FOR TODAY (calendar day)`)
       return null
     } catch (error) {
-      console.error("Error getting today's ticket:", error)
+      console.error("Error checking today's ticket:", error)
       return null
     }
   }
 
-  // Helper function to get next daily order number (resets each day)
+  // Helper function to get next daily order number (resets each calendar day)
   async function getNextDailyOrderNumber() {
     try {
-      const todayDateString = getTodayDateString()
+      const todayNormalized = getTodayNormalized()
 
-      console.log(`=== GETTING DAILY ORDER NUMBER ===`)
-      console.log(`Today's date string: ${todayDateString}`)
+      console.log(`📊 Getting daily order number for calendar day: ${todayNormalized.toISOString()}`)
 
-      // Find all tickets for today
-      const allTickets = await Tickets.find({})
-      const todayTickets = allTickets.filter((ticket) => {
-        const ticketDateString = getDateString(ticket.date)
-        return ticketDateString === todayDateString
+      // Find all tickets with EXACT date match (normalized to start of day)
+      const todayTickets = await Tickets.find({
+        date: todayNormalized, // Exact match for normalized date
       })
 
-      console.log(`Found ${todayTickets.length} tickets for today`)
+      console.log(`Found ${todayTickets.length} tickets for today (calendar day)`)
 
       if (todayTickets.length === 0) {
         console.log("No tickets for today, returning order number 1")
@@ -524,7 +517,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // GET user by passport (for auto-fill)
+  // GET user by passport (for auto-fill) - REQUIREMENT 3
   router.get("/user/:passport", async (req, res) => {
     try {
       const user = await LibraryUsers.findOne({ passport: req.params.passport })
@@ -538,7 +531,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // POST create new ticket or return existing ticket for today
+  // POST create new ticket - MAIN LOGIC WITH PROPER CALENDAR DAY HANDLING
   router.post("/", async (req, res) => {
     try {
       const { fullname, passport } = req.body
@@ -557,12 +550,12 @@ const createTicketsRoutes = () => {
       const cleanFullname = fullname.trim()
 
       console.log(`\n🎫 TICKET REQUEST for passport: ${cleanPassport}`)
+      console.log(`📅 Current time: ${new Date().toISOString()}`)
 
-      // FIRST: Check if user has ticket for TODAY
-      const todaysTicket = await getTodaysTicket(cleanPassport)
-
+      // REQUIREMENT 5: Check if user already has ticket for TODAY (calendar day)
+      const todaysTicket = await hasTicketForToday(cleanPassport)
       if (todaysTicket) {
-        console.log(`✅ RETURNING EXISTING TICKET FOR TODAY`)
+        console.log(`🚫 USER ALREADY HAS TICKET FOR TODAY (calendar day)`)
         return res.status(200).json({
           ticketId: todaysTicket.ticketId,
           message: "Bu foydalanuvchi bugun allaqachon chipta olgan. Bugungi chipta ko'rsatilmoqda.",
@@ -571,20 +564,18 @@ const createTicketsRoutes = () => {
         })
       }
 
-      console.log(`🆕 NO TICKET FOR TODAY - CREATING NEW ONE`)
-
-      // Check if user exists in LibraryUsers
+      // REQUIREMENT 4: Check if user exists in LibraryUsers collection
       let libraryUser = await LibraryUsers.findOne({ passport: cleanPassport })
       let isUpdate = false
       let nameChanged = false
 
       if (libraryUser) {
-        // Existing user - creating ticket for new day
-        console.log(`👤 EXISTING USER: ${libraryUser.ticketId}`)
+        // REQUIREMENT 6: Existing user - same ID, new ticket for today
+        console.log(`👤 EXISTING USER: ${libraryUser.ticketId} (ID remains same)`)
         isUpdate = true
         nameChanged = libraryUser.fullname !== cleanFullname
 
-        // Update user info if name changed
+        // REQUIREMENT 3: Update user info if name changed
         if (nameChanged) {
           console.log(`📝 NAME CHANGED: "${libraryUser.fullname}" -> "${cleanFullname}"`)
           libraryUser.fullname = cleanFullname
@@ -592,7 +583,7 @@ const createTicketsRoutes = () => {
           await libraryUser.save()
         }
       } else {
-        // New user - create in LibraryUsers
+        // New user - create in LibraryUsers collection
         console.log(`🆕 NEW USER - CREATING`)
         const globalTicketNumber = await getNextGlobalTicketNumber()
         const ticketId = generateTicketId(globalTicketNumber)
@@ -609,38 +600,41 @@ const createTicketsRoutes = () => {
         console.log(`✅ NEW USER CREATED: ${libraryUser.ticketId}`)
       }
 
-      // Get daily order number for today
+      // REQUIREMENT 2: Get daily order number (resets each calendar day)
       const dailyOrderNumber = await getNextDailyOrderNumber()
 
-      // Create today's date at start of day (00:00:00) - day specific, not 24-hour
-      const today = new Date()
-      const ticketDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
+      // CRITICAL: Normalize ticket date to start of calendar day
+      const ticketDate = getTodayNormalized()
 
-      console.log(`📅 TICKET DATE (day-specific): ${getDateString(ticketDate)} 00:00:00`)
+      console.log(`📅 TICKET DATE (normalized): ${ticketDate.toISOString()}`)
       console.log(`🔢 DAILY ORDER NUMBER: ${dailyOrderNumber}`)
+      console.log(`🎫 TICKET ID (remains same): ${libraryUser.ticketId}`)
 
-      // Add to ticket history in LibraryUsers
+      // REQUIREMENT 7: Add to ticket history in LibraryUsers
       libraryUser.ticketHistory.push({
-        date: ticketDate,
+        date: ticketDate, // Normalized date
         dailyOrderNumber: dailyOrderNumber,
-        createdAt: new Date(),
+        createdAt: new Date(), // Actual timestamp
       })
       await libraryUser.save()
 
-      // Create new ticket entry
+      // Create new ticket entry in Tickets collection (ticketId is NOT unique here)
       const newTicketEntry = new Tickets({
-        ticketId: libraryUser.ticketId,
+        ticketId: libraryUser.ticketId, // Same ID for same user
         passport: cleanPassport,
         fullname: cleanFullname,
-        date: ticketDate,
+        date: ticketDate, // Normalized date (00:00:00.000)
         dailyOrderNumber: dailyOrderNumber,
         globalTicketNumber: libraryUser.globalTicketNumber,
         isUpdate: isUpdate,
         nameChanged: nameChanged,
+        // createdAt will be set automatically to actual timestamp
       })
 
       await newTicketEntry.save()
-      console.log(`✅ NEW TICKET CREATED: ${newTicketEntry._id}`)
+      console.log(`✅ NEW TICKET ENTRY CREATED: ${newTicketEntry._id}`)
+      console.log(`   - Ticket date (normalized): ${newTicketEntry.date.toISOString()}`)
+      console.log(`   - Created at (actual): ${newTicketEntry.createdAt.toISOString()}`)
 
       const message = isUpdate
         ? nameChanged
@@ -655,7 +649,7 @@ const createTicketsRoutes = () => {
         nameChanged: nameChanged,
       })
     } catch (error) {
-      console.error("Error creating ticket:", error)
+      console.error("❌ Error creating ticket:", error)
       res.status(500).json({ error: error.message })
     }
   })

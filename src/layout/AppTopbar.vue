@@ -77,7 +77,7 @@ const returnToAdmin = () => {
       
       // Force a complete page reload and redirect to experts page
       // This ensures the authentication state is fully refreshed before navigation
-      window.location.href = '/experts';
+      window.location.href = '/vakillar';
     } catch (error) {
       console.error('Error returning to admin account:', error);
     }

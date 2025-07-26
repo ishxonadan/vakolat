@@ -40,11 +40,11 @@ const onPageChange = (event) => {
 };
 
 const goToAddPage = () => {
-  router.push('/expert_add');
+  router.push('/vakil_add');
 };
 
 const editButton = (itemId) => {
-  router.push('/expert_edit/' + itemId);
+  router.push('/vakil_edit/' + itemId);
 };
 
 // Function to login as expert
