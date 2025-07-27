@@ -1,6 +1,6 @@
 <script setup>
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import authService from '@/service/auth.service';
@@ -27,7 +27,6 @@ onMounted(() => {
   animate();
 });
 
-import { onBeforeUnmount } from 'vue';
 onBeforeUnmount(() => {
   cancelAnimationFrame(animationFrameId);
 });
@@ -52,8 +51,12 @@ const login = async () => {
     const data = await response.json();
 
     if (response.ok) {
-      // Store the token using auth service
+      // Use the auth service to set the token (this will also parse and set user data)
       authService.setToken(data.token);
+
+      console.log("✅ Login successful, token set");
+      console.log("👤 User data:", authService.getUser());
+      console.log("🎭 User level:", authService.getUserLevel());
 
       // Show success toast
       toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: 'Login successful', life: 3000 });
@@ -114,4 +117,3 @@ const login = async () => {
   margin-right: 1rem;
 }
 </style>
-

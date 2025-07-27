@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken")
-const JWT_SECRET = "secret_key" // Should be in environment variables in production
+const JWT_SECRET = process.env.JWT_SECRET || "secret_key"
 
 // Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
@@ -32,9 +32,8 @@ const checkUserLevel = (requiredLevel) => {
     verifyToken(req, res, (err) => {
       if (err) return next(err)
 
-      // Get user from database to check current level
-      // This is a simplified example - in a real app, you'd query the database
-      const userLevel = req.user.level || "expert" // Default to expert if not specified
+      // Get user level from token
+      const userLevel = req.user.level || "expert"
 
       // Define level hierarchy
       const levels = {
@@ -55,5 +54,48 @@ const checkUserLevel = (requiredLevel) => {
   }
 }
 
-module.exports = { verifyToken, checkUserLevel }
+// Middleware to check specific permissions
+const checkPermissions = (requiredPermissions) => {
+  return async (req, res, next) => {
+    // Verify token first
+    verifyToken(req, res, async (err) => {
+      if (err) return next(err)
 
+      try {
+        // Superadmin (rais) has all permissions
+        if (req.user.level === "rais") {
+          return next()
+        }
+
+        // Get user permissions from database
+        const User = req.app.locals.User // Assuming User model is available
+        const user = await User.findById(req.user.id).populate("permissions")
+
+        if (!user) {
+          return res.status(404).json({ error: "User not found" })
+        }
+
+        const userPermissions = user.permissions || []
+        const userPermissionNames = userPermissions.map((p) => p.name)
+
+        // Check if user has all required permissions
+        const hasAllPermissions = requiredPermissions.every((permission) => userPermissionNames.includes(permission))
+
+        if (hasAllPermissions) {
+          next()
+        } else {
+          res.status(403).json({
+            error: "Insufficient permissions",
+            required: requiredPermissions,
+            userHas: userPermissionNames,
+          })
+        }
+      } catch (error) {
+        console.error("Error checking permissions:", error)
+        res.status(500).json({ error: "Error checking permissions" })
+      }
+    })
+  }
+}
+
+module.exports = { verifyToken, checkUserLevel, checkPermissions }
