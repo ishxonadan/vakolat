@@ -47,13 +47,36 @@ const editButton = (itemId) => {
   router.push('/vakil_edit/' + itemId);
 };
 
+// Function to toggle user active status
+const toggleUserStatus = async (user) => {
+  try {
+    const newStatus = !user.isActive;
+    await apiService.put(`/experts/${user._id}/status`, { 
+      isActive: newStatus 
+    });
+    
+    // Update local data
+    user.isActive = newStatus;
+    
+    // Show success message
+    const statusText = newStatus ? 'faollashtirildi' : 'faolsizlashtirildi';
+    // You can add toast notification here if needed
+    console.log(`Foydalanuvchi ${statusText}`);
+    
+    // Refresh data
+    fetchData(currentPage.value);
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+  }
+};
+
 // Function to login as expert
 const loginAsExpert = async (expert) => {
   try {
     console.log('Logging in as expert:', expert);
     
     // Call API to get token for expert
-    const response = await apiService.post('/api/admin/login-as-expert', { 
+    const response = await apiService.post('/admin/login-as-expert', { 
       expertId: expert._id 
     });
     
@@ -93,40 +116,69 @@ const loginAsExpert = async (expert) => {
       </button>
     </div>
     <div v-if="isLoading" class="flex justify-center items-center p-4">
-      <p>Ma'lumotlar yuklanvotti...</p>
+      <p>Ma'lumotlar yuklanmoqda...</p>
     </div>
     <div v-if="error" class="flex justify-center items-center p-4">
       <p>{{ error }}</p>
     </div>
     <DataTable v-if="!isLoading && !error" :value="products" :rows="100" :paginator="false" :page="currentPage - 1" responsiveLayout="scroll">
-      <Column field="nickname" header="Login" :sortable="true" style="width: 20%">
+      <Column field="nickname" header="Login" :sortable="true" style="width: 15%">
         <template #body="slotProps">
-          <span :class="{'text-red-600': slotProps.data.is_deleted === 1}">
+          <span :class="{'text-red-600': !slotProps.data.isActive}">
             {{ slotProps.data.nickname }}
           </span>
         </template>
       </Column>
-      <Column field="firstname" header="Ismi" :sortable="true" style="width: 20%"></Column>
-      <Column field="lastname" header="Sharifi" :sortable="true" style="width: 20%"></Column>
-      <Column field="position" header="Lavozimi" :sortable="true" style="width: 20%"></Column>
-      <Column style="width: 10%" header="O'zgartirish">
+      <Column field="firstname" header="Ismi" :sortable="true" style="width: 15%"></Column>
+      <Column field="lastname" header="Sharifi" :sortable="true" style="width: 15%"></Column>
+      <Column field="position" header="Lavozimi" :sortable="true" style="width: 15%"></Column>
+      <Column field="permissionGroup" header="Huquq guruhi" style="width: 15%">
         <template #body="slotProps">
-          <Button icon="pi pi-pencil" type="button" class="p-button-text" @click="editButton(slotProps.data._id)"></Button>
+          <Tag v-if="slotProps.data.permissionGroup" 
+               :value="slotProps.data.permissionGroup.name" 
+               severity="info" />
+          <span v-else class="text-gray-400">Belgilanmagan</span>
+        </template>
+      </Column>
+      <Column field="isActive" header="Holat" style="width: 10%">
+        <template #body="slotProps">
+          <Tag :value="slotProps.data.isActive !== false ? 'Faol' : 'Nofaol'" 
+               :severity="slotProps.data.isActive !== false ? 'success' : 'danger'" />
+        </template>
+      </Column>
+      <Column style="width: 10%" header="Amallar">
+        <template #body="slotProps">
+          <div class="flex gap-1">
+            <Button 
+              icon="pi pi-pencil" 
+              type="button" 
+              class="p-button-text p-button-sm" 
+              @click="editButton(slotProps.data._id)"
+              v-tooltip="'Tahrirlash'"
+            />
+            <Button 
+              :icon="slotProps.data.isActive !== false ? 'pi pi-eye-slash' : 'pi pi-eye'" 
+              type="button" 
+              :class="slotProps.data.isActive !== false ? 'p-button-text p-button-warning p-button-sm' : 'p-button-text p-button-success p-button-sm'" 
+              @click="toggleUserStatus(slotProps.data)"
+              :title="slotProps.data.isActive !== false ? 'Faolsizlashtirish' : 'Faollashtirish'"
+            />
+          </div>
         </template>
       </Column>
       <!-- Add Login As column for superadmins -->
-      <Column v-if="isSuperAdmin" style="width: 10%" header="Kirish">
+      <Column v-if="isSuperAdmin" style="width: 5%" header="Kirish">
         <template #body="slotProps">
           <Button 
             icon="pi pi-user" 
             type="button" 
-            class="p-button-text p-button-success" 
+            class="p-button-text p-button-success p-button-sm" 
             @click="loginAsExpert(slotProps.data)"
             title="Ekspert sifatida kirish"
-          ></Button>
+            :disabled="slotProps.data.isActive === false"
+          />
         </template>
       </Column>
     </DataTable>
   </div>
 </template>
-

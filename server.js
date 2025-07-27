@@ -66,6 +66,8 @@ const userSchema = new mongoose.Schema({
   position: { type: String }, // Made optional
   level: { type: String, required: true, default: "expert" },
   language: { type: String, required: true, default: "uz" },
+  permissionGroup: { type: mongoose.Schema.Types.ObjectId, ref: "PermissionGroup" },
+  isActive: { type: Boolean, default: true },
 })
 
 // Updated contestant schema with library integration fields
@@ -400,6 +402,7 @@ const contestantRoutes = require("./routes/contestants.routes")(vakolat)
 const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
 const surveyRoutes = require("./routes/survey.routes")(vakolat)
+const permissionsRoutes = require("./routes/permissions.routes")(vakolat, JWT_SECRET)
 
 // Create tickets routes with CORRECTED calendar day logic
 const createTicketsRoutes = () => {
@@ -714,6 +717,7 @@ app.use("/api/experts", expertRoutes)
 app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
+app.use("/api/admin", permissionsRoutes)
 app.use("/survey", surveyRoutes)
 
 // Register tickets routes

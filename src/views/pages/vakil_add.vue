@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 import apiService from '@/service/api.service';
@@ -12,6 +12,19 @@ const lastname = ref('');
 const position = ref('');
 const password = ref('');
 const confirmPassword = ref('');
+const selectedPermissionGroup = ref(null);
+const permissionGroups = ref([]);
+const isActive = ref(true);
+
+// Load permission groups on mount
+onMounted(async () => {
+  try {
+    const data = await apiService.get('/admin/permission-groups');
+    permissionGroups.value = data.filter(group => group.isActive);
+  } catch (error) {
+    console.error('Error loading permission groups:', error);
+  }
+});
 
 async function saveData() {
   // Validate passwords match
@@ -32,8 +45,10 @@ async function saveData() {
     lastname: lastname.value,
     position: position.value,
     password: password.value,
-    level: 'vakil',
-    language: 'uz'
+    level: 'expert',
+    language: 'uz',
+    permissionGroup: selectedPermissionGroup.value,
+    isActive: isActive.value
   };
   
   try {
@@ -67,7 +82,7 @@ async function saveData() {
 
 <template>
   <div class="p-6 bg-white rounded-lg shadow-md mx-auto">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Ekspert qo'shish</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Vakil qo'shish</h2>
     
     <div class="card">
       <!-- Nickname row -->
@@ -122,6 +137,21 @@ async function saveData() {
         </div>
       </div>
 
+      <!-- Permission Group row -->
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="w-full">
+          <label for="permissionGroup" class="block text-sm font-medium text-gray-700 mb-1">Huquq guruhi</label>
+          <Dropdown 
+            v-model="selectedPermissionGroup" 
+            :options="permissionGroups"
+            optionLabel="name"
+            optionValue="_id"
+            placeholder="Huquq guruhini tanlang"
+            class="w-full"
+          />
+        </div>
+      </div>
+
       <!-- Password row -->
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="md:w-1/2">
@@ -144,6 +174,16 @@ async function saveData() {
             class="w-full p-3" 
           />
         </div>
+      </div>
+
+      <!-- Active status -->
+      <div class="flex items-center mb-4">
+        <Checkbox 
+          v-model="isActive" 
+          id="isActive" 
+          binary
+        />
+        <label for="isActive" class="ml-2">Faol</label>
       </div>
 
       <!-- Submit button -->
@@ -171,4 +211,3 @@ async function saveData() {
   border-color: #4338ca;
 }
 </style>
-

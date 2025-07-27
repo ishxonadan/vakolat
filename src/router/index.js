@@ -45,31 +45,25 @@ const router = createRouter({
           path: "/vakillar",
           name: "vakillar",
           component: () => import("@/views/pages/vakillar.vue"),
-          // meta: { requiredPermissions: ["manage_users"] }, // This ensures the entire layout requires auth
+          meta: { requiredLevel: "admin" },
         },
         {
           path: "/vakil_add",
           name: "vakil_add",
           component: () => import("@/views/pages/vakil_add.vue"),
-          // meta: { requiredPermissions: ["manage_users"] }, // This ensures the entire layout requires auth
+          meta: { requiredLevel: "admin" },
         },
         {
           path: "/vakil_edit/:id",
           name: "vakil_edit",
           component: () => import("@/views/pages/vakil_edit.vue"),
-          // meta: { requiredPermissions: ["manage_users"] }, // This ensures the entire layout requires auth
+          meta: { requiredLevel: "admin" },
         },
         // Permissions management routes
         {
-          path: "/permissions",
-          name: "permissions",
-          component: () => import("@/views/pages/permissions.vue"),
-          meta: { requiredLevel: "rais" },
-        },
-        {
-          path: "/user-permissions",
-          name: "user-permissions",
-          component: () => import("@/views/pages/user-permissions.vue"),
+          path: "/huquqlar",
+          name: "huquqlar",
+          component: () => import("@/views/pages/huquqlar.vue"),
           meta: { requiredLevel: "rais" },
         },
         // Dissertation routes
@@ -77,19 +71,16 @@ const router = createRouter({
           path: "/diss",
           name: "diss",
           component: () => import("@/views/pages/diss.vue"),
-          // meta: { requiredPermissions: ["view_dissertations"] }, // This ensures the entire layout requires auth
         },
         {
           path: "/diss_add",
           name: "diss_add",
           component: () => import("@/views/pages/diss_add.vue"),
-          // meta: { requiredPermissions: ["manage_dissertations"] }, // This ensures the entire layout requires auth
         },
         {
           path: "/diss_edit/:uuid",
           name: "diss_edit",
           component: () => import("@/views/pages/diss_edit.vue"),
-          // meta: { requiredPermissions: ["manage_dissertations"] }, // This ensures the entire layout requires auth
         },
         // Rating routes
         {

@@ -13,23 +13,33 @@ const lastname = ref('');
 const position = ref('');
 const password = ref('');
 const confirmPassword = ref('');
+const selectedPermissionGroup = ref(null);
+const permissionGroups = ref([]);
+const isActive = ref(true);
 const loading = ref(true);
 const id = route.params.id;
 
-// Fetch expert data on mount
+// Fetch expert data and permission groups on mount
 onMounted(async () => {
   try {
     loading.value = true;
+    
+    // Load permission groups
+    const groupsData = await apiService.get('/admin/permission-groups');
+    permissionGroups.value = groupsData.filter(group => group.isActive);
+    
+    // Load expert data
     console.log('Fetching expert with ID:', id);
-    // Fix the API endpoint path - change from /admin/experts/ to /experts/
-    const data = await apiService.get(`/experts/${id}`);
+    const data = await apiService.get(`/api/experts/${id}`);
     console.log('Expert data received:', data);
     
     nickname.value = data.nickname;
     firstname.value = data.firstname;
     lastname.value = data.lastname;
     position.value = data.position || '';
-    // Don't set password fields - they should remain empty
+    selectedPermissionGroup.value = data.permissionGroup?._id || data.permissionGroup || null;
+    isActive.value = data.isActive !== false; // Default to true if not set
+    
   } catch (error) {
     console.error('Error fetching expert:', error);
     toast.add({ 
@@ -62,7 +72,9 @@ async function saveData() {
     lastname: lastname.value,
     position: position.value,
     level: 'expert',
-    language: 'uz'
+    language: 'uz',
+    permissionGroup: selectedPermissionGroup.value,
+    isActive: isActive.value
   };
   
   // Only include password if it's provided
@@ -72,8 +84,7 @@ async function saveData() {
   
   try {
     console.log('Updating expert with ID:', id, 'Data:', data);
-    // Fix the API endpoint path - change from /admin/experts/ to /experts/
-    await apiService.put(`/experts/${id}`, data);
+    await apiService.put(`/api/experts/${id}`, data);
     
     toast.add({ 
       severity: 'success', 
@@ -102,13 +113,13 @@ async function saveData() {
 }
 
 function cancelEdit() {
-  router.push('/experts');
+  router.push('/vakillar');
 }
 </script>
 
 <template>
   <div class="p-6 bg-white rounded-lg shadow-md mx-auto">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Ekspertni tahrirlash</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Vakilni tahrirlash</h2>
     
     <div v-if="loading" class="flex justify-center items-center py-8">
       <ProgressSpinner />
@@ -167,6 +178,21 @@ function cancelEdit() {
         </div>
       </div>
 
+      <!-- Permission Group row -->
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="w-full">
+          <label for="permissionGroup" class="block text-sm font-medium text-gray-700 mb-1">Huquq guruhi</label>
+          <Dropdown 
+            v-model="selectedPermissionGroup" 
+            :options="permissionGroups"
+            optionLabel="name"
+            optionValue="_id"
+            placeholder="Huquq guruhini tanlang"
+            class="w-full"
+          />
+        </div>
+      </div>
+
       <!-- Password row -->
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="md:w-1/2">
@@ -191,6 +217,16 @@ function cancelEdit() {
             placeholder="Bo'sh qoldirilsa o'zgartirilmaydi"
           />
         </div>
+      </div>
+
+      <!-- Active status -->
+      <div class="flex items-center mb-4">
+        <Checkbox 
+          v-model="isActive" 
+          id="isActive" 
+          binary
+        />
+        <label for="isActive" class="ml-2">Faol</label>
       </div>
 
       <!-- Submit button -->
@@ -234,4 +270,3 @@ function cancelEdit() {
   background-color: rgba(79, 70, 229, 0.04);
 }
 </style>
-

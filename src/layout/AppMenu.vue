@@ -4,11 +4,11 @@ import { useRouter, useRoute } from 'vue-router';
 import AppMenuItem from './AppMenuItem.vue';
 import authService from '@/service/auth.service';
 
-// Hardcoded variable to control manual correction menu visibility
-const SHOW_MANUAL_CORRECTION = true; // Set to false to hide the manual correction menu
-
 const router = useRouter();
 const route = useRoute();
+
+// Hardcoded variable to control manual correction menu visibility
+const SHOW_MANUAL_CORRECTION = true; // Set to false to hide the manual correction menu
 
 // Define menu items with required permission levels
 const menuItems = [
@@ -37,7 +37,11 @@ const menuItems = [
         label: 'Dissertatsiya',
         icon: 'pi pi-fw pi-book',
         items: [
-          { label: 'Hujjatlar', icon: 'pi pi-fw pi-chart-line', to: '/diss' },
+          { 
+            label: 'Hujjatlar', 
+            icon: 'pi pi-fw pi-chart-line', 
+            to: '/diss' 
+          },
         ]
       },
       {
@@ -46,36 +50,21 @@ const menuItems = [
         items: [
           {
             label: "Vakillar",
-            icon: 'pi pi-fw pi-user',
+            icon: 'pi pi-fw pi-users',
             to: '/vakillar',
             requiredLevel: 'admin'
           },
+          {
+            label: "Huquqlar",
+            icon: 'pi pi-fw pi-key',
+            to: '/huquqlar',
+            requiredLevel: 'rais'
+          },
         ]
       },
-
-
-
     ]
   },
-  // Add new manual correction category with different URLs
-  // ...(SHOW_MANUAL_CORRECTION ? [{
-  //   label: "Qo'lda to'g'rilash",
-  //   items: [
-  //     {
-  //       label: "User baholarini to'g'rilash",
-  //       icon: 'pi pi-fw pi-users',
-  //       to: '/user-correction', // Different URL
-  //       requiredLevel: 'rais'
-  //     },
-  //     {
-  //       label: "Avtomatik bahoni to'g'rilash",
-  //       icon: 'pi pi-fw pi-cog',
-  //       to: '/auto-correction', // Different URL
-  //       requiredLevel: 'rais'
-  //     },
-  //   ]
 
-  // }] : [])
 ];
 
 // Filter menu items based on user permissions
@@ -83,19 +72,29 @@ const filteredModel = computed(() => {
   return menuItems.map(section => {
     // Filter items in each section based on permissions
     const filteredItems = section.items.filter(item => {
+      // If item has sub-items, filter those too
+      if (item.items) {
+        const filteredSubItems = item.items.filter(subItem => {
+          if (!subItem.requiredLevel) return true;
+          return authService.hasAccess(subItem.requiredLevel);
+        });
+        // Only show parent item if it has visible sub-items
+        item.items = filteredSubItems;
+        return filteredSubItems.length > 0;
+      }
+      
       // If no required level, everyone can access
       if (!item.requiredLevel) return true;
-
       // Check if user has required level
       return authService.hasAccess(item.requiredLevel);
     });
-
+    
     // Return section with filtered items
     return {
       ...section,
       items: filteredItems
     };
-  });
+  }).filter(section => section.items.length > 0); // Remove empty sections
 });
 
 // Add logout section
