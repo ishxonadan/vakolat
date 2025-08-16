@@ -202,6 +202,13 @@ const router = createRouter({
         },
       ],
     },
+    // TV Display route - NO AUTHENTICATION REQUIRED
+    {
+      path: "/tv",
+      name: "tv",
+      component: () => import("@/views/pages/tv.vue"),
+      meta: { requiresAuth: false }, // Explicitly set to false
+    },
     // Auth routes (outside of AppLayout) - explicitly set requiresAuth: false
     {
       path: "/auth/login",

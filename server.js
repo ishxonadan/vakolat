@@ -34,7 +34,7 @@ app.use(express.json())
 const { v4: uuidv4 } = require("uuid")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
-const { verifyToken, checkUserLevel } = require("./src/middleware/auth.middleware")
+const { verifyToken, checkUserLevel, checkPermissions } = require("./src/middleware/auth.middleware")
 require("dotenv").config()
 
 // JWT Secret Key - should be in environment variables in production
@@ -57,6 +57,26 @@ const nazorat = mongoose.createConnection(process.env.DB_NAZORAT, {
   useUnifiedTopology: true,
 })
 nazorat.on("connected", () => console.log("Connected to nazorat"))
+
+// DEFINE ALL SCHEMAS FIRST - BEFORE CREATING MODELS
+// Permission schema
+const permissionSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  description: { type: String, required: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+})
+
+// Permission Group schema
+const permissionGroupSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  description: { type: String, required: true },
+  permissions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Permission" }],
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+})
 
 const userSchema = new mongoose.Schema({
   nickname: { type: String, required: true, unique: true },
@@ -179,6 +199,7 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
+// CREATE ALL MODELS AFTER SCHEMAS ARE DEFINED - ONLY ONCE
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
 
@@ -195,7 +216,9 @@ const surveyVoteModel = require("./src/model/survey-vote.model")
 // Import the plausible cache model
 const plausibleCacheModel = require("./src/model/plausible-cache.model")
 
-// Create models
+// Create models - DEFINE THESE ONLY ONCE IN THE ENTIRE APPLICATION
+const Permission = vakolat.model("Permission", permissionSchema)
+const PermissionGroup = vakolat.model("PermissionGroup", permissionGroupSchema)
 const Contestant = vakolat.model("Websites", contestantSchema)
 const User = vakolat.model("User", userSchema)
 const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
@@ -210,6 +233,11 @@ const SurveyVote = vakolat.model("SurveyVote", surveyVoteModel.surveyVoteSchema)
 
 // Register the PlausibleCache model
 const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plausibleCacheSchema)
+
+// Make models available to middleware
+app.locals.User = User
+app.locals.Permission = Permission
+app.locals.PermissionGroup = PermissionGroup
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -269,6 +297,11 @@ app.get("/api/admin/fix-indexes", async (req, res) => {
     console.error("❌ Error fixing indexes:", error)
     res.status(500).json({ error: error.message })
   }
+})
+
+// Protected route example with permission check
+app.get("/api/admin/test-permissions", [verifyToken, checkPermissions(["manage_users"])], (req, res) => {
+  res.json({ message: "You have manage_users permission!" })
 })
 
 app.get("/diss/cats", async (req, res) => {
@@ -394,15 +427,6 @@ app.post("/diss_save", async (req, res) => {
     res.status(500).json({ error: "Failed to save data: " + error.message })
   }
 })
-
-// Import route modules AFTER models are created
-const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
-const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
-const contestantRoutes = require("./routes/contestants.routes")(vakolat)
-const ratingRoutes = require("./routes/ratings.routes")(vakolat)
-const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
-const surveyRoutes = require("./routes/survey.routes")(vakolat)
-const permissionsRoutes = require("./routes/permissions.routes")(vakolat, JWT_SECRET)
 
 // Create tickets routes with CORRECTED calendar day logic
 const createTicketsRoutes = () => {
@@ -711,14 +735,31 @@ const createTicketsRoutes = () => {
   return router
 }
 
+// Import route modules AFTER models are created - PASS MODELS TO ROUTES
+const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
+const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
+const contestantRoutes = require("./routes/contestants.routes")(vakolat)
+const ratingRoutes = require("./routes/ratings.routes")(vakolat)
+const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
+const surveyRoutes = require("./routes/survey.routes")(vakolat)
+
+// PASS THE ALREADY CREATED MODELS TO PERMISSIONS ROUTES
+const permissionsRoutes = require("./routes/permissions.routes")(Permission, PermissionGroup, User, JWT_SECRET)
+
+// CREATE TV ROUTES - NO AUTHENTICATION REQUIRED
+const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
+
 // Register routes
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
 app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
-app.use("/api/admin", permissionsRoutes)
+app.use("/api/admin", permissionsRoutes) // This will now use passed models
 app.use("/survey", surveyRoutes)
+
+// Register TV routes - NO AUTHENTICATION
+app.use("/api/tv", tvRoutes)
 
 // Register tickets routes
 app.use("/api/tickets", createTicketsRoutes())
@@ -822,4 +863,6 @@ module.exports = {
   PlausibleCache,
   User,
   Contestant,
+  Permission,
+  PermissionGroup,
 }
