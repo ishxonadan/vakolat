@@ -749,6 +749,9 @@ const permissionsRoutes = require("./routes/permissions.routes")(Permission, Per
 // CREATE TV ROUTES - NO AUTHENTICATION REQUIRED
 const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 
+// CREATE VIDEO ROUTES - NO AUTHENTICATION REQUIRED
+const videoRoutes = require("./routes/videos.routes")()
+
 // Register routes
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
@@ -761,8 +764,44 @@ app.use("/survey", surveyRoutes)
 // Register TV routes - NO AUTHENTICATION
 app.use("/api/tv", tvRoutes)
 
+// Register VIDEO routes - NO AUTHENTICATION
+app.use("/api/videos", videoRoutes)
+
 // Register tickets routes
 app.use("/api/tickets", createTicketsRoutes())
+
+// Serve video files from /rolik folder
+app.use(
+  "/rolik",
+  express.static(path.join(__dirname, "public/rolik"), {
+    setHeaders: (res, path) => {
+      // Set proper MIME types for video files
+      if (path.endsWith(".mp4")) {
+        res.setHeader("Content-Type", "video/mp4")
+      } else if (path.endsWith(".avi")) {
+        res.setHeader("Content-Type", "video/x-msvideo")
+      } else if (path.endsWith(".mov")) {
+        res.setHeader("Content-Type", "video/quicktime")
+      } else if (path.endsWith(".mkv")) {
+        res.setHeader("Content-Type", "video/x-matroska")
+      } else if (path.endsWith(".webm")) {
+        res.setHeader("Content-Type", "video/webm")
+      } else if (path.endsWith(".m4v")) {
+        res.setHeader("Content-Type", "video/x-m4v")
+      } else if (path.endsWith(".3gp")) {
+        res.setHeader("Content-Type", "video/3gpp")
+      } else if (path.endsWith(".flv")) {
+        res.setHeader("Content-Type", "video/x-flv")
+      }
+
+      // Enable range requests for video streaming
+      res.setHeader("Accept-Ranges", "bytes")
+
+      // Cache videos for better performance
+      res.setHeader("Cache-Control", "public, max-age=3600")
+    },
+  }),
+)
 
 // Public ticket check API (no auth required, but secret password and payload must be provided)
 app.post("/api/public/check-ticket", async (req, res) => {
@@ -831,8 +870,8 @@ app.post("/api/public/check-ticket", async (req, res) => {
     })
   }
 })
-//process.env.npm_lifecycle_event === "start"
-if (true) {
+
+if (process.env.npm_lifecycle_event === "start") {
   console.log("PRODUCTION")
   const distPath = path.join(__dirname, "dist")
   app.use(express.static(distPath))
@@ -840,15 +879,14 @@ if (true) {
   app.get("*", (req, res) => {
     res.sendFile(path.join(distPath, "index.html"))
   })
+} else {
+  // Use proxy for development
+  console.log("LOCAL")
+  app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
 }
-//  else {
-//   // Use proxy for development
-//   console.log("LOCAL")
-//   app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
-// }
 
-app.listen(7070, () => {
-  console.log("Server is running on \x1b[34mhttp://localhost:7070\x1b[0m")
+app.listen(7777, () => {
+  console.log("Server is running on \x1b[34mhttp://localhost:7777\x1b[0m")
 })
 
 // Export models for use in other files

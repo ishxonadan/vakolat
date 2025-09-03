@@ -44,7 +44,7 @@
             <!-- Events Content -->
             <div v-else-if="events.length > 0" class="events-content">
               <div v-for="event in events" :key="event.id" class="event-item">
-                <span class="event-time" :class="{ 'time-16': event.time === '16:00', 'time-17': event.time === '17:00' }">{{ event.time }}</span>
+                <span class="event-time">{{ event.time }}</span>
                 <span class="event-separator">—</span>
                 <span class="event-description">{{ event.description }}</span>
               </div>
@@ -58,24 +58,72 @@
         </div>
       </div>
 
-      <!-- Right Panel - YouTube Video -->
+      <!-- Right Panel - Local Video Player -->
       <div class="right-panel">
-        <div class="video-container">
-          <iframe
-            ref="youtubePlayer"
+        <div 
+          class="video-container" 
+          @mousemove="onMouseMove"
+          @mouseleave="onMouseLeave"
+        >
+          <!-- Video Loading State -->
+          <div v-if="videoLoading" class="video-loading-state">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Videolar yuklanmoqda...</div>
+          </div>
+          
+          <!-- Video Player -->
+          <video
+            v-else-if="currentVideoUrl"
+            ref="videoPlayer"
             :src="currentVideoUrl"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-            @load="onVideoLoad"
-          ></iframe>
-          <!-- Video Controls Overlay -->
-          <div class="video-controls" v-if="videoIds.length > 1">
-            <div class="video-info">
-              <span class="video-counter">{{ currentVideoIndex + 1 }} / {{ videoIds.length }}</span>
-              <button @click="nextVideo" class="next-video-btn" title="Next Video">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            autoplay
+            preload="auto"
+            @ended="onVideoEnded"
+            @loadstart="onVideoLoadStart"
+            @canplay="onVideoCanPlay"
+            @loadedmetadata="onVideoLoadedMetadata"
+            @error="onVideoError"
+            class="video-element"
+          ></video>
+          
+          <!-- No Videos State -->
+          <div v-else class="no-videos-state">
+            <div class="no-videos-icon">🎬</div>
+            <div class="no-videos-text">Videolar topilmadi</div>
+            <div class="no-videos-subtitle">/rolik/natlib va /rolik/klip papkalarini tekshiring</div>
+          </div>
+          
+          <!-- Video Controls Only - NO VIDEO INFO -->
+          <div 
+            v-if="currentVideoUrl && !videoLoading" 
+            class="video-controls-overlay"
+            :class="{ 'controls-visible': showControls }"
+          >
+            <div class="video-controls">
+              <button @click="previousVideo" class="control-btn" title="Oldingi video">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15 18L9 12L15 6V18Z"/>
+                </svg>
+              </button>
+              <button @click="togglePlayPause" class="control-btn" :title="isPlaying ? 'To\'xtatish' : 'Boshlash'">
+                <svg v-if="isPlaying" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 4H10V20H6V4ZM14 4H18V20H14V4Z"/>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5V19L19 12L8 5Z"/>
+                </svg>
+              </button>
+              <button @click="nextVideo" class="control-btn" title="Keyingi video">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 18L15 12L9 6V18Z"/>
+                </svg>
+              </button>
+              <button @click="toggleMute" class="control-btn" :title="isMuted ? 'Ovozni yoqish' : 'Ovozni o\'chirish'">
+                <svg v-if="isMuted" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M16.5 12C16.5 10.23 15.5 8.71 14 7.97V16.02C15.5 15.29 16.5 13.77 16.5 12ZM19 12C19 15.53 16.39 18.35 13 18.92V20.92C17.27 20.33 20.5 16.84 20.5 12.5C20.5 8.16 17.27 4.67 13 4.08V6.08C16.39 6.65 19 9.47 19 12ZM4.27 3L3 4.27L7.73 9H3V15H7L12 20V13.27L16.25 17.52C15.58 18.04 14.83 18.46 14 18.7V20.7C15.38 20.36 16.63 19.65 17.68 18.68L19.73 20.73L21 19.46L12 10.46L4.27 3ZM12 4L9.91 6.09L12 8.18V4Z"/>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 9V15H7L12 20V4L7 9H3ZM16.5 12C16.5 10.23 15.5 8.71 14 7.97V16.02C15.5 15.29 16.5 13.77 16.5 12ZM14 3.23V5.29C16.89 6.15 19 8.83 19 12C19 15.17 16.89 17.85 14 18.71V20.77C18.01 19.86 21 16.28 21 12C21 7.72 18.01 4.14 14 3.23Z"/>
                 </svg>
               </button>
             </div>
@@ -120,7 +168,31 @@ const currentTickerIndex = ref(0);
 const timeHours = ref('');
 const timeMinutes = ref('');
 const showColon = ref(true);
+
+// Video player state
+const videoLoading = ref(true);
+const currentVideoUrl = ref('');
 const currentVideoIndex = ref(0);
+const isPlaying = ref(false);
+const isMuted = ref(false); // Start unmuted since Chrome allows it
+const videoPlayer = ref(null);
+const showControls = ref(true);
+
+// Video collections
+const natlibVideos = ref([]);
+const klipVideos = ref([]);
+const currentPlaylist = ref([]);
+const playlistType = ref('mixed'); // 'natlib', 'klip', or 'mixed'
+
+// Natlib specific state (can repeat)
+const natlibCurrentIndex = ref(0);
+
+// Klip specific state (no repeat until end)
+const klipPlaylist = ref([]);
+const klipCurrentIndex = ref(0);
+
+// Control visibility timer
+let controlsHideTimer = null;
 
 // Current ticker text
 const currentTickerText = computed(() => {
@@ -132,12 +204,44 @@ const hasMinimalEvents = computed(() => {
   return !eventsLoading.value && events.value.length <= 2;
 });
 
-// YouTube playlist video IDs from your playlist
-const videoIds = [
-  'gzlHucbD76U',
-  'Fi0BhHG0R8M',
+// Total videos count
+const totalVideos = computed(() => {
+  return natlibVideos.value.length + klipVideos.value.length;
+});
 
-];
+// Timer references
+let timeInterval = null;
+let colonBlinkInterval = null;
+let statsInterval = null;
+let eventsInterval = null;
+let tickerInterval = null;
+
+// Controls visibility management
+const showControlsTemporarily = () => {
+  showControls.value = true;
+  
+  // Clear existing timer
+  if (controlsHideTimer) {
+    clearTimeout(controlsHideTimer);
+  }
+  
+  // Hide controls after 3 seconds
+  controlsHideTimer = setTimeout(() => {
+    showControls.value = false;
+  }, 3000);
+};
+
+const onMouseMove = () => {
+  showControlsTemporarily();
+};
+
+const onMouseLeave = () => {
+  // Hide controls immediately when mouse leaves
+  if (controlsHideTimer) {
+    clearTimeout(controlsHideTimer);
+  }
+  showControls.value = false;
+};
 
 // Shuffle array function
 const shuffleArray = (array) => {
@@ -149,39 +253,200 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// Shuffled video IDs
-const shuffledVideoIds = ref(shuffleArray(videoIds));
+// Fetch video list from server
+const fetchVideoList = async () => {
+  try {
+    videoLoading.value = true;
+    console.log('🎬 Fetching video list from /rolik folder...');
+    
+    const response = await fetch('/api/videos/list');
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Video data received:', data);
+      
+      natlibVideos.value = data.natlib || [];
+      klipVideos.value = data.klip || [];
+      
+      console.log(`📁 Natlib videos: ${natlibVideos.value.length}`);
+      console.log(`📁 Klip videos: ${klipVideos.value.length}`);
+      
+      // Initialize playlists
+      initializePlaylists();
+      
+      // Start playing first video
+      if (natlibVideos.value.length > 0 || klipVideos.value.length > 0) {
+        playNextVideo();
+      }
+    } else {
+      console.error('❌ Failed to fetch video list:', response.status);
+    }
+  } catch (error) {
+    console.error('❌ Error fetching video list:', error);
+  } finally {
+    videoLoading.value = false;
+  }
+};
 
-// YouTube URL with PROPER autoplay settings
-const currentVideoUrl = computed(() => {
-  const videoId = shuffledVideoIds.value[currentVideoIndex.value];
-  const timestamp = Date.now();
-  return `https://www.youtube.com/embed/${videoId}?` +
-    'autoplay=1&' +           // Force autoplay
-    'mute=0&' +               // UNMUTED for automatic audio
-    'controls=1&' +           // Show controls for user interaction
-    'rel=0&' +                // No related videos
-    'modestbranding=1&' +     // Remove YouTube logo
-    'showinfo=0&' +           // Hide video info
-    'fs=1&' +                 // Allow fullscreen
-    'disablekb=0&' +          // Allow keyboard
-    'iv_load_policy=3&' +     // Hide annotations
-    'cc_load_policy=0&' +     // Hide captions
-    'playsinline=1&' +        // Play inline
-    'loop=0&' +               // Don't loop individual videos
-    'start=0&' +              // Start from beginning
-    'enablejsapi=1&' +        // Enable JS API
-    'origin=' + encodeURIComponent(window.location.origin) + '&' +
-    `t=${timestamp}`;         // Force refresh
-});
+// Initialize playlists with proper logic
+const initializePlaylists = () => {
+  // Initialize klip playlist (shuffled, no repeat until end)
+  if (klipVideos.value.length > 0) {
+    klipPlaylist.value = shuffleArray(klipVideos.value);
+    klipCurrentIndex.value = 0;
+    console.log('🔀 Klip playlist shuffled:', klipPlaylist.value.length, 'videos');
+  }
+  
+  // Natlib videos can repeat in order
+  natlibCurrentIndex.value = 0;
+  
+  console.log('🎬 Playlists initialized');
+};
 
-// Timer references
-let timeInterval = null;
-let colonBlinkInterval = null;
-let statsInterval = null;
-let eventsInterval = null;
-let tickerInterval = null;
-let videoInterval = null;
+// Get next video based on logic
+const getNextVideo = () => {
+  const totalNatlib = natlibVideos.value.length;
+  const totalKlip = klipVideos.value.length;
+  
+  if (totalNatlib === 0 && totalKlip === 0) {
+    return null;
+  }
+  
+  // Strategy: Alternate between natlib and klip, but handle different repeat logic
+  const shouldPlayNatlib = Math.random() < 0.5; // 50/50 chance
+  
+  if (shouldPlayNatlib && totalNatlib > 0) {
+    // Play natlib video (can repeat in order)
+    const video = natlibVideos.value[natlibCurrentIndex.value];
+    natlibCurrentIndex.value = (natlibCurrentIndex.value + 1) % totalNatlib;
+    console.log(`🎬 Playing Natlib video ${natlibCurrentIndex.value}/${totalNatlib}: ${video}`);
+    return `/rolik/natlib/${video}`;
+  } else if (totalKlip > 0) {
+    // Play klip video (no repeat until end)
+    if (klipCurrentIndex.value >= klipPlaylist.value.length) {
+      // Reshuffle when we reach the end
+      console.log('🔀 Klip playlist finished, reshuffling...');
+      klipPlaylist.value = shuffleArray(klipVideos.value);
+      klipCurrentIndex.value = 0;
+    }
+    
+    const video = klipPlaylist.value[klipCurrentIndex.value];
+    klipCurrentIndex.value++;
+    console.log(`🎬 Playing Klip video ${klipCurrentIndex.value}/${klipPlaylist.value.length}: ${video}`);
+    return `/rolik/klip/${video}`;
+  } else if (totalNatlib > 0) {
+    // Fallback to natlib if klip is empty
+    const video = natlibVideos.value[natlibCurrentIndex.value];
+    natlibCurrentIndex.value = (natlibCurrentIndex.value + 1) % totalNatlib;
+    return `/rolik/natlib/${video}`;
+  }
+  
+  return null;
+};
+
+// Play next video
+const playNextVideo = () => {
+  const nextVideoUrl = getNextVideo();
+  if (nextVideoUrl) {
+    currentVideoUrl.value = nextVideoUrl;
+    currentVideoIndex.value = (currentVideoIndex.value + 1) % totalVideos.value;
+    console.log('▶️ Playing next video:', nextVideoUrl);
+  }
+};
+
+// Play previous video (simplified - just get next video)
+const previousVideo = () => {
+  playNextVideo(); // For simplicity, just play next video
+  showControlsTemporarily();
+};
+
+// Next video
+const nextVideo = () => {
+  playNextVideo();
+  showControlsTemporarily();
+};
+
+// Toggle play/pause
+const togglePlayPause = () => {
+  const video = videoPlayer.value;
+  if (!video) return;
+  
+  if (video.paused) {
+    video.play();
+    isPlaying.value = true;
+  } else {
+    video.pause();
+    isPlaying.value = false;
+  }
+  showControlsTemporarily();
+};
+
+// Toggle mute
+const toggleMute = () => {
+  const video = videoPlayer.value;
+  if (!video) return;
+  
+  video.muted = !video.muted;
+  isMuted.value = video.muted;
+  showControlsTemporarily();
+};
+
+// Video event handlers
+const onVideoEnded = () => {
+  console.log('🎬 Video ended naturally, playing next...');
+  playNextVideo();
+};
+
+const onVideoLoadStart = () => {
+  console.log('🎬 Video loading started');
+  isPlaying.value = false;
+};
+
+const onVideoLoadedMetadata = () => {
+  console.log('🎬 Video metadata loaded');
+  const video = videoPlayer.value;
+  if (video) {
+    console.log(`📐 Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+  }
+};
+
+const onVideoCanPlay = async () => {
+  console.log('🎬 Video can play');
+  const video = videoPlayer.value;
+  if (video) {
+    try {
+      // Since Chrome has --autoplay-policy=no-user-gesture-required
+      // We can start with audio immediately
+      video.muted = false;
+      video.volume = 1.0;
+      isMuted.value = false;
+      
+      await video.play();
+      isPlaying.value = true;
+      console.log('▶️ Video playing with audio automatically');
+      
+    } catch (error) {
+      console.error('❌ Autoplay failed:', error);
+      // Fallback: try muted autoplay
+      try {
+        video.muted = true;
+        isMuted.value = true;
+        await video.play();
+        isPlaying.value = true;
+        console.log('▶️ Video playing muted as fallback');
+      } catch (mutedError) {
+        console.error('❌ Even muted autoplay failed:', mutedError);
+      }
+    }
+  }
+};
+
+const onVideoError = (event) => {
+  console.error('❌ Video error:', event);
+  console.log('🔄 Trying next video...');
+  setTimeout(() => {
+    playNextVideo();
+  }, 2000);
+};
 
 // Update current time with blinking colon
 const updateTime = () => {
@@ -219,7 +484,7 @@ const fetchStats = async () => {
 const fetchEvents = async () => {
   try {
     eventsLoading.value = true;
-    console.log('🔄 Fetching events from conference.natlib.uz...');
+    console.log('🔄 Fetching events from /tv/tadbir.php...');
     
     const response = await fetch('https://conference.natlib.uz/tv/tadbir.php', {
       method: 'GET',
@@ -249,6 +514,7 @@ const fetchEvents = async () => {
     } else {
       console.error('❌ Events API responded with error:', response.status);
       events.value = [];
+      console.log('📅 API failed - showing empty events');
     }
   } catch (error) {
     console.error('❌ Error fetching events:', error);
@@ -273,7 +539,7 @@ const fetchTickerTexts = async () => {
         console.log(`📰 Loaded ${data.length} ticker texts`);
       } else {
         console.log('📰 No ticker texts in response, using fallback');
-        tickerTexts.value = ['Nodirbekga shu yerdan turib qaleysiz deb qo\'yamiz ))))  🥹🥹🥹'];
+        tickerTexts.value = ['Alisher Navoiy nomidagi O\'zbekiston Milliy kutubxonasiga xush kelibsiz'];
       }
     }
   } catch (error) {
@@ -284,17 +550,8 @@ const fetchTickerTexts = async () => {
 
 // Start ticker rotation - cycle through texts
 const startTickerRotation = () => {
-  // Calculate animation duration based on text length (minimum 20s, maximum 40s)
-  const calculateDuration = (text) => {
-    const baseSpeed = 50; // pixels per second
-    const textWidth = text.length * 8; // approximate character width
-    const screenWidth = window.innerWidth;
-    const totalDistance = screenWidth + textWidth;
-    return Math.max(20, Math.min(40, totalDistance / baseSpeed));
-  };
-
   const rotateTickerText = () => {
-    const duration = calculateDuration(currentTickerText.value);
+    const duration = 25; // Fixed 25 seconds per text
     console.log(`📰 Showing ticker ${currentTickerIndex.value + 1}/${tickerTexts.value.length}: "${currentTickerText.value}" (${duration}s)`);
     
     // Move to next text after current animation completes
@@ -308,36 +565,9 @@ const startTickerRotation = () => {
   rotateTickerText();
 };
 
-// Force video switching with iframe reload - LESS AGGRESSIVE
-const nextVideo = () => {
-  console.log('🎵 Switching to next video...');
-  currentVideoIndex.value = (currentVideoIndex.value + 1) % shuffledVideoIds.value.length;
-  
-  if (currentVideoIndex.value === 0) {
-    console.log('🔀 Reshuffling playlist for randomness');
-    shuffledVideoIds.value = shuffleArray(videoIds);
-  }
-  
-  const nextVideoId = shuffledVideoIds.value[currentVideoIndex.value];
-  console.log(`🎵 Now playing video ${currentVideoIndex.value + 1} of ${shuffledVideoIds.value.length}: ${nextVideoId}`);
-};
-
-// Enhanced video load handler - SIMPLIFIED
-const onVideoLoad = () => {
-  console.log('🎵 Video loaded:', shuffledVideoIds.value[currentVideoIndex.value]);
-  
-  // Simple user interaction simulation
-  setTimeout(() => {
-    console.log('🔊 Video should be playing with audio');
-  }, 2000);
-};
-
-// Get reference to YouTube player iframe
-const youtubePlayer = ref(null);
-
 // Initialize everything
 onMounted(() => {
-  console.log('🎵 TV Display initializing...');
+  console.log('🎬 TV Display initializing...');
   
   // Start time and colon blinking
   updateTime();
@@ -348,6 +578,7 @@ onMounted(() => {
   fetchStats();
   fetchEvents();
   fetchTickerTexts();
+  fetchVideoList(); // Load videos
   
   // Set up intervals
   statsInterval = setInterval(fetchStats, 30000);
@@ -358,16 +589,13 @@ onMounted(() => {
     startTickerRotation();
   }, 2000);
   
-  // LESS AGGRESSIVE video switching - every 5 minutes
-  videoInterval = setInterval(() => {
-    console.log('⏰ Timer-based video switch');
-    nextVideo();
-  }, 300000); // Switch every 5 minutes instead of 3
-  
   // Refresh ticker texts every 2 minutes
   setInterval(fetchTickerTexts, 120000);
   
-  console.log('🎵 TV Display initialized with', videoIds.length, 'videos in playlist');
+  // Show controls initially
+  showControlsTemporarily();
+  
+  console.log('🎬 TV Display initialized');
 });
 
 // Cleanup
@@ -377,7 +605,7 @@ onUnmounted(() => {
   if (statsInterval) clearInterval(statsInterval);
   if (eventsInterval) clearInterval(eventsInterval);
   if (tickerInterval) clearInterval(tickerInterval);
-  if (videoInterval) clearInterval(videoInterval);
+  if (controlsHideTimer) clearTimeout(controlsHideTimer);
 });
 </script>
 
@@ -539,19 +767,12 @@ onUnmounted(() => {
   padding: 4px 0;
 }
 
+/* ALL EVENT TIMES ARE BLACK */
 .event-time {
   font-weight: 600;
-  color: #f97316;
+  color: #000000;
   min-width: 45px;
   flex-shrink: 0;
-}
-
-.event-time.time-16 {
-  color: #000000;
-}
-
-.event-time.time-17 {
-  color: #dc2626;
 }
 
 .event-separator {
@@ -596,64 +817,129 @@ onUnmounted(() => {
   background: #000;
 }
 
-.video-container iframe {
+/* VIDEO ELEMENT - STRICT FITTING */
+.video-element {
   width: 100%;
   height: 100%;
-  border: none;
-  display: block;
+  object-fit: cover; /* Changed from contain to cover for strict fitting */
+  background: #000;
 }
 
-.video-controls {
+/* VIDEO LOADING STATE */
+.video-loading-state {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  padding: 8px 12px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.video-container:hover .video-controls {
-  opacity: 1;
-}
-
-.video-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.video-counter {
+  justify-content: center;
+  background: #000;
   color: white;
-  font-size: 12px;
+  gap: 16px;
+}
+
+.video-loading-state .loading-spinner {
+  border-color: #333;
+  border-top-color: #fff;
+}
+
+.video-loading-state .loading-text {
+  color: white;
+  font-size: 16px;
+}
+
+/* NO VIDEOS STATE */
+.no-videos-state {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: white;
+  gap: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+.no-videos-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.no-videos-text {
+  font-size: 18px;
   font-weight: 600;
 }
 
-.next-video-btn {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+.no-videos-subtitle {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* VIDEO CONTROLS OVERLAY - ONLY CONTROLS, NO VIDEO INFO */
+.video-controls-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.4) 50%,
+    transparent 100%
+  );
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.video-controls-overlay.controls-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* VIDEO CONTROLS - CENTERED AT BOTTOM */
+.video-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease;
+  gap: 16px;
+  z-index: 11;
 }
 
-.next-video-btn:hover {
+.control-btn {
   background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-.next-video-btn svg {
-  width: 16px;
-  height: 16px;
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.control-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* TICKER CONTAINER */
@@ -765,24 +1051,14 @@ onUnmounted(() => {
     font-size: 11px;
   }
   
-  .time-display {
-    width: 90px;
-    padding: 0 15px;
+  .control-btn {
+    width: 44px;
+    height: 44px;
   }
   
-  .time-content,
-  .time-hours,
-  .time-minutes,
-  .time-colon {
-    font-size: 18px;
-  }
-  
-  .ticker-text {
-    font-size: 14px;
-  }
-  
-  .ticker-container {
-    height: 50px;
+  .control-btn svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -815,83 +1091,35 @@ onUnmounted(() => {
     min-height: 300px;
   }
   
-  .video-controls {
-    position: static;
+  .video-controls-overlay.controls-visible {
     opacity: 1;
-    margin-top: 10px;
-    justify-content: center;
+    pointer-events: auto;
   }
   
-  .time-display {
-    width: 90px;
-    padding: 0 15px;
+  .video-controls {
+    gap: 12px;
   }
   
-  .time-content,
-  .time-hours,
-  .time-minutes,
-  .time-colon {
-    font-size: 18px;
+  .control-btn {
+    width: 40px;
+    height: 40px;
   }
   
-  .ticker-text {
-    font-size: 14px;
-  }
-  
-  .ticker-container {
-    height: 50px;
+  .control-btn svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
 @media (max-width: 640px) {
-  .time-display {
-    width: 80px;
-    padding: 0 12px;
+  .control-btn {
+    width: 36px;
+    height: 36px;
   }
   
-  .time-content,
-  .time-hours,
-  .time-minutes,
-  .time-colon {
-    font-size: 16px;
-  }
-  
-  .ticker-text {
-    font-size: 13px;
-  }
-  
-  .ticker-container {
-    height: 45px;
-  }
-  
-  .stat-title {
-    font-size: 13px;
-  }
-  
-  .event-item {
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .time-display {
-    width: 75px;
-    padding: 0 10px;
-  }
-  
-  .time-content,
-  .time-hours,
-  .time-minutes,
-  .time-colon {
-    font-size: 15px;
-  }
-  
-  .ticker-text {
-    font-size: 12px;
-  }
-  
-  .ticker-container {
-    height: 40px;
+  .control-btn svg {
+    width: 14px;
+    height: 14px;
   }
 }
 
