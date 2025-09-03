@@ -221,7 +221,7 @@ const fetchEvents = async () => {
     eventsLoading.value = true;
     console.log('🔄 Fetching events from conference.natlib.uz...');
     
-    const response = await fetch('https://conference.natlib.uz/tadbir.php', {
+    const response = await fetch('https://conference.natlib.uz/tv/tadbir.php', {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -263,7 +263,7 @@ const fetchEvents = async () => {
 // Fetch ticker texts from conference.natlib.uz
 const fetchTickerTexts = async () => {
   try {
-    const response = await fetch('https://conference.natlib.uz/titr.php');
+    const response = await fetch('https://conference.natlib.uz/tv/titr.php');
     if (response.ok) {
       const data = await response.json();
       console.log('📰 Ticker data received:', data);
