@@ -1,47 +1,38 @@
 <template>
   <div class="tv-display">
-    <!-- Main Content Area -->
     <div class="main-content">
-      <!-- Left Panel - Statistics -->
       <div class="left-panel">
-        <!-- Today's Visitors -->
         <div class="stat-card visitors-card">
           <h3 class="stat-title">Bugun tashrif buyurganlar</h3>
           <p class="stat-subtitle">Visitors today</p>
           <div class="stat-number visitors-number">{{ stats.todayVisitors }}</div>
         </div>
 
-        <!-- Current Users -->
         <div class="stat-card users-card">
           <h3 class="stat-title">Kutubxonada ayni paytda foydalanuvchilar</h3>
           <p class="stat-subtitle">Current users in the library</p>
           <div class="stat-number users-number">{{ stats.currentUsers }}</div>
         </div>
 
-        <!-- Today's Registrations -->
         <div class="stat-card registrations-card">
           <h3 class="stat-title">Bugun a'zo bo'lganlar</h3>
           <p class="stat-subtitle">Registers today</p>
           <div class="stat-number registrations-number">{{ stats.todayRegistrations }}</div>
         </div>
 
-        <!-- One-time Tickets -->
         <div class="stat-card tickets-card">
           <h3 class="stat-title">Bir martalik chiptalar</h3>
           <p class="stat-subtitle">One-time tickets</p>
           <div class="stat-number tickets-number">{{ stats.oneTimeTickets }}</div>
         </div>
 
-        <!-- Scheduled Events - AUTOMATIC SIZE -->
         <div class="events-card" :class="{ 'events-loading': eventsLoading, 'events-minimal': hasMinimalEvents }">
           <h3 class="events-title">Rejalashtirilgan tadbirlar:</h3>
           <div class="events-list">
-            <!-- Loading State -->
             <div v-if="eventsLoading" class="events-loading-state">
               <div class="loading-spinner"></div>
               <div class="loading-text">Ma'lumotlar yuklanmoqda...</div>
             </div>
-            <!-- Events Content -->
             <div v-else-if="events.length > 0" class="events-content">
               <div v-for="event in events" :key="event.id" class="event-item">
                 <span class="event-time">{{ event.time }}</span>
@@ -49,7 +40,6 @@
                 <span class="event-description">{{ event.description }}</span>
               </div>
             </div>
-            <!-- No Events State -->
             <div v-else class="no-events">
               <div class="no-events-icon">📅</div>
               <div class="no-events-text">Bugun rejalashtirilgan tadbirlar yo'q</div>
@@ -58,20 +48,17 @@
         </div>
       </div>
 
-      <!-- Right Panel - Local Video Player -->
       <div class="right-panel">
         <div 
           class="video-container" 
           @mousemove="onMouseMove"
           @mouseleave="onMouseLeave"
         >
-          <!-- Video Loading State -->
           <div v-if="videoLoading" class="video-loading-state">
             <div class="loading-spinner"></div>
             <div class="loading-text">Videolar yuklanmoqda...</div>
           </div>
           
-          <!-- Video Player -->
           <video
             v-else-if="currentVideoUrl"
             ref="videoPlayer"
@@ -86,14 +73,12 @@
             class="video-element"
           ></video>
           
-          <!-- No Videos State -->
           <div v-else class="no-videos-state">
             <div class="no-videos-icon">🎬</div>
             <div class="no-videos-text">Videolar topilmadi</div>
             <div class="no-videos-subtitle">/rolik/natlib va /rolik/klip papkalarini tekshiring</div>
           </div>
           
-          <!-- Video Controls Only - NO VIDEO INFO -->
           <div 
             v-if="currentVideoUrl && !videoLoading" 
             class="video-controls-overlay"
@@ -123,7 +108,7 @@
                   <path d="M16.5 12C16.5 10.23 15.5 8.71 14 7.97V16.02C15.5 15.29 16.5 13.77 16.5 12ZM19 12C19 15.53 16.39 18.35 13 18.92V20.92C17.27 20.33 20.5 16.84 20.5 12.5C20.5 8.16 17.27 4.67 13 4.08V6.08C16.39 6.65 19 9.47 19 12ZM4.27 3L3 4.27L7.73 9H3V15H7L12 20V13.27L16.25 17.52C15.58 18.04 14.83 18.46 14 18.7V20.7C15.38 20.36 16.63 19.65 17.68 18.68L19.73 20.73L21 19.46L12 10.46L4.27 3ZM12 4L9.91 6.09L12 8.18V4Z"/>
                 </svg>
                 <svg v-else viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 9V15H7L12 20V4L7 9H3ZM16.5 12C16.5 10.23 15.5 8.71 14 7.97V16.02C15.5 15.29 16.5 13.77 16.5 12ZM14 3.23V5.29C16.89 6.15 19 8.83 19 12C19 15.17 16.89 17.85 14 18.71V20.77C18.01 19.86 21 16.28 21 12C21 7.72 18.01 4.14 14 3.23Z"/>
+                  <path d="M3 9V15H7L12 20V4L7 9H3ZM16.5 12C16.5 10.23 15.5 8.71 14 7.97V16.02C15.5 15.29 16.5 13.77 16.5 12ZM14 3.23V5.29C16.89 6.15 19 8.83 19 12C19 15.17 16.89 17.85 14 18.71V20.77C18.01 19.86 21 16.28 21 12C21 7.72 18.01 4.14 14 3.23ZM12 4L9.91 6.09L12 8.18V4Z"/>
                 </svg>
               </button>
             </div>
@@ -132,7 +117,6 @@
       </div>
     </div>
 
-    <!-- Bottom Ticker - FIXED SIZE FOR ALL SCREENS -->
     <div class="ticker-container">
       <div class="time-display">
         <div class="time-content">
@@ -142,7 +126,11 @@
         </div>
       </div>
       <div class="ticker-content">
-        <div class="ticker-text" :key="currentTickerIndex">
+        <div 
+          class="ticker-text" 
+          :key="`ticker-${currentTickerIndex}-${tickerAnimationKey}`"
+          :style="{ animationDuration: tickerDuration + 's' }"
+        >
           {{ currentTickerText }}
         </div>
       </div>
@@ -165,6 +153,8 @@ const events = ref([]);
 const eventsLoading = ref(true);
 const tickerTexts = ref(['Ma\'lumotlar yuklanmoqda...']);
 const currentTickerIndex = ref(0);
+const tickerAnimationKey = ref(0); // Force re-render of animation
+const tickerDuration = ref(15); // Dynamic duration based on text length
 const timeHours = ref('');
 const timeMinutes = ref('');
 const showColon = ref(true);
@@ -181,15 +171,17 @@ const showControls = ref(true);
 // Video collections
 const natlibVideos = ref([]);
 const klipVideos = ref([]);
-const currentPlaylist = ref([]);
-const playlistType = ref('mixed'); // 'natlib', 'klip', or 'mixed'
 
 // Natlib specific state (can repeat)
 const natlibCurrentIndex = ref(0);
 
-// Klip specific state (no repeat until end)
+// Klip specific state (IMPROVED RANDOMNESS)
 const klipPlaylist = ref([]);
 const klipCurrentIndex = ref(0);
+
+// ROBUST ALTERNATION STATE - Track what was last played
+const lastPlayedType = ref(null); // 'natlib' or 'klip'
+const videoPlayCount = ref(0); // Total videos played
 
 // Control visibility timer
 let controlsHideTimer = null;
@@ -215,6 +207,30 @@ let colonBlinkInterval = null;
 let statsInterval = null;
 let eventsInterval = null;
 let tickerInterval = null;
+
+// 🔧 FIXED: Proper URL encoding for filenames with special characters
+const encodeVideoFilename = (filename) => {
+  // Encode the filename to handle special characters like #, %, spaces, etc.
+  return encodeURIComponent(filename)
+    .replace(/'/g, "%27")  // Single quotes
+    .replace(/\(/g, "%28") // Opening parenthesis
+    .replace(/\)/g, "%29") // Closing parenthesis
+    .replace(/\*/g, "%2A") // Asterisk
+    .replace(/!/g, "%21")  // Exclamation mark
+    .replace(/~/g, "%7E"); // Tilde
+};
+
+// 🔧 FIXED: Build proper video URLs with encoding
+const buildVideoUrl = (type, filename) => {
+  const encodedFilename = encodeVideoFilename(filename);
+  const url = `/rolik/${type}/${encodedFilename}`;
+  
+  console.log(`🔗 Building URL:`);
+  console.log(`   Original: /rolik/${type}/${filename}`);
+  console.log(`   Encoded:  ${url}`);
+  
+  return url;
+};
 
 // Controls visibility management
 const showControlsTemporarily = () => {
@@ -243,14 +259,47 @@ const onMouseLeave = () => {
   showControls.value = false;
 };
 
-// Shuffle array function
+// IMPROVED SHUFFLE FUNCTION - Fisher-Yates with better randomness
 const shuffleArray = (array) => {
   const shuffled = [...array];
+  
+  // Fisher-Yates shuffle with crypto-random if available
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    // Use crypto.getRandomValues for better randomness if available
+    let randomValue;
+    if (window.crypto && window.crypto.getRandomValues) {
+      const randomArray = new Uint32Array(1);
+      window.crypto.getRandomValues(randomArray);
+      randomValue = randomArray[0] / (0xFFFFFFFF + 1); // Convert to 0-1 range
+    } else {
+      randomValue = Math.random();
+    }
+    
+    const j = Math.floor(randomValue * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
+  
+  console.log('🔀 Shuffled array:', shuffled.map(item => item.substring(0, 20) + '...'));
   return shuffled;
+};
+
+// Calculate ticker duration based on text length
+const calculateTickerDuration = (text) => {
+  // Base duration: 15 seconds for average text
+  // Adjust based on text length (longer text = longer duration)
+  const baseSpeed = 100; // pixels per second
+  const textLength = text.length;
+  const estimatedWidth = textLength * 12; // Rough estimate: 12px per character
+  const screenWidth = window.innerWidth || 1920;
+  const totalDistance = screenWidth + estimatedWidth;
+  
+  // Calculate duration (minimum 10 seconds, maximum 25 seconds)
+  const calculatedDuration = Math.max(10, Math.min(25, totalDistance / baseSpeed));
+  
+  console.log(`📰 Text: "${text.substring(0, 50)}..." (${textLength} chars)`);
+  console.log(`📰 Calculated duration: ${calculatedDuration.toFixed(1)}s`);
+  
+  return Math.round(calculatedDuration);
 };
 
 // Fetch video list from server
@@ -270,6 +319,17 @@ const fetchVideoList = async () => {
       console.log(`📁 Natlib videos: ${natlibVideos.value.length}`);
       console.log(`📁 Klip videos: ${klipVideos.value.length}`);
       
+      // 🔧 FIXED: Log any videos with special characters
+      const problematicNatlib = natlibVideos.value.filter(name => name.includes('#') || name.includes('%') || name.includes(' '));
+      const problematicKlip = klipVideos.value.filter(name => name.includes('#') || name.includes('%') || name.includes(' '));
+      
+      if (problematicNatlib.length > 0) {
+        console.log('⚠️ Natlib videos with special characters:', problematicNatlib);
+      }
+      if (problematicKlip.length > 0) {
+        console.log('⚠️ Klip videos with special characters:', problematicKlip);
+      }
+      
       // Initialize playlists
       initializePlaylists();
       
@@ -287,60 +347,141 @@ const fetchVideoList = async () => {
   }
 };
 
-// Initialize playlists with proper logic
+// IMPROVED PLAYLIST INITIALIZATION - Multiple shuffles for better randomness
 const initializePlaylists = () => {
-  // Initialize klip playlist (shuffled, no repeat until end)
+  // Initialize klip playlist with MULTIPLE shuffles for better randomness
   if (klipVideos.value.length > 0) {
-    klipPlaylist.value = shuffleArray(klipVideos.value);
+    let playlist = [...klipVideos.value];
+    
+    // Shuffle multiple times for better randomness
+    for (let i = 0; i < 3; i++) {
+      playlist = shuffleArray(playlist);
+    }
+    
+    klipPlaylist.value = playlist;
     klipCurrentIndex.value = 0;
-    console.log('🔀 Klip playlist shuffled:', klipPlaylist.value.length, 'videos');
+    console.log('🔀 Klip playlist triple-shuffled:', klipPlaylist.value.length, 'videos');
+    console.log('🎬 First 5 klip videos:', klipPlaylist.value.slice(0, 5));
   }
   
   // Natlib videos can repeat in order
   natlibCurrentIndex.value = 0;
   
-  console.log('🎬 Playlists initialized');
+  // RESET ALTERNATION STATE
+  lastPlayedType.value = null;
+  videoPlayCount.value = 0;
+  
+  console.log('🎬 Playlists initialized with improved randomness');
+  console.log('🔄 Alternation state reset');
 };
 
-// Get next video based on logic
+// IMPROVED: Get next klip video with better randomness
+const getNextKlipVideo = () => {
+  // If we've reached the end of current playlist, create a NEW shuffled playlist
+  if (klipCurrentIndex.value >= klipPlaylist.value.length) {
+    console.log('🔀 Klip playlist finished, creating NEW shuffled playlist...');
+    
+    // Create a completely new shuffled playlist
+    let newPlaylist = [...klipVideos.value];
+    
+    // Shuffle multiple times for maximum randomness
+    for (let i = 0; i < 3; i++) {
+      newPlaylist = shuffleArray(newPlaylist);
+    }
+    
+    // EXTRA RANDOMNESS: Ensure first video is different from last played
+    const lastPlayedVideo = klipPlaylist.value[klipPlaylist.value.length - 1];
+    if (newPlaylist.length > 1 && newPlaylist[0] === lastPlayedVideo) {
+      // Swap first video with a random position
+      const randomIndex = Math.floor(Math.random() * (newPlaylist.length - 1)) + 1;
+      [newPlaylist[0], newPlaylist[randomIndex]] = [newPlaylist[randomIndex], newPlaylist[0]];
+      console.log('🔄 Swapped first video to avoid repetition');
+    }
+    
+    klipPlaylist.value = newPlaylist;
+    klipCurrentIndex.value = 0;
+    
+    console.log('✨ NEW klip playlist created with enhanced randomness');
+    console.log('🎬 New first 5 klip videos:', klipPlaylist.value.slice(0, 5));
+  }
+  
+  const video = klipPlaylist.value[klipCurrentIndex.value];
+  klipCurrentIndex.value++;
+  
+  console.log(`🎬 Playing Klip video ${klipCurrentIndex.value}/${klipPlaylist.value.length}: ${video}`);
+  
+  // 🔧 FIXED: Use proper URL encoding
+  return buildVideoUrl('klip', video);
+};
+
+// COMPLETELY REWRITTEN ALTERNATION LOGIC - BULLETPROOF
 const getNextVideo = () => {
   const totalNatlib = natlibVideos.value.length;
   const totalKlip = klipVideos.value.length;
   
+  videoPlayCount.value++;
+  
+  console.log(`\n🎭 === VIDEO SELECTION #${videoPlayCount.value} ===`);
+  console.log(`📊 Available: ${totalNatlib} natlib, ${totalKlip} klip`);
+  console.log(`📜 Last played type: ${lastPlayedType.value || 'NONE'}`);
+  
   if (totalNatlib === 0 && totalKlip === 0) {
+    console.log('❌ No videos available');
     return null;
   }
   
-  // Strategy: Alternate between natlib and klip, but handle different repeat logic
-  const shouldPlayNatlib = Math.random() < 0.5; // 50/50 chance
-  
-  if (shouldPlayNatlib && totalNatlib > 0) {
-    // Play natlib video (can repeat in order)
-    const video = natlibVideos.value[natlibCurrentIndex.value];
-    natlibCurrentIndex.value = (natlibCurrentIndex.value + 1) % totalNatlib;
-    console.log(`🎬 Playing Natlib video ${natlibCurrentIndex.value}/${totalNatlib}: ${video}`);
-    return `/rolik/natlib/${video}`;
-  } else if (totalKlip > 0) {
-    // Play klip video (no repeat until end)
-    if (klipCurrentIndex.value >= klipPlaylist.value.length) {
-      // Reshuffle when we reach the end
-      console.log('🔀 Klip playlist finished, reshuffling...');
-      klipPlaylist.value = shuffleArray(klipVideos.value);
-      klipCurrentIndex.value = 0;
-    }
-    
-    const video = klipPlaylist.value[klipCurrentIndex.value];
-    klipCurrentIndex.value++;
-    console.log(`🎬 Playing Klip video ${klipCurrentIndex.value}/${klipPlaylist.value.length}: ${video}`);
-    return `/rolik/klip/${video}`;
-  } else if (totalNatlib > 0) {
-    // Fallback to natlib if klip is empty
-    const video = natlibVideos.value[natlibCurrentIndex.value];
-    natlibCurrentIndex.value = (natlibCurrentIndex.value + 1) % totalNatlib;
-    return `/rolik/natlib/${video}`;
+  // If only one type exists, play from that type
+  if (totalNatlib === 0) {
+    console.log('🎬 Only KLIP videos available');
+    lastPlayedType.value = 'klip';
+    return getNextKlipVideo();
   }
   
-  return null;
+  if (totalKlip === 0) {
+    console.log('🎬 Only NATLIB videos available');
+    const video = natlibVideos.value[natlibCurrentIndex.value];
+    natlibCurrentIndex.value = (natlibCurrentIndex.value + 1) % totalNatlib;
+    lastPlayedType.value = 'natlib';
+    console.log(`✅ Playing NATLIB: ${video}`);
+    
+    // 🔧 FIXED: Use proper URL encoding
+    return buildVideoUrl('natlib', video);
+  }
+  
+  // Both types exist - STRICT ALTERNATION BASED ON LAST PLAYED
+  let nextType;
+  
+  if (lastPlayedType.value === null) {
+    // First video ever - start with natlib
+    nextType = 'natlib';
+    console.log('🎬 FIRST VIDEO - Starting with NATLIB');
+  } else if (lastPlayedType.value === 'natlib') {
+    // Last was natlib, now play klip
+    nextType = 'klip';
+    console.log('🔄 Last was NATLIB → Now playing KLIP');
+  } else {
+    // Last was klip, now play natlib
+    nextType = 'natlib';
+    console.log('🔄 Last was KLIP → Now playing NATLIB');
+  }
+  
+  // Play the determined type
+  if (nextType === 'natlib') {
+    const video = natlibVideos.value[natlibCurrentIndex.value];
+    natlibCurrentIndex.value = (natlibCurrentIndex.value + 1) % totalNatlib;
+    lastPlayedType.value = 'natlib';
+    console.log(`✅ PLAYING NATLIB: ${video}`);
+    console.log(`📍 Next will be: KLIP`);
+    
+    // 🔧 FIXED: Use proper URL encoding
+    return buildVideoUrl('natlib', video);
+  } else {
+    const klipVideo = getNextKlipVideo();
+    lastPlayedType.value = 'klip';
+    console.log(`✅ PLAYING KLIP: ${klipVideo}`);
+    console.log(`📍 Next will be: NATLIB`);
+    return klipVideo;
+  }
 };
 
 // Play next video
@@ -349,7 +490,8 @@ const playNextVideo = () => {
   if (nextVideoUrl) {
     currentVideoUrl.value = nextVideoUrl;
     currentVideoIndex.value = (currentVideoIndex.value + 1) % totalVideos.value;
-    console.log('▶️ Playing next video:', nextVideoUrl);
+    console.log('▶️ Setting video URL:', nextVideoUrl);
+    console.log(`🎭 Alternation state updated: lastPlayedType = ${lastPlayedType.value}`);
   }
 };
 
@@ -392,7 +534,8 @@ const toggleMute = () => {
 
 // Video event handlers
 const onVideoEnded = () => {
-  console.log('🎬 Video ended naturally, playing next...');
+  console.log('🎬 Video ended naturally');
+  console.log(`🔄 Current alternation state: lastPlayedType = ${lastPlayedType.value}`);
   playNextVideo();
 };
 
@@ -442,6 +585,23 @@ const onVideoCanPlay = async () => {
 
 const onVideoError = (event) => {
   console.error('❌ Video error:', event);
+  console.error('❌ Video src that failed:', currentVideoUrl.value);
+  
+  // 🔧 FIXED: Better error handling for URL encoding issues
+  const video = videoPlayer.value;
+  if (video && video.error) {
+    console.error('❌ Video error details:', {
+      code: video.error.code,
+      message: video.error.message,
+      src: video.src
+    });
+    
+    // Check if it's a URL encoding issue
+    if (video.src.includes('#') && !video.src.includes('%23')) {
+      console.error('❌ DETECTED: Unencoded hashtag in URL - this is the problem!');
+    }
+  }
+  
   console.log('🔄 Trying next video...');
   setTimeout(() => {
     playNextVideo();
@@ -548,13 +708,22 @@ const fetchTickerTexts = async () => {
   }
 };
 
-// Start ticker rotation - cycle through texts
+// IMPROVED ticker rotation - no gaps, smooth transitions
 const startTickerRotation = () => {
   const rotateTickerText = () => {
-    const duration = 25; // Fixed 25 seconds per text
-    console.log(`📰 Showing ticker ${currentTickerIndex.value + 1}/${tickerTexts.value.length}: "${currentTickerText.value}" (${duration}s)`);
+    // Calculate duration based on current text length
+    const currentText = currentTickerText.value;
+    const duration = calculateTickerDuration(currentText);
+    tickerDuration.value = duration;
     
-    // Move to next text after current animation completes
+    console.log(`📰 Starting ticker ${currentTickerIndex.value + 1}/${tickerTexts.value.length}`);
+    console.log(`📰 Text: "${currentText}"`);
+    console.log(`📰 Duration: ${duration}s`);
+    
+    // Force animation restart by changing key
+    tickerAnimationKey.value++;
+    
+    // Move to next text when current animation completes
     setTimeout(() => {
       currentTickerIndex.value = (currentTickerIndex.value + 1) % tickerTexts.value.length;
       rotateTickerText(); // Continue rotation
@@ -625,6 +794,7 @@ onUnmounted(() => {
   display: flex;
   padding: 15px;
   gap: 15px;
+  padding-bottom: 85px; /* Add space for fixed ticker (70px + 15px) */
 }
 
 .left-panel {
@@ -817,11 +987,11 @@ onUnmounted(() => {
   background: #000;
 }
 
-/* VIDEO ELEMENT - STRICT FITTING */
+/* VIDEO ELEMENT - BETTER FITTING FOR ALL ASPECT RATIOS */
 .video-element {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Changed from contain to cover for strict fitting */
+  object-fit: contain; /* Changed back to contain to ensure all videos are visible */
   background: #000;
 }
 
@@ -886,8 +1056,8 @@ onUnmounted(() => {
 
 /* VIDEO CONTROLS OVERLAY - ONLY CONTROLS, NO VIDEO INFO */
 .video-controls-overlay {
-  position: absolute;
-  bottom: 0;
+  position: fixed; /* Changed from absolute to fixed */
+  bottom: 70px; /* Position above ticker (ticker height) */
   left: 0;
   right: 0;
   background: linear-gradient(
@@ -900,7 +1070,7 @@ onUnmounted(() => {
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
-  z-index: 10;
+  z-index: 999; /* Above video, below ticker */
 }
 
 .video-controls-overlay.controls-visible {
@@ -942,36 +1112,40 @@ onUnmounted(() => {
   height: 20px;
 }
 
-/* TICKER CONTAINER */
+/* TICKER CONTAINER - BIGGER SIZE */
 .ticker-container {
-  height: 50px;
+  position: fixed; /* Changed to fixed positioning */
+  bottom: 0; /* Stick to bottom */
+  left: 0; /* Full width */
+  right: 0; /* Full width */
+  height: 70px;
   background: linear-gradient(90deg, #06b6d4, #8b5cf6);
   display: flex;
   align-items: stretch;
   overflow: hidden;
-  position: relative;
+  z-index: 1000; /* Always on top */
   flex-shrink: 0;
 }
 
-/* TIME DISPLAY */
+/* TIME DISPLAY - BIGGER */
 .time-display {
   background: rgba(0, 0, 0, 0.3);
   color: white;
   font-family: 'Arial', sans-serif;
-  width: 90px;
+  width: 120px; /* Increased from 90px to 120px */
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  padding: 0 15px;
+  padding: 0 20px; /* Increased padding */
 }
 
 .time-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 26px; /* Increased from 18px to 26px */
   font-weight: bold;
   line-height: 1;
   letter-spacing: 0;
@@ -980,15 +1154,15 @@ onUnmounted(() => {
 
 .time-hours,
 .time-minutes {
-  font-size: 18px;
+  font-size: 26px; /* Increased from 18px to 26px */
   font-weight: bold;
 }
 
 .time-colon {
-  font-size: 18px;
+  font-size: 26px; /* Increased from 18px to 26px */
   font-weight: bold;
   transition: opacity 0.1s ease;
-  margin: 0 1px;
+  margin: 0 2px; /* Increased margin */
 }
 
 .time-colon.blink {
@@ -1006,10 +1180,10 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* TICKER TEXT - RIGHT TO LEFT ANIMATION */
+/* TICKER TEXT - FIXED CONTINUOUS SCROLL, NO GAPS */
 .ticker-text {
   color: white;
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 600;
   font-family: 'Arial', sans-serif;
   white-space: nowrap;
@@ -1020,16 +1194,19 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   height: 100%;
-  /* Start from far right, animate to far left */
-  animation: tickerScrollRTL 25s linear infinite;
+  /* Start from far right edge of screen, move to completely off left edge */
+  animation: tickerScrollFixed linear infinite;
+  /* Ensure text starts from right edge */
+  left: 100%;
 }
 
-@keyframes tickerScrollRTL {
+/* IMPROVED ANIMATION - ALWAYS START FROM FAR RIGHT */
+@keyframes tickerScrollFixed {
   0% {
-    transform: translateX(100vw); /* Start from far right of viewport */
+    transform: translateX(0); /* Start from right edge (left: 100%) */
   }
   100% {
-    transform: translateX(-100%); /* End at far left (completely off screen) */
+    transform: translateX(calc(-100vw - 100%)); /* Move completely off left edge */
   }
 }
 
@@ -1059,6 +1236,29 @@ onUnmounted(() => {
   .control-btn svg {
     width: 18px;
     height: 18px;
+  }
+  
+  /* Responsive ticker */
+  .ticker-container {
+    height: 60px; /* Slightly smaller on medium screens */
+  }
+  
+  .time-display {
+    width: 100px;
+  }
+  
+  .time-content {
+    font-size: 22px;
+  }
+  
+  .time-hours,
+  .time-minutes,
+  .time-colon {
+    font-size: 22px;
+  }
+  
+  .ticker-text {
+    font-size: 18px;
   }
 }
 
@@ -1109,6 +1309,30 @@ onUnmounted(() => {
     width: 16px;
     height: 16px;
   }
+  
+  /* Mobile ticker */
+  .ticker-container {
+    height: 55px;
+  }
+  
+  .time-display {
+    width: 90px;
+    padding: 0 15px;
+  }
+  
+  .time-content {
+    font-size: 20px;
+  }
+  
+  .time-hours,
+  .time-minutes,
+  .time-colon {
+    font-size: 20px;
+  }
+  
+  .ticker-text {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1120,6 +1344,30 @@ onUnmounted(() => {
   .control-btn svg {
     width: 14px;
     height: 14px;
+  }
+  
+  /* Small mobile ticker */
+  .ticker-container {
+    height: 50px;
+  }
+  
+  .time-display {
+    width: 80px;
+    padding: 0 10px;
+  }
+  
+  .time-content {
+    font-size: 18px;
+  }
+  
+  .time-hours,
+  .time-minutes,
+  .time-colon {
+    font-size: 18px;
+  }
+  
+  .ticker-text {
+    font-size: 14px;
   }
 }
 
