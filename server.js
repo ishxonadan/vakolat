@@ -831,8 +831,8 @@ app.post("/api/public/check-ticket", async (req, res) => {
     })
   }
 })
-
-if (process.env.npm_lifecycle_event === "start") {
+//process.env.npm_lifecycle_event === "start"
+if (true) {
   console.log("PRODUCTION")
   const distPath = path.join(__dirname, "dist")
   app.use(express.static(distPath))
@@ -840,14 +840,15 @@ if (process.env.npm_lifecycle_event === "start") {
   app.get("*", (req, res) => {
     res.sendFile(path.join(distPath, "index.html"))
   })
-} else {
-  // Use proxy for development
-  console.log("LOCAL")
-  app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
 }
+//  else {
+//   // Use proxy for development
+//   console.log("LOCAL")
+//   app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
+// }
 
-app.listen(7777, () => {
-  console.log("Server is running on \x1b[34mhttp://localhost:7777\x1b[0m")
+app.listen(7070, () => {
+  console.log("Server is running on \x1b[34mhttp://localhost:7070\x1b[0m")
 })
 
 // Export models for use in other files
