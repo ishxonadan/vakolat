@@ -846,7 +846,7 @@ onUnmounted(() => {
 }
 
 .users-number {
-  color: #10b981;
+  color: gold;
 }
 
 .registrations-number {
