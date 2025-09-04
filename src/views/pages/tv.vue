@@ -21,12 +21,12 @@
         </div>
 
         <div class="stat-card tickets-card">
-          <h3 class="stat-title">Bir martalik chiptalar</h3>
-          <p class="stat-subtitle">One-time tickets</p>
+          <h3 class="stat-title">Bir martalik chipta berildi</h3>
+          <p class="stat-subtitle">One-time tickets given</p>
           <div class="stat-number tickets-number">{{ stats.oneTimeTickets }}</div>
         </div>
 
-        <div class="events-card" :class="{ 'events-loading': eventsLoading, 'events-minimal': hasMinimalEvents }">
+        <!-- <div class="events-card" :class="{ 'events-loading': eventsLoading, 'events-minimal': hasMinimalEvents }">
           <h3 class="events-title">Rejalashtirilgan tadbirlar:</h3>
           <div class="events-list">
             <div v-if="eventsLoading" class="events-loading-state">
@@ -45,7 +45,7 @@
               <div class="no-events-text">Bugun rejalashtirilgan tadbirlar yo'q</div>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <div class="right-panel">
@@ -143,10 +143,10 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 // Reactive data
 const stats = ref({
-  todayVisitors: 82,
-  currentUsers: 186,
-  todayRegistrations: 63,
-  oneTimeTickets: 82
+  todayVisitors: 0,
+  currentUsers: 0,
+  todayRegistrations: 0,
+  oneTimeTickets: 0
 });
 
 const events = ref([]);
@@ -629,10 +629,10 @@ const fetchStats = async () => {
     if (response.ok) {
       const data = await response.json();
       stats.value = {
-        todayVisitors: data.todayVisitors || 82,
-        currentUsers: data.currentUsers || 186,
-        todayRegistrations: data.todayRegistrations || 63,
-        oneTimeTickets: data.oneTimeTickets || 82
+        todayVisitors: data.todayVisitors || 0,
+        currentUsers: data.currentUsers || 0,
+        todayRegistrations: data.todayRegistrations || 0,
+        oneTimeTickets: data.oneTimeTickets || 0
       };
     }
   } catch (error) {
