@@ -3,14 +3,14 @@
     <div class="main-content">
       <div class="left-panel">
         <div class="stat-card visitors-card">
-          <h3 class="stat-title">Bugun tashrif buyurganlar</h3>
-          <p class="stat-subtitle">Visitors today</p>
+          <h3 class="stat-title">Ro'yxatdan o'tgan foydalanuvchilardan bugun tashrif buyurganlar </h3>
+          <p class="stat-subtitle">Visitors today among registered users</p>
           <div class="stat-number visitors-number">{{ stats.todayVisitors }}</div>
         </div>
 
         <div class="stat-card users-card">
-          <h3 class="stat-title">Kutubxonada ayni paytda foydalanuvchilar</h3>
-          <p class="stat-subtitle">Current users in the library</p>
+          <h3 class="stat-title">Kutubxonada joriy foydalanuvchilar (A'zo bo'lganlardan)</h3>
+          <p class="stat-subtitle">Current users in the library among registered users</p>
           <div class="stat-number users-number">{{ stats.currentUsers }}</div>
         </div>
 
@@ -21,8 +21,8 @@
         </div>
 
         <div class="stat-card tickets-card">
-          <h3 class="stat-title">Bir martalik chipta berildi</h3>
-          <p class="stat-subtitle">One-time tickets given</p>
+          <h3 class="stat-title">Bugun bir martalik chipta berildi</h3>
+          <p class="stat-subtitle">One-time tickets given today</p>
           <div class="stat-number tickets-number">{{ stats.oneTimeTickets }}</div>
         </div>
 
