@@ -154,6 +154,7 @@ const isPlaying = ref(false);
 const isMuted = ref(false); // Start unmuted since Chrome allows it
 const videoPlayer = ref(null);
 const showControls = ref(true);
+const isManuallyPaused = ref(false); // 🆕 Track if user manually paused
 
 // Video collections
 const natlibVideos = ref([]);
@@ -269,21 +270,32 @@ const recoverFromSleep = async () => {
       // Force reload the current video
       video.load();
       
-      // Wait a bit then try to play
+      // Wait a bit then try to play (only if not manually paused)
       setTimeout(async () => {
         try {
-          await video.play();
-          isPlaying.value = true;
-          console.log('✅ Video playback resumed successfully');
-          showSystemStatusMessage('Videolar muvaffaqiyatli qayta boshlandi', '✅', 'status-success', 2000);
+          // 🆕 Respect manual pause state during recovery
+          if (!isManuallyPaused.value) {
+            await video.play();
+            isPlaying.value = true;
+            console.log('✅ Video playback resumed successfully after recovery');
+            showSystemStatusMessage('Videolar muvaffaqiyatli qayta boshlandi', '✅', 'status-success', 2000);
+          } else {
+            console.log('⏸️ Video loaded but staying paused (user manually paused)');
+            showSystemStatusMessage('Video tayyor, lekin to\'xtatilgan (foydalanuvchi tomonidan)', 'ℹ️', 'status-success', 2000);
+          }
         } catch (error) {
           console.error('❌ Failed to resume video, trying next video...');
-          playNextVideo();
+          // Only try next video if not manually paused
+          if (!isManuallyPaused.value) {
+            playNextVideo();
+          }
         }
       }, 1000);
     } else {
-      // No current video, start fresh
-      playNextVideo();
+      // No current video, start fresh (only if not manually paused)
+      if (!isManuallyPaused.value) {
+        playNextVideo();
+      }
     }
     
     // 3. Refresh stats and other data
@@ -311,6 +323,11 @@ const recoverFromSleep = async () => {
 const checkVideoHealth = () => {
   const video = videoPlayer.value;
   if (!video || !currentVideoUrl.value) return;
+  
+  // 🆕 Skip health checks if manually paused
+  if (isManuallyPaused.value) {
+    return;
+  }
   
   // Check if video should be playing but isn't
   if (!video.paused && !isPlaying.value) {
@@ -365,9 +382,9 @@ const handleVisibilityChange = () => {
     if (detectSystemSleep()) {
       recoverFromSleep();
     } else {
-      // Just ensure video is playing
+      // Just ensure video is playing (only if not manually paused)
       const video = videoPlayer.value;
-      if (video && currentVideoUrl.value && video.paused) {
+      if (video && currentVideoUrl.value && video.paused && !isManuallyPaused.value) {
         console.log('▶️ Resuming paused video after visibility change');
         video.play().catch(error => {
           console.error('❌ Failed to resume video:', error);
@@ -681,10 +698,14 @@ const getNextVideo = () => {
 const playNextVideo = () => {
   const nextVideoUrl = getNextVideo();
   if (nextVideoUrl) {
+    // 🆕 Reset manual pause state when playing next video
+    isManuallyPaused.value = false;
+    
     currentVideoUrl.value = nextVideoUrl;
     currentVideoIndex.value = (currentVideoIndex.value + 1) % totalVideos.value;
     console.log('▶️ Setting video URL:', nextVideoUrl);
     console.log(`🎭 Alternation state updated: lastPlayedType = ${lastPlayedType.value}`);
+    console.log('🔄 Manual pause state reset for new video');
   }
 };
 
@@ -708,9 +729,13 @@ const togglePlayPause = () => {
   if (video.paused) {
     video.play();
     isPlaying.value = true;
+    isManuallyPaused.value = false; // 🆕 User resumed, clear manual pause
+    console.log('▶️ User manually resumed video');
   } else {
     video.pause();
     isPlaying.value = false;
+    isManuallyPaused.value = true; // 🆕 User paused, set manual pause flag
+    console.log('⏸️ User manually paused video');
   }
   showControlsTemporarily();
 };
