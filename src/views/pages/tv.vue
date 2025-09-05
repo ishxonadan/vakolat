@@ -25,27 +25,6 @@
           <p class="stat-subtitle">One-time tickets given today</p>
           <div class="stat-number tickets-number">{{ stats.oneTimeTickets }}</div>
         </div>
-
-        <!-- <div class="events-card" :class="{ 'events-loading': eventsLoading, 'events-minimal': hasMinimalEvents }">
-          <h3 class="events-title">Rejalashtirilgan tadbirlar:</h3>
-          <div class="events-list">
-            <div v-if="eventsLoading" class="events-loading-state">
-              <div class="loading-spinner"></div>
-              <div class="loading-text">Ma'lumotlar yuklanmoqda...</div>
-            </div>
-            <div v-else-if="events.length > 0" class="events-content">
-              <div v-for="event in events" :key="event.id" class="event-item">
-                <span class="event-time">{{ event.time }}</span>
-                <span class="event-separator">—</span>
-                <span class="event-description">{{ event.description }}</span>
-              </div>
-            </div>
-            <div v-else class="no-events">
-              <div class="no-events-icon">📅</div>
-              <div class="no-events-text">Bugun rejalashtirilgan tadbirlar yo'q</div>
-            </div>
-          </div>
-        </div> -->
       </div>
 
       <div class="right-panel">
@@ -70,6 +49,8 @@
             @canplay="onVideoCanPlay"
             @loadedmetadata="onVideoLoadedMetadata"
             @error="onVideoError"
+            @pause="onVideoPaused"
+            @play="onVideoPlay"
             class="video-element"
           ></video>
           
@@ -135,6 +116,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 🆕 System Status Indicator -->
+    <div v-if="showSystemStatus" class="system-status-indicator" :class="systemStatusClass">
+      <div class="status-icon">{{ systemStatusIcon }}</div>
+      <div class="status-text">{{ systemStatusText }}</div>
+    </div>
   </div>
 </template>
 
@@ -183,8 +170,21 @@ const klipCurrentIndex = ref(0);
 const lastPlayedType = ref(null); // 'natlib' or 'klip'
 const videoPlayCount = ref(0); // Total videos played
 
+// 🆕 HIBERNATE/SLEEP RECOVERY STATE
+const lastActiveTime = ref(Date.now());
+const isRecovering = ref(false);
+const showSystemStatus = ref(false);
+const systemStatusText = ref('');
+const systemStatusIcon = ref('');
+const systemStatusClass = ref('');
+
 // Control visibility timer
 let controlsHideTimer = null;
+
+// 🆕 Recovery and monitoring timers
+let recoveryCheckInterval = null;
+let videoHealthCheckInterval = null;
+let systemStatusTimer = null;
 
 // Current ticker text
 const currentTickerText = computed(() => {
@@ -207,6 +207,199 @@ let colonBlinkInterval = null;
 let statsInterval = null;
 let eventsInterval = null;
 let tickerInterval = null;
+
+// 🆕 SYSTEM RECOVERY FUNCTIONS
+
+// Show system status message
+const showSystemStatusMessage = (text, icon, className, duration = 5000) => {
+  systemStatusText.value = text;
+  systemStatusIcon.value = icon;
+  systemStatusClass.value = className;
+  showSystemStatus.value = true;
+  
+  console.log(`🔔 System Status: ${text}`);
+  
+  // Clear existing timer
+  if (systemStatusTimer) {
+    clearTimeout(systemStatusTimer);
+  }
+  
+  // Hide after duration
+  systemStatusTimer = setTimeout(() => {
+    showSystemStatus.value = false;
+  }, duration);
+};
+
+// Detect if system was hibernated/sleeping
+const detectSystemSleep = () => {
+  const now = Date.now();
+  const timeDiff = now - lastActiveTime.value;
+  
+  // If more than 2 minutes have passed, likely system was sleeping
+  if (timeDiff > 120000) { // 2 minutes
+    console.log(`🛌 SYSTEM SLEEP DETECTED: ${Math.round(timeDiff / 1000)}s gap`);
+    return true;
+  }
+  
+  return false;
+};
+
+// Recovery after system sleep/hibernate
+const recoverFromSleep = async () => {
+  if (isRecovering.value) {
+    console.log('🔄 Recovery already in progress, skipping...');
+    return;
+  }
+  
+  console.log('🚀 STARTING SYSTEM RECOVERY...');
+  isRecovering.value = true;
+  
+  showSystemStatusMessage('Tizim uyg\'ondi - videolarni qayta ishga tushirish...', '🔄', 'status-recovering', 3000);
+  
+  try {
+    // 1. Refresh video list
+    console.log('📹 Refreshing video list...');
+    await fetchVideoList();
+    
+    // 2. Restart video playback
+    console.log('▶️ Restarting video playback...');
+    if (currentVideoUrl.value && videoPlayer.value) {
+      const video = videoPlayer.value;
+      
+      // Force reload the current video
+      video.load();
+      
+      // Wait a bit then try to play
+      setTimeout(async () => {
+        try {
+          await video.play();
+          isPlaying.value = true;
+          console.log('✅ Video playback resumed successfully');
+          showSystemStatusMessage('Videolar muvaffaqiyatli qayta boshlandi', '✅', 'status-success', 2000);
+        } catch (error) {
+          console.error('❌ Failed to resume video, trying next video...');
+          playNextVideo();
+        }
+      }, 1000);
+    } else {
+      // No current video, start fresh
+      playNextVideo();
+    }
+    
+    // 3. Refresh stats and other data
+    console.log('📊 Refreshing stats...');
+    fetchStats();
+    fetchTickerTexts();
+    
+  } catch (error) {
+    console.error('❌ Error during recovery:', error);
+    showSystemStatusMessage('Qayta tiklashda xatolik - qayta urinish...', '⚠️', 'status-error', 3000);
+    
+    // Retry recovery after 5 seconds
+    setTimeout(() => {
+      isRecovering.value = false;
+      recoverFromSleep();
+    }, 5000);
+    return;
+  }
+  
+  isRecovering.value = false;
+  console.log('✅ SYSTEM RECOVERY COMPLETED');
+};
+
+// Check if video is actually playing and healthy
+const checkVideoHealth = () => {
+  const video = videoPlayer.value;
+  if (!video || !currentVideoUrl.value) return;
+  
+  // Check if video should be playing but isn't
+  if (!video.paused && !isPlaying.value) {
+    console.log('🔧 Video state mismatch detected, correcting...');
+    isPlaying.value = true;
+  }
+  
+  // Check if video is stuck (currentTime not advancing)
+  const currentTime = video.currentTime;
+  if (video.lastCheckedTime !== undefined && 
+      currentTime === video.lastCheckedTime && 
+      !video.paused && 
+      !video.ended) {
+    console.log('🚨 Video appears stuck, restarting...');
+    playNextVideo();
+    return;
+  }
+  
+  video.lastCheckedTime = currentTime;
+  
+  // Check if video ended but didn't trigger ended event
+  if (video.ended && isPlaying.value) {
+    console.log('🔚 Video ended but event not triggered, playing next...');
+    playNextVideo();
+  }
+};
+
+// Monitor for system sleep/wake cycles
+const startRecoveryMonitoring = () => {
+  // Check every 30 seconds for system sleep
+  recoveryCheckInterval = setInterval(() => {
+    if (detectSystemSleep()) {
+      recoverFromSleep();
+    }
+    lastActiveTime.value = Date.now();
+  }, 30000);
+  
+  // Check video health every 10 seconds
+  videoHealthCheckInterval = setInterval(checkVideoHealth, 10000);
+  
+  console.log('🔍 Recovery monitoring started');
+};
+
+// 🆕 PAGE VISIBILITY AND FOCUS HANDLERS
+
+// Handle page visibility change (when tab becomes visible again)
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    console.log('👁️ Page became visible');
+    
+    // Check if we need recovery
+    if (detectSystemSleep()) {
+      recoverFromSleep();
+    } else {
+      // Just ensure video is playing
+      const video = videoPlayer.value;
+      if (video && currentVideoUrl.value && video.paused) {
+        console.log('▶️ Resuming paused video after visibility change');
+        video.play().catch(error => {
+          console.error('❌ Failed to resume video:', error);
+          playNextVideo();
+        });
+      }
+    }
+    
+    lastActiveTime.value = Date.now();
+  } else {
+    console.log('👁️ Page became hidden');
+  }
+};
+
+// Handle window focus (when window gets focus again)
+const handleWindowFocus = () => {
+  console.log('🎯 Window focused');
+  
+  // Update last active time
+  lastActiveTime.value = Date.now();
+  
+  // Check if we need recovery
+  if (detectSystemSleep()) {
+    recoverFromSleep();
+  }
+};
+
+// Handle window blur (when window loses focus)
+const handleWindowBlur = () => {
+  console.log('🎯 Window blurred');
+  lastActiveTime.value = Date.now();
+};
 
 // 🔧 FIXED: Proper URL encoding for filenames with special characters
 const encodeVideoFilename = (filename) => {
@@ -333,8 +526,8 @@ const fetchVideoList = async () => {
       // Initialize playlists
       initializePlaylists();
       
-      // Start playing first video
-      if (natlibVideos.value.length > 0 || klipVideos.value.length > 0) {
+      // Start playing first video if not already playing
+      if ((natlibVideos.value.length > 0 || klipVideos.value.length > 0) && !currentVideoUrl.value) {
         playNextVideo();
       }
     } else {
@@ -583,6 +776,17 @@ const onVideoCanPlay = async () => {
   }
 };
 
+// 🆕 NEW VIDEO EVENT HANDLERS
+const onVideoPaused = () => {
+  console.log('⏸️ Video paused');
+  isPlaying.value = false;
+};
+
+const onVideoPlay = () => {
+  console.log('▶️ Video playing');
+  isPlaying.value = true;
+};
+
 const onVideoError = (event) => {
   console.error('❌ Video error:', event);
   console.error('❌ Video src that failed:', currentVideoUrl.value);
@@ -738,6 +942,11 @@ const startTickerRotation = () => {
 onMounted(() => {
   console.log('🎬 TV Display initializing...');
   
+  // 🆕 ADD EVENT LISTENERS FOR SYSTEM RECOVERY
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener('blur', handleWindowBlur);
+  
   // Start time and colon blinking
   updateTime();
   startColonBlink();
@@ -764,17 +973,37 @@ onMounted(() => {
   // Show controls initially
   showControlsTemporarily();
   
-  console.log('🎬 TV Display initialized');
+  // 🆕 START RECOVERY MONITORING
+  startRecoveryMonitoring();
+  
+  // Initialize last active time
+  lastActiveTime.value = Date.now();
+  
+  console.log('🎬 TV Display initialized with hibernate recovery');
+  showSystemStatusMessage('TV Display tizimi ishga tushdi', '🚀', 'status-success', 2000);
 });
 
 // Cleanup
 onUnmounted(() => {
+  // Clear all intervals
   if (timeInterval) clearInterval(timeInterval);
   if (colonBlinkInterval) clearInterval(colonBlinkInterval);
   if (statsInterval) clearInterval(statsInterval);
   if (eventsInterval) clearInterval(eventsInterval);
   if (tickerInterval) clearInterval(tickerInterval);
   if (controlsHideTimer) clearTimeout(controlsHideTimer);
+  
+  // 🆕 CLEAR RECOVERY INTERVALS
+  if (recoveryCheckInterval) clearInterval(recoveryCheckInterval);
+  if (videoHealthCheckInterval) clearInterval(videoHealthCheckInterval);
+  if (systemStatusTimer) clearTimeout(systemStatusTimer);
+  
+  // 🆕 REMOVE EVENT LISTENERS
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener('blur', handleWindowBlur);
+  
+  console.log('🧹 TV Display cleanup completed');
 });
 </script>
 
@@ -787,6 +1016,7 @@ onUnmounted(() => {
   flex-direction: column;
   font-family: 'Arial', sans-serif;
   overflow: hidden;
+  position: relative;
 }
 
 .main-content {
@@ -855,126 +1085,6 @@ onUnmounted(() => {
 
 .tickets-number {
   color: #3b82f6;
-}
-
-/* AUTOMATIC SIZE EVENTS CARD */
-.events-card {
-  background: white;
-  border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-height: 80px;
-  transition: all 0.3s ease;
-}
-
-.events-card.events-loading {
-  min-height: 120px;
-}
-
-.events-card.events-minimal {
-  flex-shrink: 2;
-}
-
-.events-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #f97316;
-  margin: 0 0 12px 0;
-}
-
-.events-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  max-height: 300px;
-}
-
-/* LOADING STATE STYLES */
-.events-loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  gap: 12px;
-}
-
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #f97316;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 13px;
-  color: #666;
-  font-style: italic;
-}
-
-/* EVENTS CONTENT STYLES */
-.events-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.event-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  color: #333;
-  line-height: 1.4;
-  padding: 4px 0;
-}
-
-/* ALL EVENT TIMES ARE BLACK */
-.event-time {
-  font-weight: 600;
-  color: #000000;
-  min-width: 45px;
-  flex-shrink: 0;
-}
-
-.event-separator {
-  color: #666;
-  flex-shrink: 0;
-}
-
-.event-description {
-  flex: 1;
-  color: #333;
-}
-
-/* NO EVENTS STATE */
-.no-events {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  gap: 8px;
-}
-
-.no-events-icon {
-  font-size: 24px;
-  opacity: 0.5;
-}
-
-.no-events-text {
-  font-size: 13px;
-  color: #666;
-  font-style: italic;
-  text-align: center;
 }
 
 /* VIDEO CONTAINER */
@@ -1210,6 +1320,84 @@ onUnmounted(() => {
   }
 }
 
+/* 🆕 SYSTEM STATUS INDICATOR */
+.system-status-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1001;
+  backdrop-filter: blur(10px);
+  border: 2px solid transparent;
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.status-recovering {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.status-success {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.status-error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.status-icon {
+  font-size: 18px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* LOADING SPINNER */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #f97316;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* RESPONSIVE STYLES */
 @media (max-width: 1200px) {
   .left-panel {
@@ -1260,6 +1448,12 @@ onUnmounted(() => {
   .ticker-text {
     font-size: 18px;
   }
+  
+  .system-status-indicator {
+    top: 15px;
+    right: 15px;
+    padding: 10px 16px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1279,11 +1473,6 @@ onUnmounted(() => {
   .stat-card {
     flex: 1;
     min-width: 150px;
-  }
-  
-  .events-card {
-    width: 100%;
-    order: 5;
   }
   
   .right-panel {
@@ -1332,6 +1521,13 @@ onUnmounted(() => {
   
   .ticker-text {
     font-size: 16px;
+  }
+  
+  .system-status-indicator {
+    top: 10px;
+    right: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
   }
 }
 

@@ -163,7 +163,7 @@ const response = await axios({
         const rowCount = rowMatches ? rowMatches.length : 0
 
         console.log(`✅ Found ${rowCount} registration rows for ${apiDateString}`)
-        todayRegistrations = rowCount
+        todayRegistrations = rowCount - 1
       } catch (apiError) {
         console.error(`❌ Registration API error:`, apiError.message)
 
