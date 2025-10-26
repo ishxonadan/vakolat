@@ -83,7 +83,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   firstname: { type: String, required: true },
   lastname: { type: String, required: true },
-  position: { type: String }, // Made optional
+  position: { type: String },
   level: { type: String, required: true, default: "expert" },
   language: { type: String, required: true, default: "uz" },
   permissionGroup: { type: mongoose.Schema.Types.ObjectId, ref: "PermissionGroup" },
@@ -94,12 +94,11 @@ const userSchema = new mongoose.Schema({
 const contestantSchema = new mongoose.Schema({
   name: { type: String, required: true },
   url: { type: String, required: true, unique: true },
-  // Library integration fields
   libraryConfig: {
-    locationCode: { type: String }, // e.g., "R0050000"
-    locationName: { type: String }, // e.g., "Toshkent shahar kutubxonasi"
-    region: { type: String }, // e.g., "toshkent", "samarqand"
-    apiEndpoint: { type: String }, // Full API URL
+    locationCode: { type: String },
+    locationName: { type: String },
+    region: { type: String },
+    apiEndpoint: { type: String },
     isActive: { type: Boolean, default: false },
   },
   createdAt: { type: Date, default: Date.now },
@@ -121,7 +120,7 @@ const autoRatingSchema = new mongoose.Schema({
     electronicResourceUsage: { type: Number, default: 0 },
   },
   totalScore: { type: Number, default: 0 },
-  source: { type: String, enum: ["manual", "plausible", "comprehensive"], default: "manual" }, // Track data source
+  source: { type: String, enum: ["manual", "plausible", "comprehensive"], default: "manual" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 })
@@ -166,15 +165,15 @@ const razdelSchema = new mongoose.Schema({
 // COLLECTION 1: Library Users (stores user info + passport + ticket history)
 const libraryUserSchema = new mongoose.Schema(
   {
-    passport: { type: String, required: true, unique: true }, // Passport is unique per user
+    passport: { type: String, required: true, unique: true },
     fullname: { type: String, required: true },
-    ticketId: { type: String, required: true, unique: true }, // IQ format - NEVER changes for this user
-    globalTicketNumber: { type: Number, required: true, unique: true }, // Global counter - NEVER resets
+    ticketId: { type: String, required: true, unique: true },
+    globalTicketNumber: { type: Number, required: true, unique: true },
     ticketHistory: [
       {
-        date: { type: Date, required: true }, // Date of ticket (NORMALIZED to start of day)
-        dailyOrderNumber: { type: Number, required: true }, // Daily counter (resets each day)
-        createdAt: { type: Date, default: Date.now }, // When this history entry was created
+        date: { type: Date, required: true },
+        dailyOrderNumber: { type: Number, required: true },
+        createdAt: { type: Date, default: Date.now },
       },
     ],
     createdAt: { type: Date, default: Date.now },
@@ -186,15 +185,15 @@ const libraryUserSchema = new mongoose.Schema(
 // COLLECTION 2: Tickets (individual ticket entries - NOT unique by ticketId)
 const ticketSchema = new mongoose.Schema(
   {
-    ticketId: { type: String, required: true }, // IQ format - NOT unique (same user, different days)
+    ticketId: { type: String, required: true },
     passport: { type: String, required: true },
     fullname: { type: String, required: true },
-    date: { type: Date, required: true }, // The ticket date (NORMALIZED to start of day)
-    dailyOrderNumber: { type: Number, required: true }, // Daily counter (resets each day)
-    globalTicketNumber: { type: Number, required: true }, // Global counter (never resets)
-    isUpdate: { type: Boolean, default: false }, // Track if this is an update entry
-    nameChanged: { type: Boolean, default: false }, // Track if name was changed
-    createdAt: { type: Date, default: Date.now }, // When this entry was created (actual timestamp)
+    date: { type: Date, required: true },
+    dailyOrderNumber: { type: Number, required: true },
+    globalTicketNumber: { type: Number, required: true },
+    isUpdate: { type: Boolean, default: false },
+    nameChanged: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true },
 )
@@ -209,11 +208,8 @@ const Tickets = nazorat.model("Ticket", ticketSchema)
 
 // Import the rating models
 const ratingModel = require("./src/model/rating.model")
-// Import the user rating model
 const userRatingModel = require("./src/model/user-rating.model")
-// Import the survey vote model
 const surveyVoteModel = require("./src/model/survey-vote.model")
-// Import the plausible cache model
 const plausibleCacheModel = require("./src/model/plausible-cache.model")
 
 // Create models - DEFINE THESE ONLY ONCE IN THE ENTIRE APPLICATION
@@ -224,14 +220,8 @@ const User = vakolat.model("User", userSchema)
 const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
 const WebsiteRating = vakolat.model("WebsiteRating", ratingModel.websiteRatingSchema)
 const AutoRating = vakolat.model("AutoRating", autoRatingSchema)
-
-// Register the UserRating model
 const UserRating = vakolat.model("UserRating", userRatingModel.userRatingSchema)
-
-// Register the SurveyVote model
 const SurveyVote = vakolat.model("SurveyVote", surveyVoteModel.surveyVoteSchema)
-
-// Register the PlausibleCache model
 const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plausibleCacheSchema)
 
 // Make models available to middleware
@@ -241,11 +231,11 @@ app.locals.PermissionGroup = PermissionGroup
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./uploads") // Directory where files will be saved
+    cb(null, "./uploads")
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now()
-    const randomValue = Math.random().toString(36).substring(2, 7) // Generate a 5-character random string
+    const randomValue = Math.random().toString(36).substring(2, 7)
     cb(null, `${timestamp}_${randomValue}.pdf`)
   },
 })
@@ -253,7 +243,6 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    // Restrict file type to .pdf
     if (path.extname(file.originalname) !== ".pdf") {
       return cb(new Error("Only .pdf files are allowed"))
     }
@@ -266,7 +255,6 @@ app.get("/api/admin/fix-indexes", async (req, res) => {
   try {
     console.log("🔧 FIXING DATABASE INDEXES...")
 
-    // Drop ALL indexes on ticketId to remove unique constraint
     try {
       await Tickets.collection.dropIndex("ticketId_1")
       console.log("✅ Dropped unique index ticketId_1")
@@ -281,10 +269,9 @@ app.get("/api/admin/fix-indexes", async (req, res) => {
       console.log("ℹ️ ticketId index doesn't exist or already dropped")
     }
 
-    // Create proper indexes (without unique constraint on ticketId)
-    await Tickets.collection.createIndex({ passport: 1, date: 1 }) // For daily checks
-    await Tickets.collection.createIndex({ createdAt: -1 }) // For sorting
-    await Tickets.collection.createIndex({ ticketId: 1, createdAt: -1 }) // For finding latest ticket (NOT unique)
+    await Tickets.collection.createIndex({ passport: 1, date: 1 })
+    await Tickets.collection.createIndex({ createdAt: -1 })
+    await Tickets.collection.createIndex({ ticketId: 1, createdAt: -1 })
 
     console.log("✅ Created proper indexes")
     console.log("🎯 Database indexes fixed successfully - ticketId is now NON-UNIQUE")
@@ -306,10 +293,10 @@ app.get("/api/admin/test-permissions", [verifyToken, checkPermissions(["manage_u
 
 app.get("/diss/cats", async (req, res) => {
   try {
-    const razdelData = await Categories.find() // Fetch all documents
-    res.json(razdelData) // Send the data as JSON response
+    const razdelData = await Categories.find()
+    res.json(razdelData)
   } catch (error) {
-    res.status(500).json({ message: error.message }) // Handle errors
+    res.status(500).json({ message: error.message })
   }
 })
 
@@ -326,12 +313,12 @@ app.post("/diss/upload", upload.single("demo[]"), (req, res) => {
 
 app.get("/diss_list/:page?", async (req, res) => {
   try {
-    const page = Number.parseInt(req.params.page, 10) || 1 // Default page is 1
+    const page = Number.parseInt(req.params.page, 10) || 1
     const limit = 30
     const skip = (page - 1) * limit
 
     const results = await Documents.find()
-      .sort({ createdAt: -1 }) // Assuming rows should be sorted by the latest
+      .sort({ createdAt: -1 })
       .skip(skip)
       .select("title uuid author code is_deleted")
 
@@ -359,7 +346,6 @@ app.get("/diss_file/:uuid", (req, res) => {
   const uuid = req.params.uuid
   const filePath = path.join(folderplace, `${uuid}.pdf`)
 
-  // Check if file exists
   if (fs.existsSync(filePath)) {
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", `inline; filename="${uuid}.pdf"`)
@@ -374,11 +360,7 @@ app.post("/diss_save/:uuid", async (req, res) => {
     const requestData = req.body
     const uuid = req.params.uuid
 
-    const document = await Documents.findOneAndUpdate(
-      { uuid },
-      requestData,
-      { new: true, upsert: false }, // Only update if it exists, no new document creation
-    )
+    const document = await Documents.findOneAndUpdate({ uuid }, requestData, { new: true, upsert: false })
 
     if (!document) {
       return res.status(404).json({ error: `Document with UUID ${uuid} not found` })
@@ -434,12 +416,10 @@ const createTicketsRoutes = () => {
   const QRCode = require("qrcode")
   const router = express.Router()
 
-  // Helper function to generate ticket ID in IQ format
   function generateTicketId(ticketNumber) {
     return `IQ${ticketNumber.toString().padStart(10, "0")}`
   }
 
-  // Helper function to get next global ticket number (NEVER resets)
   async function getNextGlobalTicketNumber() {
     try {
       const lastUser = await LibraryUsers.findOne().sort({ globalTicketNumber: -1 })
@@ -450,29 +430,24 @@ const createTicketsRoutes = () => {
     }
   }
 
-  // CRITICAL: Normalize date to start of calendar day (00:00:00.000)
   function normalizeToCalendarDay(date = new Date()) {
     const normalized = new Date(date)
-    normalized.setHours(0, 0, 0, 0) // Set to 00:00:00.000
+    normalized.setHours(0, 0, 0, 0)
     return normalized
   }
 
-  // Helper function to get today normalized to start of day
   function getTodayNormalized() {
     return normalizeToCalendarDay(new Date())
   }
 
-  // Helper function to check if user has ticket for TODAY (calendar day)
   async function hasTicketForToday(passport) {
     try {
       const todayNormalized = getTodayNormalized()
-
       console.log(`🔍 Checking if ${passport} has ticket for calendar day: ${todayNormalized.toISOString()}`)
 
-      // Find ticket with EXACT date match (normalized to start of day)
       const todaysTicket = await Tickets.findOne({
         passport: passport,
-        date: todayNormalized, // Exact match for normalized date
+        date: todayNormalized,
       }).sort({ createdAt: -1 })
 
       if (todaysTicket) {
@@ -488,16 +463,13 @@ const createTicketsRoutes = () => {
     }
   }
 
-  // Helper function to get next daily order number (resets each calendar day)
   async function getNextDailyOrderNumber() {
     try {
       const todayNormalized = getTodayNormalized()
-
       console.log(`📊 Getting daily order number for calendar day: ${todayNormalized.toISOString()}`)
 
-      // Find all tickets with EXACT date match (normalized to start of day)
       const todayTickets = await Tickets.find({
-        date: todayNormalized, // Exact match for normalized date
+        date: todayNormalized,
       })
 
       console.log(`Found ${todayTickets.length} tickets for today (calendar day)`)
@@ -507,7 +479,6 @@ const createTicketsRoutes = () => {
         return 1
       }
 
-      // Get the highest daily order number for today
       const maxOrderNumber = Math.max(...todayTickets.map((t) => t.dailyOrderNumber || 0))
       const nextNumber = maxOrderNumber + 1
 
@@ -519,7 +490,6 @@ const createTicketsRoutes = () => {
     }
   }
 
-  // GET all tickets (all entries including updates) - sorted by createdAt DESC
   router.get("/", async (req, res) => {
     try {
       const tickets = await Tickets.find().sort({ createdAt: -1 })
@@ -530,7 +500,6 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // GET ticket by ID (get the latest entry for this ticket ID)
   router.get("/:id", async (req, res) => {
     try {
       const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
@@ -544,7 +513,6 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // GET user by passport (for auto-fill) - REQUIREMENT 3
   router.get("/user/:passport", async (req, res) => {
     try {
       const user = await LibraryUsers.findOne({ passport: req.params.passport })
@@ -558,7 +526,6 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // POST create new ticket - MAIN LOGIC WITH PROPER CALENDAR DAY HANDLING
   router.post("/", async (req, res) => {
     try {
       const { fullname, passport } = req.body
@@ -567,7 +534,6 @@ const createTicketsRoutes = () => {
         return res.status(400).json({ error: "Ism va pasport ma'lumotlari talab qilinadi" })
       }
 
-      // Validate passport format
       const passportRegex = /^[A-Z]{2}\d{7}$/
       if (!passportRegex.test(passport.replace(/\s/g, ""))) {
         return res.status(400).json({ error: "Pasport formati noto'g'ri" })
@@ -579,7 +545,6 @@ const createTicketsRoutes = () => {
       console.log(`\n🎫 TICKET REQUEST for passport: ${cleanPassport}`)
       console.log(`📅 Current time: ${new Date().toISOString()}`)
 
-      // REQUIREMENT 5: Check if user already has ticket for TODAY (calendar day)
       const todaysTicket = await hasTicketForToday(cleanPassport)
       if (todaysTicket) {
         console.log(`🚫 USER ALREADY HAS TICKET FOR TODAY (calendar day)`)
@@ -591,18 +556,15 @@ const createTicketsRoutes = () => {
         })
       }
 
-      // REQUIREMENT 4: Check if user exists in LibraryUsers collection
       let libraryUser = await LibraryUsers.findOne({ passport: cleanPassport })
       let isUpdate = false
       let nameChanged = false
 
       if (libraryUser) {
-        // REQUIREMENT 6: Existing user - same ID, new ticket for today
         console.log(`👤 EXISTING USER: ${libraryUser.ticketId} (ID remains same)`)
         isUpdate = true
         nameChanged = libraryUser.fullname !== cleanFullname
 
-        // REQUIREMENT 3: Update user info if name changed
         if (nameChanged) {
           console.log(`📝 NAME CHANGED: "${libraryUser.fullname}" -> "${cleanFullname}"`)
           libraryUser.fullname = cleanFullname
@@ -610,7 +572,6 @@ const createTicketsRoutes = () => {
           await libraryUser.save()
         }
       } else {
-        // New user - create in LibraryUsers collection
         console.log(`🆕 NEW USER - CREATING`)
         const globalTicketNumber = await getNextGlobalTicketNumber()
         const ticketId = generateTicketId(globalTicketNumber)
@@ -627,35 +588,29 @@ const createTicketsRoutes = () => {
         console.log(`✅ NEW USER CREATED: ${libraryUser.ticketId}`)
       }
 
-      // REQUIREMENT 2: Get daily order number (resets each calendar day)
       const dailyOrderNumber = await getNextDailyOrderNumber()
-
-      // CRITICAL: Normalize ticket date to start of calendar day
       const ticketDate = getTodayNormalized()
 
       console.log(`📅 TICKET DATE (normalized): ${ticketDate.toISOString()}`)
       console.log(`🔢 DAILY ORDER NUMBER: ${dailyOrderNumber}`)
       console.log(`🎫 TICKET ID (remains same): ${libraryUser.ticketId}`)
 
-      // REQUIREMENT 7: Add to ticket history in LibraryUsers
       libraryUser.ticketHistory.push({
-        date: ticketDate, // Normalized date
+        date: ticketDate,
         dailyOrderNumber: dailyOrderNumber,
-        createdAt: new Date(), // Actual timestamp
+        createdAt: new Date(),
       })
       await libraryUser.save()
 
-      // Create new ticket entry in Tickets collection (ticketId is NOT unique here)
       const newTicketEntry = new Tickets({
-        ticketId: libraryUser.ticketId, // Same ID for same user
+        ticketId: libraryUser.ticketId,
         passport: cleanPassport,
         fullname: cleanFullname,
-        date: ticketDate, // Normalized date (00:00:00.000)
+        date: ticketDate,
         dailyOrderNumber: dailyOrderNumber,
         globalTicketNumber: libraryUser.globalTicketNumber,
         isUpdate: isUpdate,
         nameChanged: nameChanged,
-        // createdAt will be set automatically to actual timestamp
       })
 
       await newTicketEntry.save()
@@ -681,7 +636,6 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // GET QR code for ticket
   router.get("/:id/qr", async (req, res) => {
     try {
       const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
@@ -689,7 +643,7 @@ const createTicketsRoutes = () => {
         return res.status(404).json({ error: "Chipta topilmadi" })
       }
 
-      const qrData = ticket.ticketId // Only the ticket ID
+      const qrData = ticket.ticketId
       const qrCode = await QRCode.toDataURL(qrData, {
         width: 400,
         margin: 1,
@@ -706,7 +660,6 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // GET ticket count for passport
   router.get("/count/:passport", async (req, res) => {
     try {
       const user = await LibraryUsers.findOne({ passport: req.params.passport })
@@ -718,7 +671,6 @@ const createTicketsRoutes = () => {
     }
   })
 
-  // DELETE ticket
   router.delete("/:id", async (req, res) => {
     try {
       const ticket = await Tickets.findOneAndDelete({ ticketId: req.params.id })
@@ -742,15 +694,12 @@ const contestantRoutes = require("./routes/contestants.routes")(vakolat)
 const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
 const surveyRoutes = require("./routes/survey.routes")(vakolat)
-
-// PASS THE ALREADY CREATED MODELS TO PERMISSIONS ROUTES
 const permissionsRoutes = require("./routes/permissions.routes")(Permission, PermissionGroup, User, JWT_SECRET)
-
-// CREATE TV ROUTES - NO AUTHENTICATION REQUIRED
 const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
-
-// CREATE VIDEO ROUTES - NO AUTHENTICATION REQUIRED
 const videoRoutes = require("./routes/videos.routes")()
+
+// Import visits routes and pass the nazorat connection
+const visitsRoutes = require("./routes/visits.routes")(nazorat)
 
 // Register routes
 app.use("/", authRoutes)
@@ -758,46 +707,39 @@ app.use("/api/experts", expertRoutes)
 app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
-app.use("/api/admin", permissionsRoutes) // This will now use passed models
+app.use("/api/admin", permissionsRoutes)
 app.use("/survey", surveyRoutes)
-
-// Register TV routes - NO AUTHENTICATION
 app.use("/api/tv", tvRoutes)
-
-// Register VIDEO routes - NO AUTHENTICATION
 app.use("/api/videos", videoRoutes)
-
-// Register tickets routes
 app.use("/api/tickets", createTicketsRoutes())
+
+// Register visits routes at /api/visits
+app.use("/api/visits", visitsRoutes)
 
 // Serve video files from /rolik folder
 app.use(
   "/rolik",
   express.static(path.join(__dirname, "public/rolik"), {
-    setHeaders: (res, path) => {
-      // Set proper MIME types for video files
-      if (path.endsWith(".mp4")) {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(".mp4")) {
         res.setHeader("Content-Type", "video/mp4")
-      } else if (path.endsWith(".avi")) {
+      } else if (filePath.endsWith(".avi")) {
         res.setHeader("Content-Type", "video/x-msvideo")
-      } else if (path.endsWith(".mov")) {
+      } else if (filePath.endsWith(".mov")) {
         res.setHeader("Content-Type", "video/quicktime")
-      } else if (path.endsWith(".mkv")) {
+      } else if (filePath.endsWith(".mkv")) {
         res.setHeader("Content-Type", "video/x-matroska")
-      } else if (path.endsWith(".webm")) {
+      } else if (filePath.endsWith(".webm")) {
         res.setHeader("Content-Type", "video/webm")
-      } else if (path.endsWith(".m4v")) {
+      } else if (filePath.endsWith(".m4v")) {
         res.setHeader("Content-Type", "video/x-m4v")
-      } else if (path.endsWith(".3gp")) {
+      } else if (filePath.endsWith(".3gp")) {
         res.setHeader("Content-Type", "video/3gpp")
-      } else if (path.endsWith(".flv")) {
+      } else if (filePath.endsWith(".flv")) {
         res.setHeader("Content-Type", "video/x-flv")
       }
 
-      // Enable range requests for video streaming
       res.setHeader("Accept-Ranges", "bytes")
-
-      // Cache videos for better performance
       res.setHeader("Cache-Control", "public, max-age=3600")
     },
   }),
@@ -808,7 +750,6 @@ app.post("/api/public/check-ticket", async (req, res) => {
   try {
     const { ticketId, secret } = req.body
 
-    // First check: Validate that secret password is provided and correct
     if (!secret || secret !== "simsim") {
       console.log(`🚫 UNAUTHORIZED ACCESS ATTEMPT: ${req.ip} - Wrong or missing secret`)
       return res.status(401).json({
@@ -817,7 +758,6 @@ app.post("/api/public/check-ticket", async (req, res) => {
       })
     }
 
-    // Second check: Validate that ticketId is provided in payload
     if (!ticketId) {
       return res.status(400).json({
         error: "Chipta ID talab qilinadi",
@@ -825,7 +765,6 @@ app.post("/api/public/check-ticket", async (req, res) => {
       })
     }
 
-    // Third check: Validate ticket ID format (should be IQ followed by 10 digits)
     const ticketIdRegex = /^IQ\d{10}$/
     if (!ticketIdRegex.test(ticketId)) {
       return res.status(400).json({
@@ -836,7 +775,6 @@ app.post("/api/public/check-ticket", async (req, res) => {
 
     console.log(`🔍 AUTHORIZED TICKET CHECK: ${ticketId} from ${req.ip}`)
 
-    // Find the most recent ticket entry for this ID
     const ticket = await Tickets.findOne({ ticketId: ticketId }).sort({ createdAt: -1 })
 
     if (!ticket) {
@@ -847,7 +785,6 @@ app.post("/api/public/check-ticket", async (req, res) => {
       })
     }
 
-    // Return ticket information
     const response = {
       success: true,
       ticket: {
@@ -855,7 +792,7 @@ app.post("/api/public/check-ticket", async (req, res) => {
         fullname: ticket.fullname,
         date: ticket.date,
         dailyOrderNumber: ticket.dailyOrderNumber,
-        isValid: true, // You can add more validation logic here if needed
+        isValid: true,
       },
       message: "Chipta topildi",
     }
@@ -880,7 +817,6 @@ if (process.env.npm_lifecycle_event === "start") {
     res.sendFile(path.join(distPath, "index.html"))
   })
 } else {
-  // Use proxy for development
   console.log("LOCAL")
   app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
 }
@@ -889,7 +825,6 @@ app.listen(7777, () => {
   console.log("Server is running on \x1b[34mhttp://localhost:7777\x1b[0m")
 })
 
-// Export models for use in other files
 module.exports = {
   Documents,
   Categories,

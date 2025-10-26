@@ -10,7 +10,7 @@ const route = useRoute();
 // Hardcoded variable to control manual correction menu visibility
 const SHOW_MANUAL_CORRECTION = true; // Set to false to hide the manual correction menu
 
-// Define menu items with required permission levels
+// Define menu items with required permission levels AND specific permissions
 const menuItems = [
   {
     label: "Bo'limlar",
@@ -29,7 +29,15 @@ const menuItems = [
             label: "Bir martalik chipta",
             icon: 'pi pi-fw pi-tags',
             to: '/tickets',
-            requiredLevel: 'admin'
+            requiredLevel: 'admin',
+            requiredPermissions: ['manage_tickets'] // Specific permission
+          },
+          {
+            label: "Tashriflar",
+            icon: 'pi pi-fw pi-chart-bar',
+            to: '/tashriflar',
+            requiredLevel: 'admin',
+            requiredPermissions: ['view_statistics']
           },
         ]
       },
@@ -40,7 +48,8 @@ const menuItems = [
           { 
             label: 'Hujjatlar', 
             icon: 'pi pi-fw pi-chart-line', 
-            to: '/diss' 
+            to: '/diss',
+            requiredPermissions: ['view_dissertations'] // Specific permission
           },
         ]
       },
@@ -52,41 +61,79 @@ const menuItems = [
             label: "Vakillar",
             icon: 'pi pi-fw pi-users',
             to: '/vakillar',
-            requiredLevel: 'admin'
+            requiredLevel: 'admin',
+            requiredPermissions: ['manage_users'] // Specific permission
           },
           {
             label: "Huquqlar",
             icon: 'pi pi-fw pi-key',
             to: '/huquqlar',
-            requiredLevel: 'rais'
+            requiredLevel: 'rais',
+            requiredPermissions: ['manage_permissions'] // Specific permission
           },
         ]
       },
     ]
   },
-
+  // Add manual correction category if enabled
+  SHOW_MANUAL_CORRECTION && {
+    label: "Qo'lda to'g'rilash",
+    items: [
+      {
+        label: "User baholarini to'g'rilash",
+        icon: 'pi pi-fw pi-users',
+        to: '/user-correction',
+        requiredLevel: 'rais',
+        requiredPermissions: ['manage_corrections']
+      },
+      {
+        label: "Avtomatik bahoni to'g'rilash",
+        icon: 'pi pi-fw pi-cog',
+        to: '/auto-correction',
+        requiredLevel: 'rais',
+        requiredPermissions: ['manage_corrections']
+      },
+    ]
+  }
 ];
 
-// Filter menu items based on user permissions
+// Enhanced filtering function that checks both levels and permissions
+const hasAccess = (item) => {
+  // If no requirements, everyone can access
+  if (!item.requiredLevel && !item.requiredPermissions) {
+    return true;
+  }
+
+  // Check level requirement
+  if (item.requiredLevel && !authService.hasAccess(item.requiredLevel)) {
+    return false;
+  }
+
+  // Check permission requirements
+  if (item.requiredPermissions && item.requiredPermissions.length > 0) {
+    if (!authService.hasPermissions(item.requiredPermissions)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+// Filter menu items based on user permissions and levels
 const filteredModel = computed(() => {
-  return menuItems.map(section => {
+  return menuItems.filter(section => section).map(section => {
     // Filter items in each section based on permissions
     const filteredItems = section.items.filter(item => {
       // If item has sub-items, filter those too
       if (item.items) {
-        const filteredSubItems = item.items.filter(subItem => {
-          if (!subItem.requiredLevel) return true;
-          return authService.hasAccess(subItem.requiredLevel);
-        });
+        const filteredSubItems = item.items.filter(subItem => hasAccess(subItem));
         // Only show parent item if it has visible sub-items
         item.items = filteredSubItems;
         return filteredSubItems.length > 0;
       }
       
-      // If no required level, everyone can access
-      if (!item.requiredLevel) return true;
-      // Check if user has required level
-      return authService.hasAccess(item.requiredLevel);
+      // Check access for regular items
+      return hasAccess(item);
     });
     
     // Return section with filtered items
