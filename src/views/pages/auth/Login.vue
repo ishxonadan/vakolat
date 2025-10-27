@@ -112,7 +112,7 @@ const login = async () => {
                 v-model="password"
                 placeholder="Kalit so'z kiriting"
                 :toggleMask="true"
-                class="form-input password-input"
+                class="password-input"
                 fluid
                 :feedback="false"
                 required
