@@ -1,5 +1,7 @@
 import { jwtDecode } from "jwt-decode"
 
+const API_BASE_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:7777"
+
 class AuthService {
   constructor() {
     this.user = null
@@ -216,6 +218,48 @@ class AuthService {
       return true
     }
     return false
+  }
+
+  async login(email, password) {
+    console.log("🔐 Attempting login for:", email)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ nickname: email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error("❌ Login failed:", data.error || data)
+        return { success: false, error: data.error || data || "Login failed" }
+      }
+
+      if (data.token && data.user) {
+        console.log("✅ Login successful, setting auth data")
+        this.setToken(data.token)
+        this.setUser(data.user)
+
+        // Store permissions if available
+        if (data.permissions) {
+          this.permissions = data.permissions
+          localStorage.setItem("permissions", JSON.stringify(data.permissions))
+        }
+
+        console.log("✅ Auth data stored successfully")
+        return { success: true, user: data.user }
+      } else {
+        console.error("❌ Invalid response format:", data)
+        return { success: false, error: "Invalid response format" }
+      }
+    } catch (error) {
+      console.error("❌ Login error:", error)
+      return { success: false, error: error.message || "Network error" }
+    }
   }
 
   logout() {
