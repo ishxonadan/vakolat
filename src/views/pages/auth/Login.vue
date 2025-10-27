@@ -76,6 +76,8 @@ const login = async () => {
       <div class="orb orb-3"></div>
     </div>
 
+
+
     <div class="login-container">
       <!-- Main login card with enhanced styling -->
       <div class="login-card" :style="animatedStyle">
@@ -85,7 +87,7 @@ const login = async () => {
             <div class="logo-container">
               <img src="/logo.svg" alt="Vakolat" class="real-logo" />
             </div>
-            <h1 class="login-title">Xush kelibsiz</h1>
+
             <p class="login-subtitle">Tizimga kirish uchun ma'lumotlaringizni kiriting</p>
           </div>
 
@@ -308,6 +310,119 @@ const login = async () => {
   }
 }
 
+/* Bubble effect */
+.bubble-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.6), rgba(147, 197, 253, 0.3) 50%, rgba(191, 219, 254, 0.15) 80%, transparent 100%);
+  backdrop-filter: blur(2px);
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  animation: bubblePulse 4s ease-in-out infinite;
+}
+
+.bubble-1 {
+  width: 80px;
+  height: 80px;
+  top: 15%;
+  left: 8%;
+  animation-delay: 0s;
+}
+
+.bubble-2 {
+  width: 60px;
+  height: 60px;
+  top: 25%;
+  right: 12%;
+  animation-delay: 0.8s;
+}
+
+.bubble-3 {
+  width: 100px;
+  height: 100px;
+  top: 45%;
+  left: 5%;
+  animation-delay: 1.6s;
+}
+
+.bubble-4 {
+  width: 70px;
+  height: 70px;
+  top: 35%;
+  right: 8%;
+  animation-delay: 2.4s;
+}
+
+.bubble-5 {
+  width: 90px;
+  height: 90px;
+  top: 65%;
+  left: 15%;
+  animation-delay: 3.2s;
+}
+
+.bubble-6 {
+  width: 50px;
+  height: 50px;
+  top: 75%;
+  right: 15%;
+  animation-delay: 4s;
+}
+
+.bubble-7 {
+  width: 65px;
+  height: 65px;
+  top: 20%;
+  left: 75%;
+  animation-delay: 4.8s;
+}
+
+.bubble-8 {
+  width: 110px;
+  height: 110px;
+  top: 55%;
+  right: 5%;
+  animation-delay: 5.6s;
+}
+
+.bubble-9 {
+  width: 55px;
+  height: 55px;
+  top: 80%;
+  left: 45%;
+  animation-delay: 6.4s;
+}
+
+.bubble-10 {
+  width: 75px;
+  height: 75px;
+  top: 40%;
+  left: 45%;
+  animation-delay: 7.2s;
+}
+
+@keyframes bubblePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.9;
+  }
+}
+
 /* Login container */
 .login-container {
   position: relative;
@@ -429,17 +544,7 @@ const login = async () => {
   }
 }
 
-.login-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-600));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+
 
 .login-subtitle {
   font-family: 'Inter', sans-serif;
@@ -486,6 +591,38 @@ const login = async () => {
 
 .password-input {
   position: relative;
+  width: 100%;
+}
+
+.password-input .p-password {
+  width: 100%;
+}
+
+.password-input .p-password input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.password-input .p-password input:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.password-input .p-password .p-password-toggle {
+  color: var(--text-color-secondary);
+  transition: all 0.3s ease;
+}
+
+.password-input .p-password .p-password-toggle:hover {
+  color: var(--primary-color);
 }
 
 .form-options {
@@ -654,10 +791,6 @@ const login = async () => {
     padding: 2rem 1.5rem;
   }
 
-  .login-title {
-    font-size: 1.75rem;
-  }
-
   .form-options {
     flex-direction: column;
     gap: 1rem;
@@ -672,17 +805,69 @@ const login = async () => {
     display: none;
   }
 
-  .particle-rain {
+  .glass-orbs {
     display: none;
   }
 
-  .glass-orbs {
+  .bubble-container {
     display: none;
   }
 
   .real-logo {
     width: 240px;
     height: 240px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .bubble-1 {
+    width: 60px;
+    height: 60px;
+  }
+
+  .bubble-2 {
+    width: 45px;
+    height: 45px;
+  }
+
+  .bubble-3 {
+    width: 75px;
+    height: 75px;
+  }
+
+  .bubble-4 {
+    width: 50px;
+    height: 50px;
+  }
+
+  .bubble-5 {
+    width: 65px;
+    height: 65px;
+  }
+
+  .bubble-6 {
+    width: 35px;
+    height: 35px;
+  }
+
+  .bubble-7 {
+    width: 45px;
+    height: 45px;
+  }
+
+  .bubble-8 {
+    width: 80px;
+    height: 80px;
+  }
+
+  .bubble-9 {
+    width: 40px;
+    height: 40px;
+  }
+
+  .bubble-10 {
+    width: 55px;
+    height: 55px;
   }
 }
 
