@@ -4,7 +4,6 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import authService from '@/service/auth.service';
-import apiService from '@/service/api.service';
 
 const toast = useToast();
 const router = useRouter();
@@ -37,27 +36,9 @@ const checked = ref(false);
 
 const login = async () => {
   try {
-    const response = await fetch('/api/auth', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        nickname: email.value,
-        password: password.value,
-      }),
-    });
+    const result = await authService.login(email.value, password.value);
 
-    const data = await response.json();
-
-    if (response.ok) {
-      // Use the auth service to set the token (this will also parse and set user data)
-      authService.setToken(data.token);
-
-      console.log("✅ Login successful, token set");
-      console.log("👤 User data:", authService.getUser());
-      console.log("🎭 User level:", authService.getUserLevel());
-
+    if (result.success) {
       // Show success toast
       toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: 'Login successful', life: 3000 });
 
@@ -65,7 +46,7 @@ const login = async () => {
       router.push('/');
     } else {
       // Show error toast
-      toast.add({ severity: 'error', summary: 'Xato', detail: data.status || 'Login failed', life: 3000 });
+      toast.add({ severity: 'error', summary: 'Xato', detail: result.error || 'Login failed', life: 3000 });
     }
   } catch (error) {
     console.error('Login error:', error);
