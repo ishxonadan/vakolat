@@ -8,22 +8,56 @@ const router = createRouter({
     {
       path: "/",
       component: AppLayout,
-      meta: { requiresAuth: true },
       children: [
         {
-          path: "/",
+          path: "",
           name: "dashboard",
           component: () => import("@/views/Dashboard.vue"),
           meta: { requiresAuth: true },
         },
         {
-          path: "/tickets",
-          name: "tickets",
-          component: () => import("@/views/pages/tickets.vue"),
+          path: "diss",
+          name: "diss",
+          component: () => import("@/views/pages/diss.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "diss/add",
+          name: "diss_add",
+          component: () => import("@/views/pages/diss_add.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "diss/edit/:uuid",
+          name: "diss_edit",
+          component: () => import("@/views/pages/diss_edit.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "/vakillar",
+          name: "vakillar",
+          component: () => import("@/views/pages/vakillar.vue"),
           meta: {
             requiresAuth: true,
-            requiredLevel: "admin",
-            requiredPermissions: ["manage_tickets"],
+            permission: "view_users",
+          },
+        },
+        {
+          path: "/vakil_add",
+          name: "vakil_add",
+          component: () => import("@/views/pages/vakil_add.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "create_users",
+          },
+        },
+        {
+          path: "/vakil_edit/:id",
+          name: "vakil_edit",
+          component: () => import("@/views/pages/vakil_edit.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "edit_users",
           },
         },
         {
@@ -32,27 +66,7 @@ const router = createRouter({
           component: () => import("@/views/pages/tashriflar.vue"),
           meta: {
             requiresAuth: true,
-            requiredLevel: "admin",
-            requiredPermissions: ["view_statistics"],
-          },
-        },
-        {
-          path: "/diss",
-          name: "diss",
-          component: () => import("@/views/pages/diss.vue"),
-          meta: {
-            requiresAuth: true,
-            requiredPermissions: ["view_dissertations"],
-          },
-        },
-        {
-          path: "/vakillar",
-          name: "vakillar",
-          component: () => import("@/views/pages/vakillar.vue"),
-          meta: {
-            requiresAuth: true,
-            requiredLevel: "admin",
-            requiredPermissions: ["manage_users"],
+            permission: "view_statistics",
           },
         },
         {
@@ -61,52 +75,66 @@ const router = createRouter({
           component: () => import("@/views/pages/huquqlar.vue"),
           meta: {
             requiresAuth: true,
-            requiredLevel: "rais",
-            requiredPermissions: ["manage_permissions"],
+            adminOnly: true,
+          },
+        },
+        {
+          path: "/tickets",
+          name: "tickets",
+          component: () => import("@/views/pages/tickets.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "view_tickets",
+          },
+        },
+        {
+          path: "/ticket_add",
+          name: "ticket_add",
+          component: () => import("@/views/pages/ticket_add.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "create_tickets",
           },
         },
       ],
     },
     {
-      path: "/auth",
-      children: [
-        {
-          path: "login",
-          name: "login",
-          component: () => import("@/views/pages/auth/Login.vue"),
-        },
-      ],
+      path: "/tv",
+      name: "tv",
+      component: () => import("@/views/pages/tv.vue"),
+    },
+    {
+      path: "/auth/login",
+      name: "login",
+      component: () => import("@/views/pages/auth/Login.vue"),
+    },
+    {
+      path: "/auth/access",
+      name: "accessDenied",
+      component: () => import("@/views/pages/auth/Access.vue"),
+    },
+    {
+      path: "/auth/error",
+      name: "error",
+      component: () => import("@/views/pages/auth/Error.vue"),
+    },
+    {
+      path: "/:pathMatch(.*)*",
+      name: "notfound",
+      component: () => import("@/views/pages/NotFound.vue"),
     },
   ],
 })
 
-// Navigation guard
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
   const isAuthenticated = authService.isAuthenticated()
 
   if (requiresAuth && !isAuthenticated) {
     next("/auth/login")
-    return
+  } else {
+    next()
   }
-
-  // Check permissions if route requires them
-  if (to.meta.requiredPermissions) {
-    if (!authService.hasPermissions(to.meta.requiredPermissions)) {
-      next("/")
-      return
-    }
-  }
-
-  // Check level if route requires it
-  if (to.meta.requiredLevel) {
-    if (!authService.hasLevel(to.meta.requiredLevel)) {
-      next("/")
-      return
-    }
-  }
-
-  next()
 })
 
 export default router

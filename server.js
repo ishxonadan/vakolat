@@ -7,16 +7,11 @@ const mongoose = require("mongoose")
 const { createProxyMiddleware } = require("http-proxy-middleware")
 const app = express()
 
-// Enable trust proxy to get real IP addresses
 app.set("trust proxy", true)
 
-// CORS configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true)
-
-    // Allow all origins for survey endpoints (since they'll be embedded on library websites)
     callback(null, true)
   },
   credentials: true,
@@ -24,20 +19,16 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
 }
 
-// Apply CORS middleware
 app.use(cors(corsOptions))
-
-// Handle preflight requests
 app.options("*", cors(corsOptions))
-
 app.use(express.json())
+
 const { v4: uuidv4 } = require("uuid")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { verifyToken, checkUserLevel, checkPermissions } = require("./src/middleware/auth.middleware")
 require("dotenv").config()
 
-// JWT Secret Key - should be in environment variables in production
 const JWT_SECRET = process.env.JWT_SECRET
 
 const vakolat = mongoose.createConnection(process.env.DB_CURRENT, {
@@ -58,8 +49,6 @@ const nazorat = mongoose.createConnection(process.env.DB_NAZORAT, {
 })
 nazorat.on("connected", () => console.log("Connected to nazorat"))
 
-// DEFINE ALL SCHEMAS FIRST - BEFORE CREATING MODELS
-// Permission schema
 const permissionSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   description: { type: String, required: true },
@@ -68,7 +57,6 @@ const permissionSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 })
 
-// Permission Group schema
 const permissionGroupSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   description: { type: String, required: true },
@@ -90,7 +78,6 @@ const userSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 })
 
-// Updated contestant schema with library integration fields
 const contestantSchema = new mongoose.Schema({
   name: { type: String, required: true },
   url: { type: String, required: true, unique: true },
@@ -105,7 +92,6 @@ const contestantSchema = new mongoose.Schema({
   lastEdited: { type: Date, default: Date.now },
 })
 
-// Add this schema and model for automatic ratings
 const autoRatingSchema = new mongoose.Schema({
   organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Websites", required: true },
   month: { type: Number, required: true },
@@ -162,7 +148,6 @@ const razdelSchema = new mongoose.Schema({
   razdel_id: Number,
 })
 
-// COLLECTION 1: Library Users (stores user info + passport + ticket history)
 const libraryUserSchema = new mongoose.Schema(
   {
     passport: { type: String, required: true, unique: true },
@@ -182,7 +167,6 @@ const libraryUserSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// COLLECTION 2: Tickets (individual ticket entries - NOT unique by ticketId)
 const ticketSchema = new mongoose.Schema(
   {
     ticketId: { type: String, required: true },
@@ -198,21 +182,16 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// CREATE ALL MODELS AFTER SCHEMAS ARE DEFINED - ONLY ONCE
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
-
-// Create both models
 const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
 const Tickets = nazorat.model("Ticket", ticketSchema)
 
-// Import the rating models
 const ratingModel = require("./src/model/rating.model")
 const userRatingModel = require("./src/model/user-rating.model")
 const surveyVoteModel = require("./src/model/survey-vote.model")
 const plausibleCacheModel = require("./src/model/plausible-cache.model")
 
-// Create models - DEFINE THESE ONLY ONCE IN THE ENTIRE APPLICATION
 const Permission = vakolat.model("Permission", permissionSchema)
 const PermissionGroup = vakolat.model("PermissionGroup", permissionGroupSchema)
 const Contestant = vakolat.model("Websites", contestantSchema)
@@ -224,7 +203,6 @@ const UserRating = vakolat.model("UserRating", userRatingModel.userRatingSchema)
 const SurveyVote = vakolat.model("SurveyVote", surveyVoteModel.surveyVoteSchema)
 const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plausibleCacheSchema)
 
-// Make models available to middleware
 app.locals.User = User
 app.locals.Permission = Permission
 app.locals.PermissionGroup = PermissionGroup
@@ -250,7 +228,6 @@ const upload = multer({
   },
 })
 
-// CRITICAL: Fix database indexes - remove unique constraint on ticketId
 app.get("/api/admin/fix-indexes", async (req, res) => {
   try {
     console.log("🔧 FIXING DATABASE INDEXES...")
@@ -286,7 +263,6 @@ app.get("/api/admin/fix-indexes", async (req, res) => {
   }
 })
 
-// Protected route example with permission check
 app.get("/api/admin/test-permissions", [verifyToken, checkPermissions(["manage_users"])], (req, res) => {
   res.json({ message: "You have manage_users permission!" })
 })
@@ -341,7 +317,6 @@ app.get("/diss_info/:uuid?", async (req, res) => {
 const folderplace = path.resolve(__dirname, "goal")
 const uploadFolder = path.resolve(__dirname, "uploads")
 
-// Add file serving route for PDF files
 app.get("/diss_file/:uuid", (req, res) => {
   const uuid = req.params.uuid
   const filePath = path.join(folderplace, `${uuid}.pdf`)
@@ -410,7 +385,6 @@ app.post("/diss_save", async (req, res) => {
   }
 })
 
-// Create tickets routes with CORRECTED calendar day logic
 const createTicketsRoutes = () => {
   const express = require("express")
   const QRCode = require("qrcode")
@@ -687,7 +661,6 @@ const createTicketsRoutes = () => {
   return router
 }
 
-// Import route modules AFTER models are created - PASS MODELS TO ROUTES
 const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
 const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
 const contestantRoutes = require("./routes/contestants.routes")(vakolat)
@@ -697,11 +670,8 @@ const surveyRoutes = require("./routes/survey.routes")(vakolat)
 const permissionsRoutes = require("./routes/permissions.routes")(Permission, PermissionGroup, User, JWT_SECRET)
 const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
-
-// Import visits routes and pass the nazorat connection
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
 
-// Register routes
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
 app.use("/api/contestants", contestantRoutes)
@@ -712,11 +682,8 @@ app.use("/survey", surveyRoutes)
 app.use("/api/tv", tvRoutes)
 app.use("/api/videos", videoRoutes)
 app.use("/api/tickets", createTicketsRoutes())
-
-// Register visits routes at /api/visits
 app.use("/api/visits", visitsRoutes)
 
-// Serve video files from /rolik folder
 app.use(
   "/rolik",
   express.static(path.join(__dirname, "public/rolik"), {
@@ -745,7 +712,6 @@ app.use(
   }),
 )
 
-// Public ticket check API (no auth required, but secret password and payload must be provided)
 app.post("/api/public/check-ticket", async (req, res) => {
   try {
     const { ticketId, secret } = req.body
