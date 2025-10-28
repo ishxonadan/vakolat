@@ -9,6 +9,9 @@ import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Button from 'primevue/button';
 import Tooltip from 'primevue/tooltip';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 
 const router = useRouter();
 const toast = useToast();
@@ -16,6 +19,8 @@ const documents = ref([]);
 const currentPage = ref(1);
 const isLoading = ref(false);
 const error = ref(null);
+const searchQuery = ref('');
+const filteredDocuments = ref([]);
 
 const fetchData = async (page = 1) => {
   isLoading.value = true;
@@ -27,6 +32,7 @@ const fetchData = async (page = 1) => {
     }
     const data = await response.json();
     documents.value = data.results || [];
+    filterDocuments();
   } catch (err) {
     console.error('Error fetching data:', err);
     error.value = 'Ma\'lumotlarni yuklashda xatolik. Iltimos, qayta urinib ko\'ring.';
@@ -38,6 +44,17 @@ const fetchData = async (page = 1) => {
     });
   } finally {
     isLoading.value = false;
+  }
+};
+
+const filterDocuments = () => {
+  if (!searchQuery.value.trim()) {
+    filteredDocuments.value = documents.value;
+  } else {
+    const query = searchQuery.value.toLowerCase().trim();
+    filteredDocuments.value = documents.value.filter(doc => 
+      doc.code?.toLowerCase().includes(query)
+    );
   }
 };
 
@@ -72,6 +89,18 @@ const viewFile = (uuid) => {
       </button>
     </div>
     
+    <div class="mb-4 bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-md">
+      <IconField iconPosition="left">
+        <InputIcon class="pi pi-search" />
+        <InputText 
+          v-model="searchQuery" 
+          @input="filterDocuments"
+          placeholder="Shifr bo'yicha qidirish..." 
+          class="w-full"
+        />
+      </IconField>
+    </div>
+    
     <div v-if="isLoading" class="flex justify-center items-center p-4">
       <ProgressSpinner />
     </div>
@@ -82,16 +111,24 @@ const viewFile = (uuid) => {
     
     <DataTable 
       v-if="!isLoading && !error" 
-      :value="documents" 
+      :value="filteredDocuments" 
       :rows="30" 
       :paginator="true" 
       :page="currentPage - 1" 
       @page="onPageChange"
       responsiveLayout="scroll"
     >
-      <Column field="title" header="Sarlavha" :sortable="true" style="width: 40%"></Column>
-      <Column field="author" header="Muallif" :sortable="true" style="width: 25%"></Column>
-      <Column field="code" header="Kod" :sortable="true" style="width: 15%"></Column>
+      <Column field="title" header="Sarlavha" :sortable="true" style="width: 35%"></Column>
+      <Column field="author" header="Muallif" :sortable="true" style="width: 20%"></Column>
+      <Column field="code" header="Shifr" :sortable="true" style="width: 12%"></Column>
+      <Column field="filename" header="Fayl" style="width: 10%">
+        <template #body="slotProps">
+          <Tag 
+            :value="slotProps.data.filename ? 'Mavjud' : 'Mavjud emas'" 
+            :severity="slotProps.data.filename ? 'success' : 'danger'" 
+          />
+        </template>
+      </Column>
       <Column field="is_deleted" header="Holat" style="width: 10%">
         <template #body="slotProps">
           <Tag 
@@ -100,7 +137,7 @@ const viewFile = (uuid) => {
           />
         </template>
       </Column>
-      <Column style="width: 10%" header="Amallar">
+      <Column style="width: 13%" header="Amallar">
         <template #body="slotProps">
           <div class="flex gap-1">
             <Button 
@@ -116,6 +153,7 @@ const viewFile = (uuid) => {
               class="p-button-text p-button-info p-button-sm" 
               @click="viewFile(slotProps.data.uuid)"
               v-tooltip="'Faylni ko\'rish'"
+              :disabled="!slotProps.data.filename"
             />
           </div>
         </template>
