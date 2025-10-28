@@ -8,7 +8,7 @@ const router = useRouter();
 const route = useRoute();
 
 // Hardcoded variable to control manual correction menu visibility
-const SHOW_MANUAL_CORRECTION = true; // Set to false to hide the manual correction menu
+const SHOW_MANUAL_CORRECTION = false; // Set to false to hide the manual correction menu
 
 // Define menu items with required permission levels AND specific permissions
 const menuItems = [
@@ -36,6 +36,13 @@ const menuItems = [
             label: "Tashriflar",
             icon: 'pi pi-fw pi-chart-bar',
             to: '/tashriflar',
+            requiredLevel: 'admin',
+            requiredPermissions: ['view_statistics']
+          },
+          {
+            label: "A'zo bo'lganlar",
+            icon: 'pi pi-fw pi-users',
+            to: '/azo-bolganlar',
             requiredLevel: 'admin',
             requiredPermissions: ['view_statistics']
           },
@@ -76,7 +83,7 @@ const menuItems = [
     ]
   },
   // Add manual correction category if enabled
-  SHOW_MANUAL_CORRECTION && {
+  {
     label: "Qo'lda to'g'rilash",
     items: [
       {

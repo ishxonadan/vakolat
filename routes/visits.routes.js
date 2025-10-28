@@ -360,7 +360,7 @@ module.exports = (nazoratConnection) => {
       res.status(500).json({ error: "Failed to fetch position statistics", details: error.message })
     }
   })
-
+ 
   console.log("✅ Visits routes initialized")
   return router
 }

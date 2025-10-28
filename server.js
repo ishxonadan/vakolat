@@ -296,7 +296,7 @@ app.get("/diss_list/:page?", async (req, res) => {
     const results = await Documents.find()
       .sort({ createdAt: -1 })
       .skip(skip)
-      .select("title uuid author code is_deleted")
+      .select("title uuid author code is_deleted filename")
 
     res.json({ results })
   } catch (error) {
@@ -671,6 +671,7 @@ const permissionsRoutes = require("./routes/permissions.routes")(Permission, Per
 const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
+const membersRoutes = require("./routes/members.routes")(nazorat)
 
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
@@ -683,6 +684,7 @@ app.use("/api/tv", tvRoutes)
 app.use("/api/videos", videoRoutes)
 app.use("/api/tickets", createTicketsRoutes())
 app.use("/api/visits", visitsRoutes)
+app.use("/api/members", membersRoutes)
 
 app.use(
   "/rolik",

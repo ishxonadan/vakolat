@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import axios from 'axios'
@@ -52,6 +52,13 @@ const loadingHistory = ref(false)
 const todayStats = ref({ total: 0, unique: 0, current: 0 })
 const monthStats = ref({ total: 0, unique: 0, average: 0 })
 const periodStats = ref({ total: 0, unique: 0, days: 0, average: 0 })
+
+// Auto-refresh state
+const autoRefreshEnabled = ref(true) // ON by default
+const autoRefreshInterval = ref(null)
+const lastFetchTime = ref(0)
+const REFRESH_INTERVAL = 10000 // 10 seconds
+const MIN_FETCH_INTERVAL = 1000 // 1 second throttle
 
 // Get photo URL - handle base64 images
 const getPhotoUrl = (photo) => {
@@ -126,8 +133,21 @@ const showUserDetails = async (user) => {
 }
 
 // Fetch visits
-const fetchVisits = async () => {
-  loading.value = true
+const fetchVisits = async (isAutoRefresh = false) => {
+  // Throttle: don't fetch if less than 1 second since last fetch
+  const now = Date.now()
+  if (now - lastFetchTime.value < MIN_FETCH_INTERVAL) {
+    console.log('⏱️ Throttled: Too soon since last fetch')
+    return
+  }
+  
+  lastFetchTime.value = now
+  
+  // Only show loading spinner for manual refresh, not auto-refresh
+  if (!isAutoRefresh) {
+    loading.value = true
+  }
+  
   try {
     console.log('🔄 Fetching visits for page:', currentPage.value)
     
@@ -208,19 +228,19 @@ const onPageChange = (event) => {
   console.log('📄 Page change event:', event)
   currentPage.value = event.page + 1
   console.log('📄 New current page:', currentPage.value)
-  fetchVisits()
+  fetchVisits(false)
 }
 
 const onSearch = () => {
   console.log('🔍 Search triggered:', searchQuery.value)
   currentPage.value = 1
-  fetchVisits()
+  fetchVisits(false)
 }
 
 const onDateFilterChange = () => {
   console.log('📅 Date filter changed:', dateRangeFilter.value)
   currentPage.value = 1
-  fetchVisits()
+  fetchVisits(false)
 }
 
 const onDateStatsChange = () => {
@@ -235,7 +255,7 @@ const clearFilters = () => {
   dateRangeStats.value = null
   currentPage.value = 1
   periodStats.value = { total: 0, unique: 0, days: 0, average: 0 }
-  fetchVisits()
+  fetchVisits(false)
   fetchStatistics()
 }
 
@@ -264,18 +284,47 @@ const getStatusText = (visit) => {
   return 'Chiqdi'
 }
 
+const startAutoRefresh = () => {
+  autoRefreshEnabled.value = true
+  if (autoRefreshInterval.value) {
+    clearInterval(autoRefreshInterval.value)
+  }
+  autoRefreshInterval.value = setInterval(() => {
+    fetchVisits(true) // Pass true to indicate auto-refresh
+  }, REFRESH_INTERVAL)
+  console.log('▶️ Auto-refresh started (10 seconds)')
+}
+
+const stopAutoRefresh = () => {
+  autoRefreshEnabled.value = false
+  if (autoRefreshInterval.value) {
+    clearInterval(autoRefreshInterval.value)
+    autoRefreshInterval.value = null
+  }
+  console.log('⏸️ Auto-refresh stopped')
+}
+
+const manualRefresh = () => {
+  fetchVisits(false) // Manual refresh shows loading
+}
+
 // Watch for rows per page changes
 watch(rowsPerPage, (newValue) => {
   console.log('📊 Rows per page changed:', newValue)
   currentPage.value = 1
-  fetchVisits()
+  fetchVisits(false)
 })
 
 // Lifecycle
 onMounted(() => {
   console.log('🚀 Component mounted')
-  fetchVisits()
+  fetchVisits(false)
   fetchStatistics()
+  startAutoRefresh() // Start auto-refresh on mount
+})
+
+onUnmounted(() => {
+  stopAutoRefresh() // Clean up on unmount
 })
 </script>
 
@@ -362,6 +411,39 @@ onMounted(() => {
           
           <!-- Filters in Header -->
           <div class="flex items-center gap-3">
+            <!-- Auto-refresh controls -->
+            <div class="flex items-center gap-2 mr-2">
+              <Button
+                v-if="!autoRefreshEnabled"
+                icon="pi pi-play"
+                @click="startAutoRefresh"
+                severity="success"
+                rounded
+                text
+                class="w-10 h-10"
+                v-tooltip.bottom="'Avtomatik yangilashni yoqish'"
+              />
+              <Button
+                v-if="autoRefreshEnabled"
+                icon="pi pi-pause"
+                @click="stopAutoRefresh"
+                severity="warning"
+                rounded
+                text
+                class="w-10 h-10"
+                v-tooltip.bottom="'Avtomatik yangilashni to\'xtatish'"
+              />
+              <Button
+                icon="pi pi-refresh"
+                @click="manualRefresh"
+                severity="info"
+                rounded
+                text
+                class="w-10 h-10"
+                v-tooltip.bottom="'Qo\'lda yangilash'"
+              />
+            </div>
+
             <!-- Search -->
             <div class="relative">
               <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-blue-300"></i>

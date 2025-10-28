@@ -96,6 +96,15 @@ const router = createRouter({
             permission: "create_tickets",
           },
         },
+        {
+          path: "/azo-bolganlar",
+          name: "azo-bolganlar",
+          component: () => import("@/views/pages/azo-bolganlar.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "view_statistics",
+          },
+        },
       ],
     },
     {
