@@ -296,7 +296,7 @@ app.get("/diss_list/:page?", async (req, res) => {
     const results = await Documents.find()
       .sort({ createdAt: -1 })
       .skip(skip)
-      .select("title uuid author code is_deleted")
+      .select("title uuid author code is_deleted filename")
 
     res.json({ results })
   } catch (error) {

@@ -207,276 +207,315 @@ onMounted(loadCategories);
 </script>
 
 <template>
-  <div class="p-6 bg-white rounded-lg shadow-md mx-auto">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Dissertatsiya qo'shish</h2>
-    
-    <div class="card">
-      <!-- Title -->
-      <div class="flex flex-col mb-4">
-        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Sarlavha*</label>
-        <InputText 
-          v-model="title" 
-          id="title" 
-          type="text" 
-          class="w-full p-3" 
-        />
-      </div>
-
-      <!-- Author -->
-      <div class="flex flex-col mb-4">
-        <label for="author" class="block text-sm font-medium text-gray-700 mb-1">Muallif*</label>
-        <InputText 
-          v-model="author" 
-          id="author" 
-          type="text" 
-          class="w-full p-3" 
-        />
-      </div>
-
-      <!-- Code and UDK/BBK -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="md:w-1/2">
-          <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Kod*</label>
+  <div class="max-w-5xl mx-auto p-8">
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-zinc-800 dark:to-zinc-900 rounded-2xl shadow-xl p-8">
+      <h2 class="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        Dissertatsiya qo'shish
+      </h2>
+      
+      <div class="space-y-6">
+        <!-- Title -->
+        <div class="form-group">
+          <label for="title" class="form-label">Sarlavha*</label>
           <InputText 
-            v-model="code" 
-            id="code" 
+            v-model="title" 
+            id="title" 
             type="text" 
-            class="w-full p-3" 
+            class="form-input" 
+            placeholder="Dissertatsiya sarlavhasini kiriting"
           />
         </div>
-        <div class="md:w-1/2">
-          <label for="udk_bbk" class="block text-sm font-medium text-gray-700 mb-1">UDK/BBK</label>
+
+        <!-- Author -->
+        <div class="form-group">
+          <label for="author" class="form-label">Muallif*</label>
           <InputText 
-            v-model="udk_bbk" 
-            id="udk_bbk" 
+            v-model="author" 
+            id="author" 
             type="text" 
-            class="w-full p-3" 
+            class="form-input" 
+            placeholder="Muallif ismini kiriting"
           />
         </div>
-      </div>
 
-      <!-- Type and Level -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="md:w-1/2">
-          <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Turi*</label>
-          <Dropdown 
-            v-model="type" 
-            :options="typeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Turini tanlang"
+        <!-- Code and UDK/BBK -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="code" class="form-label">Shifr*</label>
+            <InputText 
+              v-model="code" 
+              id="code" 
+              type="text" 
+              class="form-input" 
+              placeholder="Shifr raqamini kiriting"
+            />
+          </div>
+          <div class="form-group">
+            <label for="udk_bbk" class="form-label">UDK/BBK</label>
+            <InputText 
+              v-model="udk_bbk" 
+              id="udk_bbk" 
+              type="text" 
+              class="form-input" 
+              placeholder="UDK/BBK raqamini kiriting"
+            />
+          </div>
+        </div>
+
+        <!-- Type and Level -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="type" class="form-label">Turi*</label>
+            <Dropdown 
+              v-model="type" 
+              :options="typeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Turini tanlang"
+              class="form-input"
+            />
+          </div>
+          <div class="form-group">
+            <label for="level" class="form-label">Daraja*</label>
+            <Dropdown 
+              v-model="level" 
+              :options="levelOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Darajani tanlang"
+              class="form-input"
+            />
+          </div>
+        </div>
+
+        <!-- Category and Language -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="category" class="form-label">Kategoriya*</label>
+            <Dropdown 
+              v-model="category_id" 
+              :options="categories"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Kategoriyani tanlang"
+              class="form-input"
+            />
+          </div>
+          <div class="form-group">
+            <label for="language" class="form-label">Til</label>
+            <Dropdown 
+              v-model="language" 
+              :options="languageOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="form-input"
+            />
+          </div>
+        </div>
+
+        <!-- Place, Collective, Devision -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="form-group">
+            <label for="place" class="form-label">Joy</label>
+            <InputText 
+              v-model="place" 
+              id="place" 
+              type="text" 
+              class="form-input" 
+              placeholder="Joyni kiriting"
+            />
+          </div>
+          <div class="form-group">
+            <label for="collective" class="form-label">Kollektiv</label>
+            <InputText 
+              v-model="collective" 
+              id="collective" 
+              type="text" 
+              class="form-input" 
+              placeholder="Kollektivni kiriting"
+            />
+          </div>
+          <div class="form-group">
+            <label for="devision" class="form-label">Bo'lim</label>
+            <InputText 
+              v-model="devision" 
+              id="devision" 
+              type="text" 
+              class="form-input" 
+              placeholder="Bo'limni kiriting"
+            />
+          </div>
+        </div>
+
+        <!-- Year and Approved Date -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="year" class="form-label">Yil</label>
+            <InputText 
+              v-model="year" 
+              id="year" 
+              type="text" 
+              class="form-input" 
+              placeholder="Yilni kiriting"
+            />
+          </div>
+          <div class="form-group">
+            <label for="approved_date" class="form-label">Tasdiqlangan sana</label>
+            <Calendar 
+              v-model="approved_date" 
+              id="approved_date" 
+              dateFormat="dd.mm.yy"
+              class="form-input"
+              placeholder="Sanani tanlang"
+            />
+          </div>
+        </div>
+
+        <!-- Ashyo, SRN, MTT, Volume -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="form-group">
+            <label for="ashyo" class="form-label">Ashyo</label>
+            <InputText 
+              v-model="ashyo" 
+              id="ashyo" 
+              type="text" 
+              class="form-input" 
+              placeholder="Ashyo"
+            />
+          </div>
+          <div class="form-group">
+            <label for="srn" class="form-label">SRN</label>
+            <InputText 
+              v-model="srn" 
+              id="srn" 
+              type="text" 
+              class="form-input" 
+              placeholder="SRN"
+            />
+          </div>
+          <div class="form-group">
+            <label for="mtt" class="form-label">MTT</label>
+            <InputText 
+              v-model="mtt" 
+              id="mtt" 
+              type="text" 
+              class="form-input" 
+              placeholder="MTT"
+            />
+          </div>
+          <div class="form-group">
+            <label for="volume" class="form-label">Hajm</label>
+            <InputText 
+              v-model="volume" 
+              id="volume" 
+              type="text" 
+              class="form-input" 
+              placeholder="Hajm"
+            />
+          </div>
+        </div>
+
+        <!-- Annotation -->
+        <div class="form-group">
+          <label for="annotation" class="form-label">Annotatsiya</label>
+          <Textarea 
+            v-model="annotation" 
+            id="annotation" 
+            rows="4" 
+            class="form-input" 
+            placeholder="Annotatsiyani kiriting"
+          />
+        </div>
+
+        <!-- Additional -->
+        <div class="form-group">
+          <label for="additional" class="form-label">Qo'shimcha ma'lumot</label>
+          <Textarea 
+            v-model="additional" 
+            id="additional" 
+            rows="3" 
+            class="form-input" 
+            placeholder="Qo'shimcha ma'lumotlarni kiriting"
+          />
+        </div>
+
+        <!-- File Upload -->
+        <div class="form-group">
+          <label class="form-label">PDF fayl*</label>
+          <FileUpload 
+            mode="basic" 
+            accept="application/pdf" 
+            :maxFileSize="50000000"
+            @select="onFileSelect"
+            :auto="false"
+            chooseLabel="Fayl tanlash"
+            :disabled="isUploading"
             class="w-full"
           />
+          <small v-if="uploadedFileName" class="text-green-600 font-medium mt-2 block">
+            ✓ Yuklangan: {{ uploadedFileName }}
+          </small>
         </div>
-        <div class="md:w-1/2">
-          <label for="level" class="block text-sm font-medium text-gray-700 mb-1">Daraja*</label>
-          <Dropdown 
-            v-model="level" 
-            :options="levelOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Darajani tanlang"
-            class="w-full"
-          />
-        </div>
-      </div>
 
-      <!-- Category and Language -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="md:w-1/2">
-          <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Kategoriya*</label>
-          <Dropdown 
-            v-model="category_id" 
-            :options="categories"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Kategoriyani tanlang"
-            class="w-full"
+        <!-- Submit buttons -->
+        <div class="flex justify-center gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-zinc-700">
+          <Button 
+            label="Saqlash" 
+            @click="saveData"
+            class="px-8 py-3 text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg shadow-lg transition-all"
+            icon="pi pi-save"
+            iconPos="left"
+            :disabled="isUploading"
+          />
+          <Button 
+            label="Bekor qilish" 
+            @click="cancelAdd"
+            class="px-8 py-3 font-semibold"
+            severity="secondary"
+            outlined
           />
         </div>
-        <div class="md:w-1/2">
-          <label for="language" class="block text-sm font-medium text-gray-700 mb-1">Til</label>
-          <Dropdown 
-            v-model="language" 
-            :options="languageOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="w-full"
-          />
-        </div>
-      </div>
-
-      <!-- Place, Collective, Devision -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="md:w-1/3">
-          <label for="place" class="block text-sm font-medium text-gray-700 mb-1">Joy</label>
-          <InputText 
-            v-model="place" 
-            id="place" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-        <div class="md:w-1/3">
-          <label for="collective" class="block text-sm font-medium text-gray-700 mb-1">Kollektiv</label>
-          <InputText 
-            v-model="collective" 
-            id="collective" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-        <div class="md:w-1/3">
-          <label for="devision" class="block text-sm font-medium text-gray-700 mb-1">Bo'lim</label>
-          <InputText 
-            v-model="devision" 
-            id="devision" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-      </div>
-
-      <!-- Year and Approved Date -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="md:w-1/2">
-          <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Yil</label>
-          <InputText 
-            v-model="year" 
-            id="year" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-        <div class="md:w-1/2">
-          <label for="approved_date" class="block text-sm font-medium text-gray-700 mb-1">Tasdiqlangan sana</label>
-          <Calendar 
-            v-model="approved_date" 
-            id="approved_date" 
-            dateFormat="dd.mm.yy"
-            class="w-full"
-          />
-        </div>
-      </div>
-
-      <!-- Ashyo, SRN, MTT, Volume -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="md:w-1/4">
-          <label for="ashyo" class="block text-sm font-medium text-gray-700 mb-1">Ashyo</label>
-          <InputText 
-            v-model="ashyo" 
-            id="ashyo" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-        <div class="md:w-1/4">
-          <label for="srn" class="block text-sm font-medium text-gray-700 mb-1">SRN</label>
-          <InputText 
-            v-model="srn" 
-            id="srn" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-        <div class="md:w-1/4">
-          <label for="mtt" class="block text-sm font-medium text-gray-700 mb-1">MTT</label>
-          <InputText 
-            v-model="mtt" 
-            id="mtt" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-        <div class="md:w-1/4">
-          <label for="volume" class="block text-sm font-medium text-gray-700 mb-1">Hajm</label>
-          <InputText 
-            v-model="volume" 
-            id="volume" 
-            type="text" 
-            class="w-full p-3" 
-          />
-        </div>
-      </div>
-
-      <!-- Annotation -->
-      <div class="flex flex-col mb-4">
-        <label for="annotation" class="block text-sm font-medium text-gray-700 mb-1">Annotatsiya</label>
-        <Textarea 
-          v-model="annotation" 
-          id="annotation" 
-          rows="4" 
-          class="w-full p-3" 
-        />
-      </div>
-
-      <!-- Additional -->
-      <div class="flex flex-col mb-4">
-        <label for="additional" class="block text-sm font-medium text-gray-700 mb-1">Qo'shimcha ma'lumot</label>
-        <Textarea 
-          v-model="additional" 
-          id="additional" 
-          rows="3" 
-          class="w-full p-3" 
-        />
-      </div>
-
-      <!-- File Upload -->
-      <div class="flex flex-col mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">PDF fayl*</label>
-        <FileUpload 
-          mode="basic" 
-          accept="application/pdf" 
-          :maxFileSize="50000000"
-          @select="onFileSelect"
-          :auto="false"
-          chooseLabel="Fayl tanlash"
-          :disabled="isUploading"
-        />
-        <small v-if="uploadedFileName" class="text-green-600 mt-2">
-          Yuklangan: {{ uploadedFileName }}
-        </small>
-      </div>
-
-      <!-- Submit buttons -->
-      <div class="flex justify-center gap-4 mt-6">
-        <Button 
-          label="Saqlash" 
-          @click="saveData"
-          class="px-6 py-3 text-white font-medium"
-          icon="pi pi-save"
-          iconPos="left"
-          :disabled="isUploading"
-        />
-        <Button 
-          label="Bekor qilish" 
-          @click="cancelAdd"
-          class="px-6 py-3 font-medium"
-          severity="secondary"
-          outlined
-        />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-:deep(.p-button) {
-  background-color: #4f46e5;
-  border-color: #4f46e5;
+.form-group {
+  @apply flex flex-col;
 }
 
-:deep(.p-button:hover) {
-  background-color: #4338ca;
-  border-color: #4338ca;
+.form-label {
+  @apply block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2;
 }
 
-:deep(.p-button.p-button-outlined) {
-  color: #4f46e5;
-  background-color: transparent;
+.form-input {
+  @apply w-full;
 }
 
-:deep(.p-button.p-button-outlined:hover) {
-  background-color: rgba(79, 70, 229, 0.04);
+:deep(.p-inputtext),
+:deep(.p-dropdown),
+:deep(.p-calendar),
+:deep(.p-textarea) {
+  @apply rounded-lg border-2 border-gray-200 dark:border-zinc-700 
+         focus:border-blue-500 dark:focus:border-blue-400 
+         transition-all duration-200 shadow-sm
+         bg-white dark:bg-zinc-800;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+}
+
+:deep(.p-inputtext:hover),
+:deep(.p-dropdown:hover),
+:deep(.p-calendar:hover),
+:deep(.p-textarea:hover) {
+  @apply border-blue-300 dark:border-blue-600;
+}
+
+:deep(.p-fileupload-choose) {
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 
+         hover:from-blue-700 hover:to-indigo-700 
+         border-0 rounded-lg shadow-md transition-all;
+  padding: 0.75rem 1.5rem;
 }
 </style>
