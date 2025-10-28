@@ -53,6 +53,9 @@ module.exports = (nazorat) => {
       cache: Boolean,
       muddat: Number,
       status: Number,
+      EMAIL: String,
+      PASSPORT_SERIES: String,
+      PASSPORT_NUMBER: String,
     },
     { collection: "cache" },
   )
@@ -178,6 +181,59 @@ module.exports = (nazorat) => {
     } catch (error) {
       console.error("Error fetching members:", error)
       res.status(500).json({ error: "Error fetching members", details: error.message })
+    }
+  })
+
+  // Update member
+  router.put("/:userNo", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+    try {
+      const { userNo } = req.params
+      const updateData = req.body
+
+      // Remove fields that shouldn't be updated directly
+      delete updateData._id
+      delete updateData.__v
+
+      const result = await CacheUser.findOneAndUpdate(
+        { USER_NO: userNo },
+        { $set: updateData },
+        { new: true, runValidators: true },
+      )
+
+      if (!result) {
+        return res.status(404).json({ error: "Member not found" })
+      }
+
+      res.json({ success: true, member: result })
+    } catch (error) {
+      console.error("Error updating member:", error)
+      res.status(500).json({ error: "Error updating member", details: error.message })
+    }
+  })
+
+  // Create new member
+  router.post("/", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+    try {
+      const newMember = new CacheUser(req.body)
+      const savedMember = await newMember.save()
+      res.status(201).json({ success: true, member: savedMember })
+    } catch (error) {
+      console.error("Error creating member:", error)
+      res.status(500).json({ error: "Error creating member", details: error.message })
+    }
+  })
+
+  // Get member by USER_NO
+  router.get("/by-user-no/:userNo", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+    try {
+      const member = await CacheUser.findOne({ USER_NO: req.params.userNo })
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" })
+      }
+      res.json(member)
+    } catch (error) {
+      console.error("Error fetching member:", error)
+      res.status(500).json({ error: "Error fetching member", details: error.message })
     }
   })
 
