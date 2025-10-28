@@ -291,6 +291,7 @@ const startAutoRefresh = () => {
   }
   autoRefreshInterval.value = setInterval(() => {
     fetchVisits(true) // Pass true to indicate auto-refresh
+    fetchStatistics() // Also update statistics
   }, REFRESH_INTERVAL)
   console.log('▶️ Auto-refresh started (10 seconds)')
 }
@@ -306,6 +307,7 @@ const stopAutoRefresh = () => {
 
 const manualRefresh = () => {
   fetchVisits(false) // Manual refresh shows loading
+  fetchStatistics()
 }
 
 // Watch for rows per page changes

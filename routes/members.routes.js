@@ -66,17 +66,21 @@ module.exports = (nazorat) => {
       const limit = Number.parseInt(req.query.limit) || 50
       const skip = (page - 1) * limit
 
-      // Build filter query
       const filter = {}
-      if (req.query.search) {
-        const searchRegex = new RegExp(req.query.search, "i")
-        filter.$or = [
-          { USER_NAME: searchRegex },
-          { USER_NO: searchRegex },
-          { CARD_NO: searchRegex },
-          { TEL_NO: searchRegex },
-          { USER_POSITION: searchRegex },
-        ]
+
+      // Handle multi-field search
+      if (req.query.filters) {
+        try {
+          const filters = JSON.parse(req.query.filters)
+          if (Array.isArray(filters) && filters.length > 0) {
+            filter.$and = filters.map((f) => {
+              const searchRegex = new RegExp(f.value, "i")
+              return { [f.field]: searchRegex }
+            })
+          }
+        } catch (e) {
+          console.error("Error parsing filters:", e)
+        }
       }
 
       // Build sort query
@@ -134,6 +138,46 @@ module.exports = (nazorat) => {
     } catch (error) {
       console.error("Error fetching statistics:", error)
       res.status(500).json({ error: "Error fetching statistics", details: error.message })
+    }
+  })
+
+  // Search members with complex filter data in request body
+  router.post("/search", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+    try {
+      const page = Number.parseInt(req.body.page) || 1
+      const limit = Number.parseInt(req.body.limit) || 50
+      const skip = (page - 1) * limit
+
+      const filter = {}
+
+      // Handle multi-field search from request body
+      if (req.body.filters && Array.isArray(req.body.filters) && req.body.filters.length > 0) {
+        filter.$and = req.body.filters.map((f) => {
+          const searchRegex = new RegExp(f.value, "i")
+          return { [f.field]: searchRegex }
+        })
+      }
+
+      // Build sort query
+      let sort = { INSERT_DATE: -1 } // Default sort by insert date descending
+      if (req.body.sortField) {
+        sort = { [req.body.sortField]: req.body.sortOrder === "asc" ? 1 : -1 }
+      }
+
+      const [members, total] = await Promise.all([
+        CacheUser.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+        CacheUser.countDocuments(filter),
+      ])
+
+      res.json({
+        members,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      })
+    } catch (error) {
+      console.error("Error fetching members:", error)
+      res.status(500).json({ error: "Error fetching members", details: error.message })
     }
   })
 
