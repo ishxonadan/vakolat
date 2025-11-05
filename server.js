@@ -148,6 +148,13 @@ const razdelSchema = new mongoose.Schema({
   razdel_id: Number,
 })
 
+const levelSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  mark: { type: String, required: true, unique: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+})
+
 const libraryUserSchema = new mongoose.Schema(
   {
     passport: { type: String, required: true, unique: true },
@@ -184,6 +191,7 @@ const ticketSchema = new mongoose.Schema(
 
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
+const Levels = yoqlama.model("Level", levelSchema)
 const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
 const Tickets = nazorat.model("Ticket", ticketSchema)
 
@@ -276,6 +284,15 @@ app.get("/diss/cats", async (req, res) => {
   }
 })
 
+app.get("/diss/levels", async (req, res) => {
+  try {
+    const levelData = await Levels.find({  }).sort({ createdAt: 1 })
+    res.json(levelData)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
 app.post("/diss/upload", upload.single("demo[]"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded or invalid file format" })
@@ -314,7 +331,8 @@ app.get("/diss_info/:uuid?", async (req, res) => {
   }
 })
 
-const folderplace = path.resolve(__dirname, "goal")
+const folderplace = process.env.DISS_STORAGE_PATH || path.resolve(__dirname, "goal")
+const backupFolder = path.resolve(__dirname, "backup")
 const uploadFolder = path.resolve(__dirname, "uploads")
 
 app.get("/diss_file/:uuid", (req, res) => {
@@ -335,10 +353,65 @@ app.post("/diss_save/:uuid", async (req, res) => {
     const requestData = req.body
     const uuid = req.params.uuid
 
+    // Handle turi/daraja mapping to level column
+    if (requestData.turi) {
+      requestData.level = requestData.turi
+    }
+    // Always remove daraja field as it's replaced by turi
+    delete requestData.daraja
+
+    // Get the existing document before updating
+    const existingDocument = await Documents.findOne({ uuid })
+
     const document = await Documents.findOneAndUpdate({ uuid }, requestData, { new: true, upsert: false })
 
     if (!document) {
       return res.status(404).json({ error: `Document with UUID ${uuid} not found` })
+    }
+
+    // Handle file operations if there's a filename in the request
+    if (requestData.filename && existingDocument) {
+      const sourceFilePath = path.join(uploadFolder, requestData.filename)
+      const destinationFilePath = path.join(folderplace, `${uuid}.pdf`)
+
+      // Backup the old file if it exists
+      const oldFilePath = path.join(folderplace, `${uuid}.pdf`)
+      if (fs.existsSync(oldFilePath)) {
+        try {
+          if (!fs.existsSync(backupFolder)) {
+            fs.mkdirSync(backupFolder, { recursive: true })
+          }
+
+          const timestamp = Date.now()
+          const backupFilePath = path.join(backupFolder, `${uuid}_${timestamp}.pdf`)
+          fs.copyFileSync(oldFilePath, backupFilePath)
+          console.log(`Old file backed up to: ${backupFilePath}`)
+        } catch (backupError) {
+          console.error("Error backing up old file:", backupError)
+          // Continue with the update even if backup fails
+        }
+      }
+
+      // Copy the new file to storage
+      try {
+        if (!fs.existsSync(folderplace)) {
+          fs.mkdirSync(folderplace, { recursive: true })
+        }
+
+        fs.copyFileSync(sourceFilePath, destinationFilePath)
+        console.log(`File copied successfully to: ${destinationFilePath}`)
+
+        // Verify the file was actually copied
+        if (fs.existsSync(destinationFilePath)) {
+          console.log(`✅ File verified at destination: ${destinationFilePath}`)
+        } else {
+          console.error(`❌ File copy verification failed: ${destinationFilePath}`)
+        }
+      } catch (error) {
+        console.error("Error copying file to storage:", error)
+        // Don't fail the save operation if file copy fails
+        // The document is saved in DB, file remains in uploads for manual handling
+      }
     }
 
     res.json({
@@ -357,6 +430,13 @@ app.post("/diss_save", async (req, res) => {
     const generatedUuid = uuidv4()
     const originalFilename = requestData.filename
 
+    // Handle turi/daraja mapping to level column
+    if (requestData.turi) {
+      requestData.level = requestData.turi
+    }
+    // Always remove daraja field as it's replaced by turi
+    delete requestData.daraja
+
     requestData.uuid = generatedUuid
     requestData.owner_id = 1
     requestData.filename = `${generatedUuid}.pdf`
@@ -364,15 +444,30 @@ app.post("/diss_save", async (req, res) => {
     const document = new Documents(requestData)
     const saveStatus = await document.save()
 
-    if (saveStatus) {
+    // Handle file operations if there's a filename (file uploading is optional)
+    if (saveStatus && originalFilename) {
       const sourceFilePath = path.join(uploadFolder, originalFilename)
       const destinationFilePath = path.join(folderplace, `${generatedUuid}.pdf`)
 
-      if (!fs.existsSync(folderplace)) {
-        fs.mkdirSync(folderplace)
-      }
+      try {
+        if (!fs.existsSync(folderplace)) {
+          fs.mkdirSync(folderplace, { recursive: true })
+        }
 
-      fs.renameSync(sourceFilePath, destinationFilePath)
+        fs.copyFileSync(sourceFilePath, destinationFilePath)
+        console.log(`File copied successfully to: ${destinationFilePath}`)
+
+        // Verify the file was actually copied
+        if (fs.existsSync(destinationFilePath)) {
+          console.log(`✅ File verified at destination: ${destinationFilePath}`)
+        } else {
+          console.error(`❌ File copy verification failed: ${destinationFilePath}`)
+        }
+      } catch (error) {
+        console.error("Error copying file to storage:", error)
+        // Don't fail the save operation if file copy fails
+        // The document is saved in DB, file remains in uploads for manual handling
+      }
     }
 
     res.json({
@@ -796,6 +891,7 @@ app.listen(7777, () => {
 module.exports = {
   Documents,
   Categories,
+  Levels,
   LibraryUsers,
   Tickets,
   WebsiteRating,

@@ -25,9 +25,9 @@ const srn = ref('');
 const mtt = ref('');
 const volume = ref('');
 const type = ref('');
-const level = ref('');
 const category_id = ref(null);
 const categories = ref([]);
+const typeOptions = ref([]);
 const loading = ref(true);
 const uploadedFile = ref(null);
 const uploadedFileName = ref('');
@@ -40,36 +40,54 @@ const languageOptions = [
   { label: 'English', value: 'eng' }
 ];
 
-const typeOptions = [
-  { label: 'Doktorlik', value: 'doktorlik' },
-  { label: 'Nomzodlik', value: 'nomzodlik' },
-  { label: 'Magistrlik', value: 'magistrlik' }
-];
-
-const levelOptions = [
-  { label: 'Davlat', value: 'davlat' },
-  { label: 'Xalqaro', value: 'xalqaro' }
-];
+const loadLevels = async () => {
+  try {
+    const response = await fetch('/diss/levels');
+    const data = await response.json();
+    typeOptions.value = data.map(level => ({
+      label: level.name,
+      value: level.mark
+    }));
+  } catch (error) {
+    console.error('Error loading levels:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Darajalarni yuklashda xatolik',
+      life: 3000
+    });
+  }
+};
 
 onMounted(async () => {
   try {
     loading.value = true;
-    
-    // Load categories
-    const catsResponse = await fetch('/diss/cats');
+
+    // Load categories and levels in parallel
+    const [catsResponse, levelsResponse] = await Promise.all([
+      fetch('/diss/cats'),
+      fetch('/diss/levels')
+    ]);
+
     const catsData = await catsResponse.json();
     categories.value = catsData.map(cat => ({
       label: cat.name,
       value: cat.razdel_id
     }));
-    
+
+    const levelsData = await levelsResponse.json();
+    typeOptions.value = levelsData.map(level => ({
+      label: level.name,
+      value: level.mark
+    }));
+
     // Load document data
     const response = await fetch(`/diss_info/${uuid}`);
     if (!response.ok) {
       throw new Error('Failed to fetch document');
     }
     const data = await response.json();
-    
+
     title.value = data.title || '';
     author.value = data.author || '';
     code.value = data.code || '';
@@ -81,23 +99,22 @@ onMounted(async () => {
     approved_date.value = data.approved_date ? new Date(data.approved_date) : null;
     language.value = data.language || 'uzb';
     additional.value = data.additional || '';
-    annotation.value = data.annotation || '';
+    annotation.value = data.additional || '';
     ashyo.value = data.ashyo || '';
     srn.value = data.srn || '';
     mtt.value = data.mtt || '';
     volume.value = data.volume || '';
     type.value = data.type || '';
-    level.value = data.level || '';
     category_id.value = data.category_id || null;
     currentFileName.value = data.filename || '';
-    
+
   } catch (error) {
     console.error('Error fetching document:', error);
-    toast.add({ 
-      severity: 'error', 
-      summary: 'Xato', 
-      detail: 'Ma\'lumotlarni yuklashda xatolik yuz berdi', 
-      life: 3000 
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Ma\'lumotlarni yuklashda xatolik yuz berdi',
+      life: 3000
     });
   } finally {
     loading.value = false;
@@ -157,12 +174,12 @@ const onFileSelect = async (event) => {
 
 async function saveData() {
   // Validate required fields
-  if (!title.value || !author.value || !code.value || !type.value || !level.value || !category_id.value) {
-    toast.add({ 
-      severity: 'error', 
-      summary: 'Xato', 
-      detail: 'Barcha majburiy maydonlarni to\'ldiring', 
-      life: 3000 
+  if (!title.value || !author.value || !code.value || !type.value || !category_id.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Barcha majburiy maydonlarni to\'ldiring',
+      life: 3000
     });
     return;
   }
@@ -185,7 +202,6 @@ async function saveData() {
     mtt: mtt.value,
     volume: volume.value,
     type: type.value,
-    level: level.value,
     category_id: category_id.value
   };
 
@@ -300,30 +316,17 @@ function viewCurrentFile() {
           </div>
         </div>
 
-        <!-- Type and Level -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="form-group">
-            <label for="type" class="form-label">Turi*</label>
-            <Dropdown 
-              v-model="type" 
-              :options="typeOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Turini tanlang"
-              class="form-input"
-            />
-          </div>
-          <div class="form-group">
-            <label for="level" class="form-label">Daraja*</label>
-            <Dropdown 
-              v-model="level" 
-              :options="levelOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Darajani tanlang"
-              class="form-input"
-            />
-          </div>
+        <!-- Type -->
+        <div class="form-group">
+          <label for="type" class="form-label">Turi*</label>
+          <Dropdown
+            v-model="type"
+            :options="typeOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Turini tanlang"
+            class="form-input"
+          />
         </div>
 
         <!-- Category and Language -->

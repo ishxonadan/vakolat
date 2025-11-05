@@ -23,9 +23,9 @@ const srn = ref('');
 const mtt = ref('');
 const volume = ref('');
 const type = ref('');
-const level = ref('');
 const category_id = ref(null);
 const categories = ref([]);
+const typeOptions = ref([]);
 const uploadedFile = ref(null);
 const uploadedFileName = ref('');
 const isUploading = ref(false);
@@ -34,17 +34,6 @@ const languageOptions = [
   { label: 'O\'zbekcha', value: 'uzb' },
   { label: 'Русский', value: 'rus' },
   { label: 'English', value: 'eng' }
-];
-
-const typeOptions = [
-  { label: 'Doktorlik', value: 'doktorlik' },
-  { label: 'Nomzodlik', value: 'nomzodlik' },
-  { label: 'Magistrlik', value: 'magistrlik' }
-];
-
-const levelOptions = [
-  { label: 'Davlat', value: 'davlat' },
-  { label: 'Xalqaro', value: 'xalqaro' }
 ];
 
 const loadCategories = async () => {
@@ -57,11 +46,30 @@ const loadCategories = async () => {
     }));
   } catch (error) {
     console.error('Error loading categories:', error);
-    toast.add({ 
-      severity: 'error', 
-      summary: 'Xato', 
-      detail: 'Kategoriyalarni yuklashda xatolik', 
-      life: 3000 
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Kategoriyalarni yuklashda xatolik',
+      life: 3000
+    });
+  }
+};
+
+const loadLevels = async () => {
+  try {
+    const response = await fetch('/diss/levels');
+    const data = await response.json();
+    typeOptions.value = data.map(level => ({
+      label: level.name,
+      value: level.mark
+    }));
+  } catch (error) {
+    console.error('Error loading levels:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Darajalarni yuklashda xatolik',
+      life: 3000
     });
   }
 };
@@ -119,12 +127,12 @@ const onFileSelect = async (event) => {
 
 async function saveData() {
   // Validate required fields
-  if (!title.value || !author.value || !code.value || !type.value || !level.value || !category_id.value) {
-    toast.add({ 
-      severity: 'error', 
-      summary: 'Xato', 
-      detail: 'Barcha majburiy maydonlarni to\'ldiring', 
-      life: 3000 
+  if (!title.value || !author.value || !code.value || !type.value || !category_id.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Barcha majburiy maydonlarni to\'ldiring',
+      life: 3000
     });
     return;
   }
@@ -157,7 +165,6 @@ async function saveData() {
     mtt: mtt.value,
     volume: volume.value,
     type: type.value,
-    level: level.value,
     category_id: category_id.value,
     filename: uploadedFileName.value,
     size: uploadedFile.value?.size || 0
@@ -203,7 +210,10 @@ function cancelAdd() {
   router.push('/diss');
 }
 
-onMounted(loadCategories);
+onMounted(async () => {
+  await loadCategories();
+  await loadLevels();
+});
 </script>
 
 <template>
@@ -262,30 +272,17 @@ onMounted(loadCategories);
           </div>
         </div>
 
-        <!-- Type and Level -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="form-group">
-            <label for="type" class="form-label">Turi*</label>
-            <Dropdown 
-              v-model="type" 
-              :options="typeOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Turini tanlang"
-              class="form-input"
-            />
-          </div>
-          <div class="form-group">
-            <label for="level" class="form-label">Daraja*</label>
-            <Dropdown 
-              v-model="level" 
-              :options="levelOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Darajani tanlang"
-              class="form-input"
-            />
-          </div>
+        <!-- Type -->
+        <div class="form-group">
+          <label for="type" class="form-label">Turi*</label>
+          <Dropdown
+            v-model="type"
+            :options="typeOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Turini tanlang"
+            class="form-input"
+          />
         </div>
 
         <!-- Category and Language -->
