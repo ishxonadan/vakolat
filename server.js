@@ -353,12 +353,16 @@ app.post("/diss_save/:uuid", async (req, res) => {
     const requestData = req.body
     const uuid = req.params.uuid
 
-    // Handle type mapping to level column
-    if (requestData.type) {
-      requestData.level = requestData.type
+    // level and type are already correctly set from frontend
+    // level = academic degree (from levels collection)
+    // type = document type (dissertatisya/avtoreferat)
+
+    // Store original uploaded filename before converting to UUID-based name
+    let originalUploadedFilename = null
+    if (requestData.filename) {
+      originalUploadedFilename = requestData.filename
+      requestData.filename = `${uuid}.pdf`
     }
-    // Remove type field after mapping to level
-    delete requestData.type
 
     // Get the existing document before updating
     const existingDocument = await Documents.findOne({ uuid })
@@ -370,8 +374,8 @@ app.post("/diss_save/:uuid", async (req, res) => {
     }
 
     // Handle file operations if there's a filename in the request
-    if (requestData.filename && existingDocument) {
-      const sourceFilePath = path.join(uploadFolder, requestData.filename)
+    if (originalUploadedFilename && existingDocument) {
+      const sourceFilePath = path.join(uploadFolder, originalUploadedFilename)
       const destinationFilePath = path.join(folderplace, `${uuid}.pdf`)
 
       // Backup the old file if it exists
@@ -406,11 +410,12 @@ app.post("/diss_save/:uuid", async (req, res) => {
           console.log(`✅ File verified at destination: ${destinationFilePath}`)
         } else {
           console.error(`❌ File copy verification failed: ${destinationFilePath}`)
+          throw new Error(`File copy verification failed for ${destinationFilePath}`)
         }
       } catch (error) {
         console.error("Error copying file to storage:", error)
-        // Don't fail the save operation if file copy fails
-        // The document is saved in DB, file remains in uploads for manual handling
+        // Fail the save operation if file copy fails
+        throw new Error(`Failed to save file: ${error.message}`)
       }
     }
 
@@ -430,17 +435,17 @@ app.post("/diss_save", async (req, res) => {
     const generatedUuid = uuidv4()
     const originalFilename = requestData.filename
 
-    // Handle type mapping to level column
-    if (requestData.type) {
-      requestData.level = requestData.type
-    }
-    // Set document type and remove frontend type field
-    requestData.type = "dissertation"  // Document type
-    // level field is already set above
+    // level and type are already correctly set from frontend
+    // level = academic degree (from levels collection)
+    // type = document type (dissertatisya/avtoreferat)
 
     requestData.uuid = generatedUuid
     requestData.owner_id = 1
-    requestData.filename = `${generatedUuid}.pdf`
+
+    // Only set filename if a file was actually uploaded
+    if (originalFilename) {
+      requestData.filename = `${generatedUuid}.pdf`
+    }
 
     const document = new Documents(requestData)
     const saveStatus = await document.save()
@@ -466,8 +471,8 @@ app.post("/diss_save", async (req, res) => {
         }
       } catch (error) {
         console.error("Error copying file to storage:", error)
-        // Don't fail the save operation if file copy fails
-        // The document is saved in DB, file remains in uploads for manual handling
+        // Fail the save operation if file copy fails
+        throw new Error(`Failed to save file: ${error.message}`)
       }
     }
 

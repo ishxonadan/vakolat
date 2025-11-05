@@ -22,10 +22,15 @@ const ashyo = ref('');
 const srn = ref('');
 const mtt = ref('');
 const volume = ref('');
+const level = ref('');
 const type = ref('');
 const category_id = ref(null);
 const categories = ref([]);
-const typeOptions = ref([]);
+const levelOptions = ref([]);
+const documentTypeOptions = ref([
+  { label: 'Dissertatisya', value: 'Dissertatisya' },
+  { label: 'Avtoreferat', value: 'Avtoreferat' }
+]);
 const uploadedFile = ref(null);
 const uploadedFileName = ref('');
 const isUploading = ref(false);
@@ -55,20 +60,20 @@ const loadCategories = async () => {
   }
 };
 
-const loadLevels = async () => {
+const loadAcademicDegrees = async () => {
   try {
     const response = await fetch('/diss/levels');
     const data = await response.json();
-    typeOptions.value = data.map(level => ({
+    levelOptions.value = data.map(level => ({
       label: level.name,
       value: level.mark
     }));
   } catch (error) {
-    console.error('Error loading levels:', error);
+    console.error('Error loading academic degrees:', error);
     toast.add({
       severity: 'error',
       summary: 'Xato',
-      detail: 'Darajalarni yuklashda xatolik',
+      detail: 'Akademik darajalarni yuklashda xatolik',
       life: 3000
     });
   }
@@ -127,7 +132,7 @@ const onFileSelect = async (event) => {
 
 async function saveData() {
   // Validate required fields
-  if (!title.value || !author.value || !code.value || !type.value || !category_id.value) {
+  if (!title.value || !author.value || !code.value || !level.value || !type.value || !category_id.value) {
     toast.add({
       severity: 'error',
       summary: 'Xato',
@@ -136,8 +141,6 @@ async function saveData() {
     });
     return;
   }
-
-
 
   const data = {
     title: title.value,
@@ -156,6 +159,7 @@ async function saveData() {
     srn: srn.value,
     mtt: mtt.value,
     volume: volume.value,
+    level: level.value,
     type: type.value,
     category_id: category_id.value,
     filename: uploadedFileName.value,
@@ -204,7 +208,7 @@ function cancelAdd() {
 
 onMounted(async () => {
   await loadCategories();
-  await loadLevels();
+  await loadAcademicDegrees();
 });
 </script>
 
@@ -264,17 +268,31 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Type -->
-        <div class="form-group">
-          <label for="type" class="form-label">Turi*</label>
-          <Dropdown
-            v-model="type"
-            :options="typeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Turini tanlang"
-            class="form-input"
-          />
+        <!-- Academic Degree and Document Type -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="level" class="form-label">Akademik daraja*</label>
+            <Dropdown
+              v-model="level"
+              :options="levelOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Akademik darajani tanlang"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="type" class="form-label">Turi*</label>
+            <Dropdown
+              v-model="type"
+              :options="documentTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Turini tanlang"
+              class="form-input"
+            />
+          </div>
         </div>
 
         <!-- Category and Language -->
