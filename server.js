@@ -353,12 +353,12 @@ app.post("/diss_save/:uuid", async (req, res) => {
     const requestData = req.body
     const uuid = req.params.uuid
 
-    // Handle turi/daraja mapping to level column
-    if (requestData.turi) {
-      requestData.level = requestData.turi
+    // Handle type mapping to level column
+    if (requestData.type) {
+      requestData.level = requestData.type
     }
-    // Always remove daraja field as it's replaced by turi
-    delete requestData.daraja
+    // Remove type field after mapping to level
+    delete requestData.type
 
     // Get the existing document before updating
     const existingDocument = await Documents.findOne({ uuid })
@@ -430,12 +430,13 @@ app.post("/diss_save", async (req, res) => {
     const generatedUuid = uuidv4()
     const originalFilename = requestData.filename
 
-    // Handle turi/daraja mapping to level column
-    if (requestData.turi) {
-      requestData.level = requestData.turi
+    // Handle type mapping to level column
+    if (requestData.type) {
+      requestData.level = requestData.type
     }
-    // Always remove daraja field as it's replaced by turi
-    delete requestData.daraja
+    // Set document type and remove frontend type field
+    requestData.type = "dissertation"  // Document type
+    // level field is already set above
 
     requestData.uuid = generatedUuid
     requestData.owner_id = 1

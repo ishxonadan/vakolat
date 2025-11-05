@@ -137,15 +137,7 @@ async function saveData() {
     return;
   }
 
-  if (!uploadedFileName.value) {
-    toast.add({ 
-      severity: 'error', 
-      summary: 'Xato', 
-      detail: 'PDF fayl yuklash majburiy', 
-      life: 3000 
-    });
-    return;
-  }
+
 
   const data = {
     title: title.value,
@@ -438,7 +430,7 @@ onMounted(async () => {
 
         <!-- File Upload -->
         <div class="form-group">
-          <label class="form-label">PDF fayl*</label>
+          <label class="form-label">PDF fayl (ixtiyoriy)</label>
           <FileUpload 
             mode="basic" 
             accept="application/pdf" 
