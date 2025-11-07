@@ -128,6 +128,8 @@ const documentSchema = new mongoose.Schema(
     approved_date: { type: Date },
     language: { type: String, default: "uzb" },
     additional: { type: String },
+    soha_kodi: { type: String },
+    ilmiy_rahbar: { type: String },
     annotation: { type: String, default: "" },
     ashyo: { type: String },
     srn: { type: String },
