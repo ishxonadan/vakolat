@@ -82,26 +82,7 @@ const menuItems = [
       },
     ]
   },
-  // Add manual correction category if enabled
-  {
-    label: "Qo'lda to'g'rilash",
-    items: [
-      {
-        label: "User baholarini to'g'rilash",
-        icon: 'pi pi-fw pi-users',
-        to: '/user-correction',
-        requiredLevel: 'rais',
-        requiredPermissions: ['manage_corrections']
-      },
-      {
-        label: "Avtomatik bahoni to'g'rilash",
-        icon: 'pi pi-fw pi-cog',
-        to: '/auto-correction',
-        requiredLevel: 'rais',
-        requiredPermissions: ['manage_corrections']
-      },
-    ]
-  }
+
 ];
 
 // Enhanced filtering function that checks both levels and permissions

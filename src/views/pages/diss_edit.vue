@@ -19,6 +19,8 @@ const year = ref('');
 const approved_date = ref(null);
 const language = ref('uzb');
 const additional = ref('');
+const soha_kodi = ref('');
+const ilmiy_rahbar = ref('');
 const annotation = ref('');
 const ashyo = ref('');
 const srn = ref('');
@@ -99,7 +101,9 @@ onMounted(async () => {
     approved_date.value = data.approved_date ? new Date(data.approved_date) : null;
     language.value = data.language || 'uzb';
     additional.value = data.additional || '';
-    annotation.value = data.additional || '';
+    soha_kodi.value = data.soha_kodi || '';
+    ilmiy_rahbar.value = data.ilmiy_rahbar || '';
+    annotation.value = data.annotation || '';
     ashyo.value = data.ashyo || '';
     srn.value = data.srn || '';
     mtt.value = data.mtt || '';
@@ -196,6 +200,8 @@ async function saveData() {
     approved_date: approved_date.value,
     language: language.value,
     additional: additional.value,
+    soha_kodi: soha_kodi.value,
+    ilmiy_rahbar: ilmiy_rahbar.value,
     annotation: annotation.value,
     ashyo: ashyo.value,
     srn: srn.value,
@@ -415,55 +421,79 @@ function viewCurrentFile() {
         <!-- Ashyo, SRN, MTT, Volume -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="form-group">
-            <label for="ashyo" class="form-label">Ashyo</label>
-            <InputText 
-              v-model="ashyo" 
-              id="ashyo" 
-              type="text" 
-              class="form-input" 
+            <label for="ashyo" class="form-label">Ashyolar ro'yxati (Invertar)</label>
+            <InputText
+              v-model="ashyo"
+              id="ashyo"
+              type="text"
+              class="form-input"
               placeholder="Ashyo"
             />
           </div>
           <div class="form-group">
             <label for="srn" class="form-label">SRN</label>
-            <InputText 
-              v-model="srn" 
-              id="srn" 
-              type="text" 
-              class="form-input" 
+            <InputText
+              v-model="srn"
+              id="srn"
+              type="text"
+              class="form-input"
               placeholder="SRN"
             />
           </div>
           <div class="form-group">
             <label for="mtt" class="form-label">MTT</label>
-            <InputText 
-              v-model="mtt" 
-              id="mtt" 
-              type="text" 
-              class="form-input" 
+            <InputText
+              v-model="mtt"
+              id="mtt"
+              type="text"
+              class="form-input"
               placeholder="MTT"
             />
           </div>
           <div class="form-group">
             <label for="volume" class="form-label">Hajm</label>
-            <InputText 
-              v-model="volume" 
-              id="volume" 
-              type="text" 
-              class="form-input" 
+            <InputText
+              v-model="volume"
+              id="volume"
+              type="text"
+              class="form-input"
               placeholder="Hajm"
             />
           </div>
         </div>
 
+        <!-- Soha kodi -->
+        <div class="form-group">
+          <label for="soha_kodi" class="form-label">Soha kodi</label>
+          <Textarea
+            v-model="soha_kodi"
+            id="soha_kodi"
+            rows="4"
+            class="form-input"
+            placeholder="Soha kodini kiriting. Bir nechta soha kodini kiritsa bo'ladi"
+          />
+        </div>
+
+        <!-- Ilmiy rahbar/maslahatchi -->
+        <div class="form-group">
+          <label for="ilmiy_rahbar" class="form-label">Ilmiy rahbar/maslahatchi</label>
+          <Textarea
+            v-model="ilmiy_rahbar"
+            id="ilmiy_rahbar"
+            rows="4"
+            class="form-input"
+            placeholder="Ilmiy rahbar/maslahatchi ismini kiriting"
+          />
+        </div>
+
         <!-- Annotation -->
         <div class="form-group">
           <label for="annotation" class="form-label">Annotatsiya</label>
-          <Textarea 
-            v-model="annotation" 
-            id="annotation" 
-            rows="4" 
-            class="form-input" 
+          <Textarea
+            v-model="annotation"
+            id="annotation"
+            rows="4"
+            class="form-input"
             placeholder="Annotatsiyani kiriting"
           />
         </div>
