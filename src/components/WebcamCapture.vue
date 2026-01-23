@@ -80,33 +80,42 @@
               Yuz topilganda 3 soniyada rasm olinadi
             </small>
           </div>
-        </div>
-      </div>
-
-      <!-- Frame Selection UI -->
-      <div v-if="showFrameSelection" class="frame-selection mt-4">
-        <h4 class="mb-3">
-          <i class="pi pi-images mr-2"></i>
-          Eng yaxshi rasmni tanlang
-        </h4>
-        <div class="frames-grid">
-          <div
-            v-for="(frame, index) in capturedFrames"
-            :key="index"
-            class="frame-item"
-            @click="selectFrame(frame)"
-          >
-            <img :src="frame.image" :alt="`Frame ${index + 1}`" />
-            <div class="frame-overlay">
-              <i class="pi pi-check-circle"></i>
-              <span>{{ index + 1 }}</span>
-            </div>
+          <div class="toggle-item">
+            <label class="flex align-items-center gap-2 cursor-pointer">
+              <InputSwitch v-model="autoColorCorrection" />
+              <span class="font-semibold">
+                <i class="pi pi-sun"></i>
+                Avtomatik rang tuzatish
+              </span>
+            </label>
+            <small class="text-gray-600 block ml-8 mt-1">
+              Yorqinlik va rangni avtomatik tuzatadi
+            </small>
           </div>
         </div>
       </div>
 
       <!-- Captured Image with Crop -->
-      <div v-if="capturedImage && !showFrameSelection" class="crop-section mt-4">
+      <div v-if="capturedImage" class="crop-section mt-4">
+        <!-- Frame Selection Slider (shown above crop area) -->
+        <div v-if="capturedFrames.length > 1" class="frame-slider mb-3">
+          <h5 class="mb-2">
+            <i class="pi pi-images mr-2"></i>
+            Rasmni tanlang
+          </h5>
+          <div class="frames-carousel">
+            <div
+              v-for="(frame, index) in capturedFrames"
+              :key="index"
+              class="frame-thumb"
+              :class="{ 'active': capturedImage === frame.image }"
+              @click="selectFrame(frame)"
+            >
+              <img :src="frame.image" :alt="`Frame ${index + 1}`" />
+              <span class="frame-number">{{ index + 1 }}</span>
+            </div>
+          </div>
+        </div>
         <h4 class="mb-2">
           <i class="pi pi-crop mr-2"></i>
           Rasmni moslashtiring (harakatlantiring va o'lchamini o'zgartiring)
@@ -235,6 +244,7 @@ const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 })
 
 // Settings
 const autoDetectFace = ref(true) // Start with toggle ON by default
+const autoColorCorrection = ref(true) // Auto brightness/color correction (enabled by default)
 const countdown = ref(0)
 const isFrontCamera = ref(true)
 
@@ -256,6 +266,8 @@ let lastFaceDetectionTime = 0
 // Best frame capture during countdown
 const capturedFrames = ref([])
 let frameCaptureDuringCountdown = false
+let lastFrameCaptureTime = 0
+const frameCaptureInterval = 250 // Capture every ~250ms to get ~12 frames in 3 seconds
 
 // Aspect ratio
 const aspectRatio = props.targetWidth / props.targetHeight
@@ -386,10 +398,8 @@ const loadFaceDetectionModels = async () => {
     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
     modelsLoaded.value = true
-    console.log('✅ Face detection models loaded')
   } catch (error) {
     console.error('❌ Error loading face detection models:', error)
-    console.log('⚠️ Face detection will use fallback mode')
     modelsLoaded.value = true // Continue anyway
   }
 }
@@ -490,8 +500,11 @@ const detectFace = async () => {
         
         // Capture frames during countdown to pick best one
         if (frameCaptureDuringCountdown && countdown.value > 0) {
-          console.log('📸 Capturing frame during countdown:', countdown.value)
-          captureFrameForSelection(box, landmarks)
+          const now = Date.now()
+          if (now - lastFrameCaptureTime >= frameCaptureInterval) {
+            captureFrameForSelection(box, landmarks)
+            lastFrameCaptureTime = now
+          }
         }
         
         // Start countdown ONLY if:
@@ -567,6 +580,7 @@ const startCountdown = () => {
   countdown.value = 3
   capturedFrames.value = [] // Reset frames
   frameCaptureDuringCountdown = true // Start capturing frames
+  lastFrameCaptureTime = 0 // Reset throttle timer
   
   // Total 3 seconds: show 3, 2, 1 for 1s each
   countdownIntervalId = setInterval(() => {
@@ -607,7 +621,6 @@ const captureFrameForSelection = (box, landmarks) => {
     const nose = landmarks.getNose()
     
     if (!leftEye || !rightEye || !nose || leftEye.length === 0 || rightEye.length === 0) {
-      console.log('❌ SKIPPED - missing landmarks')
       return
     }
     
@@ -628,17 +641,10 @@ const captureFrameForSelection = (box, landmarks) => {
     const faceCenterX = box.x + box.width / 2
     const noseOffset = Math.abs(noseCenterX - faceCenterX) / box.width
     
-    console.log('🎯 Frontal:', frontalScore.toFixed(3), 
-                '👁️ Eye Open:', eyeOpenness.toFixed(3), 
-                '👃 Nose Offset:', noseOffset.toFixed(3))
-    
     // Basic quality check - only skip extremely bad frames
     if (frontalScore < 0.20) {
-      console.log('❌ SKIPPED - face turned away too much')
       return
     }
-    
-    console.log('✅ CAPTURED')
     
     const video = videoElement.value
     const canvas = document.createElement('canvas')
@@ -675,16 +681,22 @@ const captureFrameForSelection = (box, landmarks) => {
 
 // Show frame selection UI for user to choose
 const capturePhotoWithBestFrame = () => {
-  console.log('📊 Total frames captured:', capturedFrames.value.length)
-  
   if (capturedFrames.value.length === 0) {
-    console.log('⚠️ No frames captured - using current frame')
     capturePhotoWithFace()
     return
   }
   
-  // Show frame selection UI instead of auto-selecting
-  showFrameSelection.value = true
+  // Keep only last 12 frames and reverse order (most recent first)
+  const allFrames = capturedFrames.value.slice(-12).reverse()
+  capturedFrames.value = allFrames
+  
+  // Find best frame (highest quality score)
+  const bestFrame = allFrames.reduce((best, frame) => 
+    frame.score > best.score ? frame : best
+  )
+  
+  // Auto-select best frame
+  selectFrame(bestFrame)
 }
 
 // User selects a frame from the captured frames
@@ -692,7 +704,7 @@ const selectFrame = (frame) => {
   capturedImage.value = frame.image
   faceBox.value = frame.faceBox
   facePosition.value = frame.facePosition
-  showFrameSelection.value = false
+  // Keep frame selection visible so user can switch between frames
   
   // DON'T stop face detection - keep tracking!
   // But DISABLE auto-countdown after first capture
@@ -1033,6 +1045,37 @@ const stopDrag = () => {
   document.removeEventListener('mouseup', stopDrag)
 }
 
+const applyColorCorrection = (ctx, width, height) => {
+  // Get image data
+  const imageData = ctx.getImageData(0, 0, width, height)
+  const data = imageData.data
+  
+  // Calculate average brightness
+  let totalBrightness = 0
+  for (let i = 0; i < data.length; i += 4) {
+    totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3
+  }
+  const avgBrightness = totalBrightness / (data.length / 4)
+  
+  // Auto-adjust brightness (target: ~128)
+  const brightnessFactor = Math.min(Math.max(128 / avgBrightness, 0.8), 1.3)
+  
+  // Apply corrections
+  for (let i = 0; i < data.length; i += 4) {
+    // Brightness adjustment
+    data[i] = Math.min(255, data[i] * brightnessFactor)
+    data[i + 1] = Math.min(255, data[i + 1] * brightnessFactor)
+    data[i + 2] = Math.min(255, data[i + 2] * brightnessFactor)
+    
+    // Slight contrast boost
+    data[i] = Math.min(255, ((data[i] - 128) * 1.1) + 128)
+    data[i + 1] = Math.min(255, ((data[i + 1] - 128) * 1.1) + 128)
+    data[i + 2] = Math.min(255, ((data[i + 2] - 128) * 1.1) + 128)
+  }
+  
+  ctx.putImageData(imageData, 0, 0)
+}
+
 const confirmCrop = () => {
   if (!cropImage.value) return
   
@@ -1059,6 +1102,11 @@ const confirmCrop = () => {
     props.targetWidth,
     props.targetHeight
   )
+  
+  // Apply color correction if enabled
+  if (autoColorCorrection.value) {
+    applyColorCorrection(ctx, props.targetWidth, props.targetHeight)
+  }
   
   croppedImage.value = canvas.toDataURL('image/jpeg', 0.9)
   emit('capture', croppedImage.value)
@@ -1143,75 +1191,94 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* Frame Selection Grid */
-.frame-selection {
+/* Frame Selection Slider */
+.frame-slider {
   background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 12px;
+  padding: 1rem;
+  border-radius: 8px;
   border: 2px solid #e9ecef;
 }
 
-.frame-selection h4 {
+.frame-slider h5 {
   color: #495057;
-  font-size: 1.1rem;
-  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
 }
 
-.frames-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem;
-  max-height: 400px;
-  overflow-y: auto;
+.frames-carousel {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+  scroll-behavior: smooth;
 }
 
-.frame-item {
+.frames-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.frames-carousel::-webkit-scrollbar-track {
+  background: #e9ecef;
+  border-radius: 3px;
+}
+
+.frames-carousel::-webkit-scrollbar-thumb {
+  background: #adb5bd;
+  border-radius: 3px;
+}
+
+.frames-carousel::-webkit-scrollbar-thumb:hover {
+  background: #6c757d;
+}
+
+.frame-thumb {
   position: relative;
+  flex-shrink: 0;
+  width: 140px;
+  height: 140px;
   cursor: pointer;
   border-radius: 8px;
   overflow: hidden;
-  aspect-ratio: 1;
   border: 3px solid transparent;
   transition: all 0.2s ease;
   background: white;
 }
 
-.frame-item:hover {
+.frame-thumb:hover {
   border-color: #3b82f6;
-  transform: scale(1.05);
+  transform: translateY(-4px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.frame-item img {
+.frame-thumb.active {
+  border-color: #22c55e;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
+
+.frame-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.frame-overlay {
+.frame-number {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.7);
   color: white;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
 }
 
-.frame-overlay i {
-  font-size: 1.2rem;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.frame-item:hover .frame-overlay i {
-  opacity: 1;
+.frame-thumb.active .frame-number {
+  background: #22c55e;
 }
 
 .camera-controls {
