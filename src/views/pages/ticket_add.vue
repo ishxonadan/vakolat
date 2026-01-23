@@ -23,7 +23,7 @@
               @blur="checkExistingUser"
             />
             <small v-if="errors.passport" class="p-error">{{ errors.passport }}</small>
-            <small class="text-gray-500">Masalan: AA1234567</small>
+            <small class="text-gray-500">Masalan: AB1234567</small>
           </div>
 
           <div>
@@ -206,9 +206,9 @@ const validateForm = () => {
     return false;
   }
   
-  const passportRegex = /^[A-Z]{2}\d{7}$/;
+  const passportRegex = /^[A-Z]{1,5}\d{4,10}$/;
   if (!passportRegex.test(form.passport.replace(/\s/g, ''))) {
-    errors.passport = 'Pasport formati noto\'g\'ri (AA1234567)';
+    errors.passport = 'Pasport formati noto\'g\'ri (1-5 harf, 4-10 raqam)';
     return false;
   }
   
@@ -217,14 +217,20 @@ const validateForm = () => {
 
 const formatPassport = (event) => {
   let value = event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (value.length > 2) {
-    value = value.substring(0, 2) + value.substring(2, 9);
-  }
-  form.passport = value;
+  // Extract letters and numbers
+  const letters = value.match(/[A-Z]/g)?.join('') || '';
+  const numbers = value.match(/\d/g)?.join('') || '';
+  
+  // Limit letters to 5 and numbers to 10
+  const limitedLetters = letters.substring(0, 5);
+  const limitedNumbers = numbers.substring(0, 10);
+  
+  // Combine them: letters first, then numbers
+  form.passport = limitedLetters + limitedNumbers;
 };
 
 const checkExistingUser = async () => {
-  if (!form.passport.trim() || form.passport.length < 9) return;
+  if (!form.passport.trim() || form.passport.length < 5) return;
   
   try {
     // Check if user exists in LibraryUsers

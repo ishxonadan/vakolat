@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import AppFooter from './AppFooter.vue';
 import AppSidebar from './AppSidebar.vue';
 import AppTopbar from './AppTopbar.vue';
+import SessionTimer from '@/components/SessionTimer.vue';
 
 const { layoutConfig, layoutState, isSidebarActive, resetMenu } = useLayout();
 
@@ -65,5 +66,6 @@ function isOutsideClicked(event) {
         </div>
         <div class="layout-mask animate-fadein"></div>
     </div>
+    <SessionTimer />
     <Toast />
 </template>

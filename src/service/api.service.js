@@ -1,5 +1,16 @@
 const API_BASE_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:7777"
 
+// Helper function to handle 401 errors
+const handleUnauthorized = () => {
+  // Import auth service and router dynamically to avoid circular dependencies
+  import('./auth.service').then(({ default: authService }) => {
+    authService.logout()
+  })
+  
+  // Redirect to login page
+  window.location.href = '/auth/login'
+}
+
 const ApiService = {
   async get(endpoint) {
     const token = localStorage.getItem("token")
@@ -10,6 +21,11 @@ const ApiService = {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     })
+
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error("Unauthorized")
+    }
 
     if (!response.ok) {
       const error = await response.json()
@@ -30,6 +46,11 @@ const ApiService = {
       body: JSON.stringify(data),
     })
 
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error("Unauthorized")
+    }
+
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.error || "Network error")
@@ -49,6 +70,11 @@ const ApiService = {
       body: JSON.stringify(data),
     })
 
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error("Unauthorized")
+    }
+
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.error || "Network error")
@@ -66,6 +92,11 @@ const ApiService = {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     })
+
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error("Unauthorized")
+    }
 
     if (!response.ok) {
       const error = await response.json()

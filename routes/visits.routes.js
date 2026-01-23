@@ -220,9 +220,20 @@ module.exports = (nazoratConnection) => {
       console.log("📊 Fetching today stats")
       const db = getDb()
       const today = new Date().toISOString().split("T")[0]
+      console.log("📅 Today's date:", today)
       const collection = db.collection("tashrif")
 
+      // Debug: Check what dates exist in the database
+      const allDates = await collection.distinct("date")
+      console.log("📅 Available dates in database:", allDates.slice(0, 10), `(${allDates.length} total)`)
+
       const todayVisits = await collection.find({ date: today }).toArray()
+      console.log("📊 Found", todayVisits.length, "visits for today")
+      
+      if (todayVisits.length > 0) {
+        console.log("📄 First visit sample:", todayVisits[0])
+      }
+
       const uniqueIds = new Set(todayVisits.map((v) => v.id))
       const currentInside = todayVisits.filter((v) => !v.ketdi).length
 
@@ -250,6 +261,8 @@ module.exports = (nazoratConnection) => {
       const month = String(now.getMonth() + 1).padStart(2, "0")
       const startDate = `${year}-${month}-01`
       const endDate = new Date(year, now.getMonth() + 1, 0).toISOString().split("T")[0]
+      
+      console.log("📅 Month date range:", { startDate, endDate })
 
       const collection = db.collection("tashrif")
 
@@ -258,6 +271,8 @@ module.exports = (nazoratConnection) => {
           date: { $gte: startDate, $lte: endDate },
         })
         .toArray()
+
+      console.log("📊 Found", monthVisits.length, "visits for this month")
 
       const uniqueIds = new Set(monthVisits.map((v) => v.id))
       const daysInMonth = now.getDate()

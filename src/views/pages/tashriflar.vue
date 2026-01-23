@@ -198,10 +198,15 @@ const fetchVisits = async (isAutoRefresh = false) => {
 // Fetch statistics
 const fetchStatistics = async () => {
   try {
+    console.log('📊 Fetching statistics...')
+    
     const [today, month] = await Promise.all([
       api.get('/visits/stats/today'),
       api.get('/visits/stats/month'),
     ])
+
+    console.log('📊 Today response:', today.data)
+    console.log('📊 Month response:', month.data)
 
     todayStats.value = today.data
     monthStats.value = month.data
@@ -210,13 +215,25 @@ const fetchStatistics = async () => {
     if (dateRangeStats.value && dateRangeStats.value.length === 2) {
       const startDate = dateRangeStats.value[0].toISOString().split('T')[0]
       const endDate = dateRangeStats.value[1].toISOString().split('T')[0]
+      console.log('📊 Fetching period stats:', { startDate, endDate })
+      
       const period = await api.get(`/visits/stats/period?startDate=${startDate}&endDate=${endDate}`)
+      console.log('📊 Period response:', period.data)
+      
       periodStats.value = period.data
     } else {
       periodStats.value = { total: 0, unique: 0, days: 0, average: 0 }
     }
   } catch (error) {
-    console.error('Error fetching statistics:', error)
+    console.error('❌ Error fetching statistics:', error)
+    console.error('❌ Error details:', error.response?.data || error.message)
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Statistika yuklashda xatolik',
+      detail: error.response?.data?.error || error.message,
+      life: 5000
+    })
   }
 }
 
@@ -320,6 +337,12 @@ watch(rowsPerPage, (newValue) => {
 // Lifecycle
 onMounted(() => {
   console.log('🚀 Component mounted')
+  
+  // Set default date range to this year (January 1 till today)
+  const today = new Date()
+  const startOfYear = new Date(today.getFullYear(), 0, 1) // January 1 of current year
+  dateRangeStats.value = [startOfYear, today]
+  
   fetchVisits(false)
   fetchStatistics()
   startAutoRefresh() // Start auto-refresh on mount
@@ -447,13 +470,14 @@ onUnmounted(() => {
             </div>
 
             <!-- Search -->
-            <div class="relative">
-              <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-blue-300"></i>
+            <div class="relative" style="min-width: 250px;">
+              <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 z-10"></i>
               <InputText
                 v-model="searchQuery"
                 placeholder="Ism yoki ID..."
                 @keyup.enter="onSearch"
-                class="pl-10 bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:bg-white/20"
+                class="w-full bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:bg-white/20"
+                style="padding-left: 2.5rem;"
               />
             </div>
 
@@ -676,47 +700,73 @@ onUnmounted(() => {
             <p>Tashriflar tarixi topilmadi</p>
           </div>
 
-          <div v-else class="max-h-96 overflow-y-auto">
-            <Timeline :value="userHistory" align="left" class="customized-timeline">
+          <div v-else class="max-h-96 overflow-y-auto px-4">
+            <div class="max-w-3xl mx-auto">
+              <Timeline :value="userHistory" align="left" class="customized-timeline">
               <template #marker="{ item }">
-                <span 
-                  class="flex w-8 h-8 items-center justify-center text-white rounded-full shadow-lg"
-                  :class="isStillInLibrary(item) ? 'bg-green-500' : 'bg-gray-400'"
+                <div 
+                  class="flex w-10 h-10 items-center justify-center text-white rounded-full shadow-md border-2 border-white"
+                  :class="isStillInLibrary(item) ? 'bg-green-500' : 'bg-blue-500'"
                 >
-                  <i :class="isStillInLibrary(item) ? 'pi pi-clock' : 'pi pi-check'"></i>
-                </span>
+                  <i :class="isStillInLibrary(item) ? 'pi pi-clock text-sm' : 'pi pi-check text-sm'"></i>
+                </div>
               </template>
               <template #content="{ item }">
-                <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors mb-4">
-                  <div class="flex justify-between items-start mb-2">
-                    <div class="flex-1">
-                      <div class="font-bold text-gray-900 text-lg">
-                        {{ formatDate(item.date) }}
+                <div class="ml-3 mb-5">
+                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all p-4">
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-3">
+                          <i class="pi pi-calendar text-blue-500"></i>
+                          <span class="font-bold text-gray-900 text-lg">{{ formatDate(item.date) }}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                          <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                            <i class="pi pi-sign-in text-green-600 text-lg"></i>
+                            <div>
+                              <div class="text-xs text-gray-500">Keldi</div>
+                              <div class="font-semibold text-gray-900">{{ formatTime(item.keldi) }}</div>
+                            </div>
+                          </div>
+                          
+                          <div v-if="item.ketdi" class="flex items-center gap-2 p-2 bg-red-50 rounded-lg">
+                            <i class="pi pi-sign-out text-red-600 text-lg"></i>
+                            <div>
+                              <div class="text-xs text-gray-500">Ketdi</div>
+                              <div class="font-semibold text-gray-900">{{ formatTime(item.ketdi) }}</div>
+                            </div>
+                          </div>
+                          
+                          <div v-else class="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
+                            <i class="pi pi-clock text-yellow-600 text-lg"></i>
+                            <div>
+                              <div class="text-xs text-gray-500">Holat</div>
+                              <div class="font-semibold text-gray-900">Kutubxonada</div>
+                            </div>
+                          </div>
+                          
+                          <div v-if="item.duration" class="flex items-center gap-2 p-2 bg-purple-50 rounded-lg">
+                            <i class="pi pi-hourglass text-purple-600 text-lg"></i>
+                            <div>
+                              <div class="text-xs text-gray-500">Davomiyligi</div>
+                              <div class="font-semibold text-gray-900">{{ item.duration }}</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div class="text-base text-gray-600 mt-2">
-                        <span class="inline-flex items-center gap-2">
-                          <i class="pi pi-sign-in text-green-600"></i>
-                          Keldi: <strong class="text-lg">{{ formatTime(item.keldi) }}</strong>
-                        </span>
-                        <span v-if="item.ketdi" class="inline-flex items-center gap-2 ml-4">
-                          <i class="pi pi-sign-out text-red-600"></i>
-                          Ketdi: <strong class="text-lg">{{ formatTime(item.ketdi) }}</strong>
-                        </span>
-                      </div>
+                      
+                      <Tag 
+                        :value="getStatusText(item)" 
+                        :severity="getStatusSeverity(item)"
+                        class="text-xs ml-3"
+                      />
                     </div>
-                    <Tag 
-                      :value="getStatusText(item)" 
-                      :severity="getStatusSeverity(item)"
-                      class="text-sm"
-                    />
-                  </div>
-                  <div v-if="item.duration" class="text-base text-gray-600 mt-2 flex items-center gap-2">
-                    <i class="pi pi-clock text-purple-600"></i>
-                    <span>Davomiyligi: <strong class="text-lg">{{ item.duration }}</strong></span>
                   </div>
                 </div>
               </template>
-            </Timeline>
+              </Timeline>
+            </div>
           </div>
         </div>
       </div>
@@ -784,30 +834,42 @@ onUnmounted(() => {
   border-top: 1px solid #e2e8f0;
 }
 
-/* Custom Timeline Styles - Keep line left, center content */
+/* Custom Timeline Styles - Clean and Modern */
+:deep(.customized-timeline) {
+  padding: 1rem 0;
+}
+
+:deep(.customized-timeline .p-timeline-event) {
+  min-height: 100px;
+}
+
+:deep(.customized-timeline .p-timeline-event-opposite) {
+  display: none;
+}
+
 :deep(.customized-timeline .p-timeline-event-marker) {
   border: 0;
   background: transparent;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 :deep(.customized-timeline .p-timeline-event-connector) {
-  background-color: #cbd5e1;
-  width: 2px;
+  background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+  width: 3px;
+  margin: 0 auto;
 }
 
 :deep(.customized-timeline .p-timeline-event-content) {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  padding-left: 2rem;
-}
-
-:deep(.customized-timeline .p-timeline-event-content > div) {
-  width: 100%;
-  max-width: 600px;
+  padding: 0;
 }
 
 :deep(.customized-timeline .p-timeline-event-separator) {
-  align-items: center;
+  align-items: flex-start;
+  gap: 1rem;
 }
 </style>

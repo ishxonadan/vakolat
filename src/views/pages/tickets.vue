@@ -5,6 +5,30 @@
       <Button @click="$router.push('/ticket_add')" icon="pi pi-plus" label="Yangi chipta" />
     </div>
 
+    <!-- Search Section -->
+    <div class="card mb-6 bg-blue-50 border border-blue-200">
+      <h3 class="text-lg font-semibold mb-4 text-blue-900">Tezkor qidiruv</h3>
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <InputText 
+            v-model="searchQuery"
+            placeholder="Pasport, F.I.Sh yoki Chipta ID bo'yicha qidiring..."
+            class="w-full"
+            @input="filterTickets"
+            @keyup.enter="filterTickets"
+          />
+        </div>
+        <Button 
+          v-if="searchQuery"
+          @click="clearSearch" 
+          icon="pi pi-times" 
+          label="Tozalash" 
+          severity="secondary"
+          outlined
+        />
+      </div>
+    </div>
+
     <DataTable 
       :value="tickets" 
       :loading="loading"
@@ -147,8 +171,10 @@ import apiService from '@/service/api.service';
 import LibraryLogo from '@/components/LibraryLogo.vue';
 
 const toast = useToast();
+const allTickets = ref([]);
 const tickets = ref([]);
 const loading = ref(false);
+const searchQuery = ref('');
 const showTicketDialog = ref(false);
 const selectedTicket = ref(null);
 const qrCode = ref('');
@@ -158,6 +184,7 @@ const loadTickets = async () => {
   try {
     loading.value = true;
     const data = await apiService.get('/tickets');
+    allTickets.value = data;
     tickets.value = data;
   } catch (error) {
     toast.add({ 
@@ -519,6 +546,39 @@ const formatDate = (date) => {
 
 const formatDateTime = (date) => {
   return new Date(date).toLocaleString('uz-UZ');
+};
+
+const filterTickets = () => {
+  if (!searchQuery.value.trim()) {
+    tickets.value = allTickets.value;
+    return;
+  }
+  
+  const query = searchQuery.value.toLowerCase().trim();
+  
+  tickets.value = allTickets.value.filter(ticket => {
+    // Search in ticket ID
+    if (ticket.ticketId && ticket.ticketId.toLowerCase().includes(query)) {
+      return true;
+    }
+    
+    // Search in full name
+    if (ticket.fullname && ticket.fullname.toLowerCase().includes(query)) {
+      return true;
+    }
+    
+    // Search in passport
+    if (ticket.passport && ticket.passport.toLowerCase().includes(query)) {
+      return true;
+    }
+    
+    return false;
+  });
+};
+
+const clearSearch = () => {
+  searchQuery.value = '';
+  tickets.value = allTickets.value;
 };
 
 onMounted(() => {
