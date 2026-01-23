@@ -83,8 +83,30 @@
         </div>
       </div>
 
+      <!-- Frame Selection UI -->
+      <div v-if="showFrameSelection" class="frame-selection mt-4">
+        <h4 class="mb-3">
+          <i class="pi pi-images mr-2"></i>
+          Eng yaxshi rasmni tanlang
+        </h4>
+        <div class="frames-grid">
+          <div
+            v-for="(frame, index) in capturedFrames"
+            :key="index"
+            class="frame-item"
+            @click="selectFrame(frame)"
+          >
+            <img :src="frame.image" :alt="`Frame ${index + 1}`" />
+            <div class="frame-overlay">
+              <i class="pi pi-check-circle"></i>
+              <span>{{ index + 1 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Captured Image with Crop -->
-      <div v-if="capturedImage" class="crop-section mt-4">
+      <div v-if="capturedImage && !showFrameSelection" class="crop-section mt-4">
         <h4 class="mb-2">
           <i class="pi pi-crop mr-2"></i>
           Rasmni moslashtiring (harakatlantiring va o'lchamini o'zgartiring)
@@ -200,6 +222,7 @@ const stream = ref(null)
 const cameraReady = ref(false)
 const capturedImage = ref(null)
 const croppedImage = ref(null)
+const showFrameSelection = ref(false) // Show frame selection UI
 
 // Crop state
 const cropPosition = ref({ x: 0, y: 0 })
@@ -467,6 +490,7 @@ const detectFace = async () => {
         
         // Capture frames during countdown to pick best one
         if (frameCaptureDuringCountdown && countdown.value > 0) {
+          console.log('📸 Capturing frame during countdown:', countdown.value)
           captureFrameForSelection(box, landmarks)
         }
         
@@ -577,6 +601,45 @@ const captureFrameForSelection = (box, landmarks) => {
   if (!videoElement.value || !canvasElement.value) return
   
   try {
+    // Get eye landmarks
+    const leftEye = landmarks.getLeftEye()
+    const rightEye = landmarks.getRightEye()
+    const nose = landmarks.getNose()
+    
+    if (!leftEye || !rightEye || !nose || leftEye.length === 0 || rightEye.length === 0) {
+      console.log('❌ SKIPPED - missing landmarks')
+      return
+    }
+    
+    // 1. Calculate frontal score (face rotation)
+    const leftEyeX = leftEye.reduce((sum, p) => sum + p.x, 0) / leftEye.length
+    const rightEyeX = rightEye.reduce((sum, p) => sum + p.x, 0) / rightEye.length
+    const eyeDistance = Math.abs(rightEyeX - leftEyeX)
+    const frontalScore = eyeDistance / box.width
+    
+    // 2. Check eye openness (detect blinking)
+    const leftEyeHeight = Math.abs(leftEye[1].y - leftEye[5].y)  // Top - bottom of eye
+    const rightEyeHeight = Math.abs(rightEye[1].y - rightEye[5].y)
+    const avgEyeHeight = (leftEyeHeight + rightEyeHeight) / 2
+    const eyeOpenness = avgEyeHeight / (eyeDistance * 0.3)  // Normalized by eye distance
+    
+    // 3. Check nose position (gaze direction)
+    const noseCenterX = nose.reduce((sum, p) => sum + p.x, 0) / nose.length
+    const faceCenterX = box.x + box.width / 2
+    const noseOffset = Math.abs(noseCenterX - faceCenterX) / box.width
+    
+    console.log('🎯 Frontal:', frontalScore.toFixed(3), 
+                '👁️ Eye Open:', eyeOpenness.toFixed(3), 
+                '👃 Nose Offset:', noseOffset.toFixed(3))
+    
+    // Basic quality check - only skip extremely bad frames
+    if (frontalScore < 0.20) {
+      console.log('❌ SKIPPED - face turned away too much')
+      return
+    }
+    
+    console.log('✅ CAPTURED')
+    
     const video = videoElement.value
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
@@ -593,45 +656,43 @@ const captureFrameForSelection = (box, landmarks) => {
     ctx.drawImage(video, 0, 0)
     const imageData = canvas.toDataURL('image/jpeg', 0.9)
     
-    // Calculate frontal score (higher = more frontal)
-    const leftEye = landmarks.getLeftEye()
-    const rightEye = landmarks.getRightEye()
-    
-    let frontalScore = 0
-    if (leftEye && rightEye && leftEye.length > 0 && rightEye.length > 0) {
-      const leftEyeX = leftEye.reduce((sum, p) => sum + p.x, 0) / leftEye.length
-      const rightEyeX = rightEye.reduce((sum, p) => sum + p.x, 0) / rightEye.length
-      const eyeDistance = Math.abs(rightEyeX - leftEyeX)
-      frontalScore = eyeDistance / box.width // Higher = more frontal
-    }
+    // Store combined quality score
+    const qualityScore = frontalScore * eyeOpenness * (1 - noseOffset)
     
     capturedFrames.value.push({
       image: imageData,
-      score: frontalScore,
+      score: qualityScore,  // Combined score considering all factors
+      frontalScore: frontalScore,
+      eyeOpenness: eyeOpenness,
+      noseOffset: noseOffset,
       faceBox: { ...faceBox.value },
-      facePosition: { ...facePosition.value }  // Store nose position too!
+      facePosition: { ...facePosition.value }
     })
   } catch (error) {
     console.debug('Error capturing frame:', error)
   }
 }
 
-// Use best frame from captured frames
+// Show frame selection UI for user to choose
 const capturePhotoWithBestFrame = () => {
+  console.log('📊 Total frames captured:', capturedFrames.value.length)
+  
   if (capturedFrames.value.length === 0) {
-    // Fallback: capture current frame
+    console.log('⚠️ No frames captured - using current frame')
     capturePhotoWithFace()
     return
   }
   
-  // Find frame with best frontal score
-  const bestFrame = capturedFrames.value.reduce((best, frame) => 
-    frame.score > best.score ? frame : best
-  )
-  
-  capturedImage.value = bestFrame.image
-  faceBox.value = bestFrame.faceBox
-  facePosition.value = bestFrame.facePosition  // Restore nose position from best frame!
+  // Show frame selection UI instead of auto-selecting
+  showFrameSelection.value = true
+}
+
+// User selects a frame from the captured frames
+const selectFrame = (frame) => {
+  capturedImage.value = frame.image
+  faceBox.value = frame.faceBox
+  facePosition.value = frame.facePosition
+  showFrameSelection.value = false
   
   // DON'T stop face detection - keep tracking!
   // But DISABLE auto-countdown after first capture
@@ -1008,6 +1069,7 @@ const retakePhoto = () => {
   capturedImage.value = null
   croppedImage.value = null
   isDragging.value = false
+  showFrameSelection.value = false
   
   // Fully reset all countdown and capture states
   hasTriggeredCapture.value = false
@@ -1040,6 +1102,7 @@ const cleanup = () => {
   cameraReady.value = false
   capturedImage.value = null
   croppedImage.value = null
+  showFrameSelection.value = false
   countdown.value = 0
   isDragging.value = false
   isResizing.value = false
@@ -1078,6 +1141,77 @@ onUnmounted(() => {
 .webcam-container {
   display: flex;
   flex-direction: column;
+}
+
+/* Frame Selection Grid */
+.frame-selection {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+}
+
+.frame-selection h4 {
+  color: #495057;
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+}
+
+.frames-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.frame-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border: 3px solid transparent;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.frame-item:hover {
+  border-color: #3b82f6;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.frame-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.frame-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.frame-overlay i {
+  font-size: 1.2rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.frame-item:hover .frame-overlay i {
+  opacity: 1;
 }
 
 .camera-controls {
