@@ -430,7 +430,7 @@ const detectFace = async () => {
       
       if (nose && nose.length > 0) {
         // Use the middle point of the nose for stability
-        const nosePoint = nose[Math.floor(nose.length / 2)]
+        const nosePoint = nose[Math.floor(nose.length / 2.5)]
         noseCenterX = nosePoint.x
         noseCenterY = nosePoint.y
       }
@@ -608,7 +608,8 @@ const captureFrameForSelection = (box, landmarks) => {
     capturedFrames.value.push({
       image: imageData,
       score: frontalScore,
-      faceBox: { ...faceBox.value }
+      faceBox: { ...faceBox.value },
+      facePosition: { ...facePosition.value }  // Store nose position too!
     })
   } catch (error) {
     console.debug('Error capturing frame:', error)
@@ -630,6 +631,7 @@ const capturePhotoWithBestFrame = () => {
   
   capturedImage.value = bestFrame.image
   faceBox.value = bestFrame.faceBox
+  facePosition.value = bestFrame.facePosition  // Restore nose position from best frame!
   
   // DON'T stop face detection - keep tracking!
   // But DISABLE auto-countdown after first capture
@@ -767,42 +769,52 @@ const initManualCropWithFace = () => {
     const scaleX = img.naturalWidth / videoElement.value.videoWidth
     const scaleY = img.naturalHeight / videoElement.value.videoHeight
     
-    // Use FULL FACE BOX (not nose position) for better cropping
-    let faceX = faceBox.value.x * scaleX
-    let faceY = faceBox.value.y * scaleY
-    let faceWidth = faceBox.value.width * scaleX
-    let faceHeight = faceBox.value.height * scaleY
+    // Get nose position and face box in image coordinates
+    let noseX = facePosition.value.x * scaleX
+    let noseY = facePosition.value.y * scaleY
+    const faceBoxX = faceBox.value.x * scaleX
+    const faceBoxY = faceBox.value.y * scaleY
+    const faceWidth = faceBox.value.width * scaleX
+    const faceHeight = faceBox.value.height * scaleY
     
-    // Mirror face position if front camera
+    // Mirror nose position if front camera
     if (isFrontCamera.value) {
-      faceX = img.naturalWidth - faceX - faceWidth
+      noseX = img.naturalWidth - noseX
     }
     
-    // Calculate crop box to include face + shoulders (better alignment)
-    const cropWidth = Math.max(faceWidth * 1.9, 250) // Good size for face + shoulders
-    const cropHeight = cropWidth / aspectRatio
+    // SMART CROP: Calculate to include FULL HEAD + SHOULDERS automatically
+    // Face box doesn't include top of head (hair) or shoulders
+    const headTopMargin = faceHeight * 0.5  // 50% above face for full head/hair
+    const shouldersMargin = faceHeight * 0.7  // 70% below face for shoulders
+    
+    // Calculate required height to include everything
+    const requiredHeight = faceHeight + headTopMargin + shouldersMargin
+    
+    // Calculate width based on aspect ratio (178:189)
+    const requiredWidth = requiredHeight * aspectRatio
     
     // Scale to display size
     const displayScaleX = img.offsetWidth / img.naturalWidth
     const displayScaleY = img.offsetHeight / img.naturalHeight
     
-    const displayCropWidth = cropWidth * displayScaleX
-    const displayCropHeight = cropHeight * displayScaleY
+    const displayCropWidth = requiredWidth * displayScaleX
+    const displayCropHeight = requiredHeight * displayScaleY
     
     cropSize.value = {
       width: displayCropWidth,
       height: displayCropHeight
     }
     
-    // Position crop box centered on face with good alignment
-    const displayFaceX = faceX * displayScaleX
-    const displayFaceY = faceY * displayScaleY
-    const displayFaceWidth = faceWidth * displayScaleX
-    const displayFaceHeight = faceHeight * displayScaleY
+    // Position the crop box
+    const displayNoseX = noseX * displayScaleX
+    const displayFaceBoxY = faceBoxY * displayScaleY
+    const displayHeadTopMargin = headTopMargin * displayScaleY
     
-    // Center horizontally on face, position vertically with nose/face higher (not too low)
-    let cropX = displayFaceX + displayFaceWidth / 2 - displayCropWidth / 2
-    let cropY = displayFaceY - displayCropHeight * 0.05 // Face/nose positioned higher, more natural
+    // CENTER horizontally on nose
+    let cropX = displayNoseX - displayCropWidth / 2
+    
+    // Position vertically to include full head (start from top of head)
+    let cropY = displayFaceBoxY - displayHeadTopMargin
     
     // Constrain to image bounds
     cropX = Math.max(0, Math.min(cropX, img.offsetWidth - displayCropWidth))
@@ -996,11 +1008,23 @@ const retakePhoto = () => {
   capturedImage.value = null
   croppedImage.value = null
   isDragging.value = false
-  hasTriggeredCapture.value = false
   
-  // Keep face detection running (don't restart)
-  // Green square will keep following nose
-  // But auto-countdown stays disabled
+  // Fully reset all countdown and capture states
+  hasTriggeredCapture.value = false
+  autoCountdownDisabled.value = false
+  countdown.value = 0
+  faceStableTime.value = 0
+  lastFaceDetectionTime = 0
+  capturedFrames.value = []
+  frameCaptureDuringCountdown = false
+  
+  // Clear any running countdown interval
+  if (countdownIntervalId) {
+    clearInterval(countdownIntervalId)
+    countdownIntervalId = null
+  }
+  
+  // Keep face detection running - will auto-count when looking at camera again
 }
 
 const cleanup = () => {
