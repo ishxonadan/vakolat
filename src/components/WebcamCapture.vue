@@ -225,6 +225,15 @@ const faceBox = ref({ x: 0, y: 0, width: 0, height: 0 }) // Full face box for cr
 const hasTriggeredCapture = ref(false)
 const autoCountdownDisabled = ref(false) // Disable auto-countdown after first capture
 
+// Face stability tracking
+const faceStableTime = ref(0)
+const faceStableRequired = 1200 // Face must be stable for 1.2 seconds before countdown
+let lastFaceDetectionTime = 0
+
+// Best frame capture during countdown
+const capturedFrames = ref([])
+let frameCaptureDuringCountdown = false
+
 // Aspect ratio
 const aspectRatio = props.targetWidth / props.targetHeight
 
@@ -393,6 +402,8 @@ const stopFaceDetection = () => {
   countdown.value = 0
   faceDetected.value = false
   hasTriggeredCapture.value = false
+  faceStableTime.value = 0
+  lastFaceDetectionTime = 0
 }
 
 const detectFace = async () => {
@@ -443,12 +454,42 @@ const detectFace = async () => {
       // Set face as detected
       faceDetected.value = true
       
-      // Start countdown ONLY if:
-      // 1. Not already triggered
-      // 2. No countdown running
-      // 3. Auto-countdown not disabled (after first capture)
-      if (!hasTriggeredCapture.value && countdown.value === 0 && !autoCountdownDisabled.value) {
-        startCountdown()
+      // Check if user is actually LOOKING AT CAMERA
+      const isLookingAtCamera = checkIfLookingAtCamera(landmarks, box)
+      
+      if (isLookingAtCamera) {
+        // Track face stability - user must be looking at camera for a moment
+        const now = Date.now()
+        if (lastFaceDetectionTime > 0) {
+          faceStableTime.value += now - lastFaceDetectionTime
+        }
+        lastFaceDetectionTime = now
+        
+        // Capture frames during countdown to pick best one
+        if (frameCaptureDuringCountdown && countdown.value > 0) {
+          captureFrameForSelection(box, landmarks)
+        }
+        
+        // Start countdown ONLY if:
+        // 1. Not already triggered
+        // 2. No countdown running
+        // 3. Auto-countdown not disabled (after first capture)
+        // 4. Face has been stable/looking at camera for required time
+        if (!hasTriggeredCapture.value && 
+            countdown.value === 0 && 
+            !autoCountdownDisabled.value &&
+            faceStableTime.value >= faceStableRequired) {
+          startCountdown()
+        }
+      } else {
+        // Not looking at camera - reset stability timer
+        faceStableTime.value = 0
+        lastFaceDetectionTime = 0
+        
+        // Stop countdown if it started but user looked away
+        if (countdown.value > 0 && !hasTriggeredCapture.value) {
+          stopCountdown()
+        }
       }
       
       // Draw face detection overlay (just nose point, no box)
@@ -475,6 +516,8 @@ const detectFace = async () => {
     } else {
       faceDetected.value = false
       facePosition.value = { x: 0, y: 0, width: 0, height: 0 }
+      faceStableTime.value = 0 // Reset stability timer
+      lastFaceDetectionTime = 0
       
       // Clear overlay
       if (overlayCanvas.value) {
@@ -498,6 +541,8 @@ const startCountdown = () => {
   
   hasTriggeredCapture.value = true
   countdown.value = 3
+  capturedFrames.value = [] // Reset frames
+  frameCaptureDuringCountdown = true // Start capturing frames
   
   // Total 3 seconds: show 3, 2, 1 for 1s each
   countdownIntervalId = setInterval(() => {
@@ -506,9 +551,10 @@ const startCountdown = () => {
     if (countdown.value === 0) {
       clearInterval(countdownIntervalId)
       countdownIntervalId = null
+      frameCaptureDuringCountdown = false
       
-      // Capture immediately when countdown finishes
-      capturePhotoWithFace()
+      // Pick best frame and use it
+      capturePhotoWithBestFrame()
     }
   }, 1000) // 1000ms per count = 3 seconds total
 }
@@ -520,6 +566,123 @@ const stopCountdown = () => {
   }
   countdown.value = 0
   hasTriggeredCapture.value = false
+  faceStableTime.value = 0 // Reset stability timer when countdown stops
+  lastFaceDetectionTime = 0
+  frameCaptureDuringCountdown = false
+  capturedFrames.value = []
+}
+
+// Capture frame during countdown for selection
+const captureFrameForSelection = (box, landmarks) => {
+  if (!videoElement.value || !canvasElement.value) return
+  
+  try {
+    const video = videoElement.value
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    
+    const ctx = canvas.getContext('2d')
+    
+    // Mirror if front camera
+    if (isFrontCamera.value) {
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+    }
+    
+    ctx.drawImage(video, 0, 0)
+    const imageData = canvas.toDataURL('image/jpeg', 0.9)
+    
+    // Calculate frontal score (higher = more frontal)
+    const leftEye = landmarks.getLeftEye()
+    const rightEye = landmarks.getRightEye()
+    
+    let frontalScore = 0
+    if (leftEye && rightEye && leftEye.length > 0 && rightEye.length > 0) {
+      const leftEyeX = leftEye.reduce((sum, p) => sum + p.x, 0) / leftEye.length
+      const rightEyeX = rightEye.reduce((sum, p) => sum + p.x, 0) / rightEye.length
+      const eyeDistance = Math.abs(rightEyeX - leftEyeX)
+      frontalScore = eyeDistance / box.width // Higher = more frontal
+    }
+    
+    capturedFrames.value.push({
+      image: imageData,
+      score: frontalScore,
+      faceBox: { ...faceBox.value }
+    })
+  } catch (error) {
+    console.debug('Error capturing frame:', error)
+  }
+}
+
+// Use best frame from captured frames
+const capturePhotoWithBestFrame = () => {
+  if (capturedFrames.value.length === 0) {
+    // Fallback: capture current frame
+    capturePhotoWithFace()
+    return
+  }
+  
+  // Find frame with best frontal score
+  const bestFrame = capturedFrames.value.reduce((best, frame) => 
+    frame.score > best.score ? frame : best
+  )
+  
+  capturedImage.value = bestFrame.image
+  faceBox.value = bestFrame.faceBox
+  
+  // DON'T stop face detection - keep tracking!
+  // But DISABLE auto-countdown after first capture
+  autoCountdownDisabled.value = true
+  hasTriggeredCapture.value = false
+  countdown.value = 0
+  if (countdownIntervalId) {
+    clearInterval(countdownIntervalId)
+    countdownIntervalId = null
+  }
+  
+  // Initialize crop with face-centered position
+  if (faceDetected.value && faceBox.value.width > 0) {
+    nextTick(() => {
+      initManualCropWithFace()
+    })
+  }
+}
+
+// Simplified: Check if face is frontal (both eyes visible, reasonable size)
+const checkIfLookingAtCamera = (landmarks, box) => {
+  try {
+    const leftEye = landmarks.getLeftEye()
+    const rightEye = landmarks.getRightEye()
+    
+    // Simple check: Both eyes must be visible
+    if (!leftEye || !rightEye || leftEye.length === 0 || rightEye.length === 0) {
+      return false
+    }
+    
+    // Calculate eye centers
+    const leftEyeCenter = {
+      x: leftEye.reduce((sum, p) => sum + p.x, 0) / leftEye.length
+    }
+    const rightEyeCenter = {
+      x: rightEye.reduce((sum, p) => sum + p.x, 0) / rightEye.length
+    }
+    
+    // Calculate eye distance
+    const eyeDistance = Math.abs(rightEyeCenter.x - leftEyeCenter.x)
+    
+    // Simple frontal face check: eye distance should be reasonable relative to face width
+    // If eyes are too close together = profile view (not looking at camera)
+    const faceWidthRatio = eyeDistance / box.width
+    
+    // Very lenient: just check face is reasonably frontal (not extreme profile)
+    const isLooking = faceWidthRatio > 0.25
+    
+    return isLooking
+  } catch (error) {
+    console.debug('Error checking gaze:', error)
+    return true // If error, assume looking (don't block)
+  }
 }
 
 const capturePhoto = () => {
@@ -637,9 +800,9 @@ const initManualCropWithFace = () => {
     const displayFaceWidth = faceWidth * displayScaleX
     const displayFaceHeight = faceHeight * displayScaleY
     
-    // Center horizontally on face, position vertically with face in upper-middle
+    // Center horizontally on face, position vertically with nose/face higher (not too low)
     let cropX = displayFaceX + displayFaceWidth / 2 - displayCropWidth / 2
-    let cropY = displayFaceY + displayFaceHeight / 2 - displayCropHeight * 0.35 // Face in upper-middle, shoulders below
+    let cropY = displayFaceY - displayCropHeight * 0.05 // Face/nose positioned higher, more natural
     
     // Constrain to image bounds
     cropX = Math.max(0, Math.min(cropX, img.offsetWidth - displayCropWidth))
