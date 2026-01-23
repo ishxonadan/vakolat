@@ -220,7 +220,8 @@ let faceDetectionInterval = null
 let countdownIntervalId = null
 const modelsLoaded = ref(false)
 const faceDetected = ref(false)
-const facePosition = ref({ x: 0, y: 0, width: 0, height: 0 })
+const facePosition = ref({ x: 0, y: 0, width: 0, height: 0 }) // Nose position for tracking
+const faceBox = ref({ x: 0, y: 0, width: 0, height: 0 }) // Full face box for cropping
 const hasTriggeredCapture = ref(false)
 const autoCountdownDisabled = ref(false) // Disable auto-countdown after first capture
 
@@ -423,10 +424,18 @@ const detectFace = async () => {
         noseCenterY = nosePoint.y
       }
       
-      // ALWAYS update face position using NOSE coordinates
+      // Update NOSE position for green square tracking
       facePosition.value = {
         x: noseCenterX,
         y: noseCenterY,
+        width: box.width,
+        height: box.height
+      }
+      
+      // Update FULL FACE BOX for cropping after capture
+      faceBox.value = {
+        x: box.x,
+        y: box.y,
         width: box.width,
         height: box.height
       }
@@ -595,20 +604,19 @@ const initManualCropWithFace = () => {
     const scaleX = img.naturalWidth / videoElement.value.videoWidth
     const scaleY = img.naturalHeight / videoElement.value.videoHeight
     
-    // Get face box (not just nose)
-    let faceX = facePosition.value.x * scaleX
-    let faceY = facePosition.value.y * scaleY
-    let faceWidth = facePosition.value.width * scaleX
-    let faceHeight = facePosition.value.height * scaleY
+    // Use FULL FACE BOX (not nose position) for better cropping
+    let faceX = faceBox.value.x * scaleX
+    let faceY = faceBox.value.y * scaleY
+    let faceWidth = faceBox.value.width * scaleX
+    let faceHeight = faceBox.value.height * scaleY
     
     // Mirror face position if front camera
     if (isFrontCamera.value) {
       faceX = img.naturalWidth - faceX - faceWidth
     }
     
-    // Calculate crop box to include face + shoulders
-    // Make it bigger and position it higher to include shoulders
-    const cropWidth = Math.max(faceWidth * 2.5, 300) // Wider to include shoulders
+    // Calculate crop box to include face + shoulders (better alignment)
+    const cropWidth = Math.max(faceWidth * 1.9, 250) // Good size for face + shoulders
     const cropHeight = cropWidth / aspectRatio
     
     // Scale to display size
@@ -623,14 +631,15 @@ const initManualCropWithFace = () => {
       height: displayCropHeight
     }
     
-    // Position crop box to include shoulders (face in upper third)
+    // Position crop box centered on face with good alignment
     const displayFaceX = faceX * displayScaleX
     const displayFaceY = faceY * displayScaleY
     const displayFaceWidth = faceWidth * displayScaleX
+    const displayFaceHeight = faceHeight * displayScaleY
     
-    // Center horizontally on face, but position vertically to show shoulders
+    // Center horizontally on face, position vertically with face in upper-middle
     let cropX = displayFaceX + displayFaceWidth / 2 - displayCropWidth / 2
-    let cropY = displayFaceY - displayCropHeight * 0.15 // Face in upper portion, shoulders below
+    let cropY = displayFaceY + displayFaceHeight / 2 - displayCropHeight * 0.35 // Face in upper-middle, shoulders below
     
     // Constrain to image bounds
     cropX = Math.max(0, Math.min(cropX, img.offsetWidth - displayCropWidth))
