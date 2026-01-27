@@ -775,6 +775,7 @@ const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
 const membersRoutes = require("./routes/members.routes")(nazorat)
+const ipAccessRoutes = require("./routes/ip-access.routes")(yoqlama)
 
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
@@ -788,6 +789,7 @@ app.use("/api/videos", videoRoutes)
 app.use("/api/tickets", createTicketsRoutes())
 app.use("/api/visits", visitsRoutes)
 app.use("/api/members", membersRoutes)
+app.use("/api/ip-access", ipAccessRoutes)
 
 app.use(
   "/rolik",

@@ -12,9 +12,25 @@ const handleUnauthorized = () => {
 }
 
 const ApiService = {
-  async get(endpoint) {
+  async get(endpoint, options = {}) {
     const token = localStorage.getItem("token")
-    const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
+    
+    // Build query string if params are provided
+    let url = `${API_BASE_URL}/api${endpoint}`
+    if (options.params) {
+      const queryParams = new URLSearchParams()
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value)
+        }
+      })
+      const queryString = queryParams.toString()
+      if (queryString) {
+        url += `?${queryString}`
+      }
+    }
+    
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -91,6 +107,30 @@ const ApiService = {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
       },
+    })
+
+    if (response.status === 401) {
+      handleUnauthorized()
+      throw new Error("Unauthorized")
+    }
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || "Network error")
+    }
+
+    return await response.json()
+  },
+
+  async patch(endpoint, data) {
+    const token = localStorage.getItem("token")
+    const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: data ? JSON.stringify(data) : undefined,
     })
 
     if (response.status === 401) {

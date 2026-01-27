@@ -34,6 +34,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "diss/ip-access",
+          name: "ip_access",
+          component: () => import("@/views/pages/ip-access.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
           path: "/vakillar",
           name: "vakillar",
           component: () => import("@/views/pages/vakillar.vue"),

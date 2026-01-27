@@ -58,6 +58,12 @@ const menuItems = [
             to: '/diss',
             requiredPermissions: ['view_dissertations'] // Specific permission
           },
+          { 
+            label: "To'liq matnga ruxsat", 
+            icon: 'pi pi-fw pi-globe', 
+            to: '/diss/ip-access',
+            requiredPermissions: ['view_statistics'] // Specific permission
+          },
         ]
       },
       {
