@@ -309,15 +309,26 @@ app.post("/diss/upload", upload.single("demo[]"), (req, res) => {
 app.get("/diss_list/:page?", async (req, res) => {
   try {
     const page = Number.parseInt(req.params.page, 10) || 1
-    const limit = 30
+    const limit = Math.min(Number.parseInt(req.query.limit, 10) || 30, 100)
     const skip = (page - 1) * limit
+    const search = (req.query.search || "").trim()
 
-    const results = await Documents.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .select("title uuid author code is_deleted filename")
+    const filter = {}
+    if (search) {
+      filter.code = { $regex: search, $options: "i" }
+    }
 
-    res.json({ results })
+    const [results, total] = await Promise.all([
+      Documents.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select("title uuid author code is_deleted filename")
+        .lean(),
+      Documents.countDocuments(filter)
+    ])
+
+    res.json({ results, total })
   } catch (error) {
     res.status(500).json({ error: "Error fetching research works", details: error.message })
   }

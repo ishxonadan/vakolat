@@ -66,12 +66,12 @@
       </div>
 
       <div class="flex justify-content-end mt-3">
-        <Button
-          label="Qidirish"
-          icon="pi pi-search"
-          @click="applySearch"
-          :disabled="!hasActiveFilters"
-        />
+          <Button
+            label="Topish"
+            icon="pi pi-search"
+            @click="applySearch"
+            :disabled="!hasActiveFilters"
+          />
       </div>
     </div>
 

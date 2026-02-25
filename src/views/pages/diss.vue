@@ -18,22 +18,29 @@ const router = useRouter();
 const toast = useToast();
 const documents = ref([]);
 const currentPage = ref(1);
+const first = ref(0);
+const rowsPerPage = 30;
+const totalRecords = ref(0);
 const isLoading = ref(false);
 const error = ref(null);
 const searchQuery = ref('');
-const filteredDocuments = ref([]);
+let searchDebounce = null;
 
 const fetchData = async (page = 1) => {
   isLoading.value = true;
   error.value = null;
   try {
-    const response = await fetch(`/diss_list/${page}`);
+    const search = searchQuery.value.trim() || '';
+    const url = `/diss_list/${page}${search ? `?search=${encodeURIComponent(search)}` : ''}`;
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch documents');
     }
     const data = await response.json();
     documents.value = data.results || [];
-    filterDocuments();
+    totalRecords.value = data.total ?? 0;
+    currentPage.value = page;
+    first.value = (page - 1) * rowsPerPage;
   } catch (err) {
     console.error('Error fetching data:', err);
     error.value = 'Ma\'lumotlarni yuklashda xatolik. Iltimos, qayta urinib ko\'ring.';
@@ -48,24 +55,23 @@ const fetchData = async (page = 1) => {
   }
 };
 
-const filterDocuments = () => {
-  if (!searchQuery.value.trim()) {
-    filteredDocuments.value = documents.value;
-  } else {
-    const query = searchQuery.value.toLowerCase().trim();
-    filteredDocuments.value = documents.value.filter(doc => 
-      doc.code?.toLowerCase().includes(query)
-    );
-  }
+const onSearchInput = () => {
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    currentPage.value = 1;
+    first.value = 0;
+    fetchData(1);
+  }, 300);
 };
 
 onMounted(() => {
-  fetchData(currentPage.value);
+  fetchData(1);
 });
 
 const onPageChange = (event) => {
-  currentPage.value = event.page + 1;
-  fetchData(currentPage.value);
+  const page = event.page + 1;
+  first.value = event.first;
+  fetchData(page);
 };
 
 const goToAddPage = () => {
@@ -100,7 +106,6 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
     const document = documents.value.find(doc => doc.uuid === uuid);
     if (document) {
       document.is_deleted = newStatus;
-      filterDocuments();
     }
 
     toast.add({
@@ -135,7 +140,7 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
         <InputIcon class="pi pi-search" />
         <InputText 
           v-model="searchQuery" 
-          @input="filterDocuments"
+          @input="onSearchInput"
           placeholder="Shifr bo'yicha qidirish..." 
           class="w-full"
         />
@@ -152,12 +157,15 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
     
     <DataTable 
       v-if="!isLoading && !error" 
-      :value="filteredDocuments" 
-      :rows="30" 
-      :paginator="true" 
-      :page="currentPage - 1" 
+      :value="documents" 
+      :rows="rowsPerPage"
+      :totalRecords="totalRecords"
+      :lazy="true"
+      :first="first"
+      :paginator="true"
       @page="onPageChange"
       responsiveLayout="scroll"
+      currentPageReportTemplate="{first} - {last} / {totalRecords}"
     >
       <Column field="title" header="Sarlavha" :sortable="true" style="width: 35%"></Column>
       <Column field="author" header="Muallif" :sortable="true" style="width: 20%"></Column>
