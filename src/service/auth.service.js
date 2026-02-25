@@ -252,9 +252,23 @@ class AuthService {
     }
   }
 
-  logout() {
+  async logout() {
     console.log("🚪 Logging out")
-    this.clearStorage()
+    try {
+      const token = this.getToken()
+      if (token) {
+        const API_BASE_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:7777"
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }).catch(() => {})
+      }
+    } finally {
+      this.clearStorage()
+    }
   }
 }
 

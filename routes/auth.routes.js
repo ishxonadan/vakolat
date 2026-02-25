@@ -43,6 +43,7 @@ module.exports = function(vakolat, JWT_SECRET) {
   }
   
   const auth = new Auth(vakolat)
+  const { logExplicitAction } = require("../src/services/audit.service")
   
   // Authentication endpoint
   router.post(["/auth", "/api/auth"], async (req, res) => {
@@ -66,6 +67,14 @@ module.exports = function(vakolat, JWT_SECRET) {
         permissions = groupPerms.filter((p) => p.isActive !== false).map((p) => p.name)
       } catch (_) {}
 
+      // Explicit audit log for vakil login (skip superuser inside helper)
+      logExplicitAction(req, user, {
+        action: "login",
+        entityType: "auth",
+        entityId: user._id,
+        meta: { nickname: user.nickname, level: user.level },
+      }).catch(() => {})
+
       res.status(200).send({
         token,
         user: {
@@ -84,6 +93,21 @@ module.exports = function(vakolat, JWT_SECRET) {
         error: "Noto'g'ri login yoki parol",
       })
     }
+  })
+
+  // Logout endpoint – logs vakil logout (token still valid, just clearing client)
+  router.post("/api/auth/logout", verifyToken, async (req, res) => {
+    try {
+      await logExplicitAction(req, req.user, {
+        action: "logout",
+        entityType: "auth",
+        entityId: req.user.id,
+        meta: {},
+      })
+    } catch (_) {
+      // ignore audit errors for logout
+    }
+    res.json({ status: "ok" })
   })
   
   // Protected route to get current user info

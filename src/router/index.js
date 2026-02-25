@@ -67,6 +67,14 @@ const router = createRouter({
           },
         },
         {
+          path: "/vakillar/logs",
+          name: "vakil_logs",
+          component: () => import("@/views/pages/vakil_logs.vue"),
+          meta: {
+            requiresAuth: true,
+          },
+        },
+        {
           path: "/vakil_add",
           name: "vakil_add",
           component: () => import("@/views/pages/vakil_add.vue"),

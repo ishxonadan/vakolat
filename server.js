@@ -220,11 +220,13 @@ const ratingModel = require("./src/model/rating.model")
 const userRatingModel = require("./src/model/user-rating.model")
 const surveyVoteModel = require("./src/model/survey-vote.model")
 const plausibleCacheModel = require("./src/model/plausible-cache.model")
+const auditLogModel = require("./src/model/audit-log.model")
 
 const Permission = vakolat.model("Permission", permissionSchema)
 const PermissionGroup = vakolat.model("PermissionGroup", permissionGroupSchema)
 const Contestant = vakolat.model("Websites", contestantSchema)
 const User = vakolat.model("User", userSchema)
+const AuditLog = vakolat.model("AuditLog", auditLogModel.auditLogSchema)
 const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
 const WebsiteRating = vakolat.model("WebsiteRating", ratingModel.websiteRatingSchema)
 const AutoRating = vakolat.model("AutoRating", autoRatingSchema)
@@ -235,6 +237,7 @@ const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plaus
 app.locals.User = User
 app.locals.Permission = Permission
 app.locals.PermissionGroup = PermissionGroup
+app.locals.AuditLog = AuditLog
 
 const uploadsDir = path.resolve(process.cwd(), "uploads")
 const storage = multer.diskStorage({
@@ -1178,6 +1181,7 @@ const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
 const surveyRoutes = require("./routes/survey.routes")(vakolat)
 const permissionsRoutes = require("./routes/permissions.routes")(Permission, PermissionGroup, User, JWT_SECRET)
+const auditRoutes = require("./routes/audit.routes")(vakolat)
 const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
@@ -1190,6 +1194,7 @@ app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/admin", permissionsRoutes)
+app.use("/api/admin", auditRoutes)
 app.use("/survey", surveyRoutes)
 app.use("/api/tv", tvRoutes)
 app.use("/api/videos", videoRoutes)

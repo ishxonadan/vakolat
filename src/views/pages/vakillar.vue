@@ -22,7 +22,6 @@ const fetchData = async (page = 1) => {
   error.value = null;
   try {
     const data = await apiService.get('/experts');
-    console.log('Fetched Data:', data);
     products.value = data;
   } catch (err) {
     console.error('Error fetching data:', err);
@@ -94,6 +93,14 @@ const loginAsExpert = async (expert) => {
     console.error('Error logging in as expert:', error)
   }
 }
+
+// View audit logs for a specific vakil (superuser only)
+const viewLogs = (expert) => {
+  router.push({
+    path: '/vakillar/logs',
+    query: { userId: expert._id }
+  })
+}
 </script>
 
 <template>
@@ -129,34 +136,31 @@ const loginAsExpert = async (expert) => {
           <span v-else class="text-gray-400">Belgilanmagan</span>
         </template>
       </Column>
-      <Column field="isActive" header="Holat" style="width: 10%">
+      <Column field="isActive" header="Holat" style="width: 12%">
         <template #body="slotProps">
-          <Tag :value="slotProps.data.isActive !== false ? 'Faol' : 'Nofaol'" 
-               :severity="slotProps.data.isActive !== false ? 'success' : 'danger'" />
+          <Button 
+            :icon="slotProps.data.isActive !== false ? 'pi pi-lock-open' : 'pi pi-lock'" 
+            type="button" 
+            class="vakil-status-lock p-button-rounded p-button-text"
+            :class="slotProps.data.isActive !== false ? 'p-button-success' : 'p-button-danger'"
+            @click="toggleUserStatus(slotProps.data)"
+            v-tooltip="slotProps.data.isActive !== false ? 'Hisobni qulflash' : 'Hisobni faollashtirish'"
+          />
         </template>
       </Column>
       <Column style="width: 10%" header="Amallar">
         <template #body="slotProps">
-          <div class="flex gap-1">
-            <Button 
-              icon="pi pi-pencil" 
-              type="button" 
-              class="p-button-text p-button-sm" 
-              @click="editButton(slotProps.data._id)"
-              v-tooltip="'Tahrirlash'"
-            />
-            <Button 
-              :icon="slotProps.data.isActive !== false ? 'pi pi-lock' : 'pi pi-lock-open'" 
-              type="button" 
-              :class="slotProps.data.isActive !== false ? 'p-button-text p-button-warning p-button-sm' : 'p-button-text p-button-success p-button-sm'" 
-              @click="toggleUserStatus(slotProps.data)"
-              v-tooltip="slotProps.data.isActive !== false ? 'Hisobni qulflash' : 'Hisobni faollashtirish'"
-            />
-          </div>
+          <Button 
+            icon="pi pi-pencil" 
+            type="button" 
+            class="p-button-text p-button-sm" 
+            @click="editButton(slotProps.data._id)"
+            v-tooltip="'Tahrirlash'"
+          />
         </template>
       </Column>
-      <!-- Add Login As column for superadmins -->
-      <Column v-if="isSuperAdmin" style="width: 5%" header="Kirish">
+      <!-- Add Login As / Logs column for superadmins -->
+      <Column v-if="isSuperAdmin" style="width: 8%" header="Kirish / Loglar">
         <template #body="slotProps">
           <Button 
             icon="pi pi-user" 
@@ -166,8 +170,21 @@ const loginAsExpert = async (expert) => {
             title="Ekspert sifatida kirish"
             :disabled="slotProps.data.isActive === false"
           />
+          <Button
+            icon="pi pi-history"
+            type="button"
+            class="p-button-text p-button-sm p-button-secondary ml-1"
+            @click="viewLogs(slotProps.data)"
+            title="Faoliyat loglarini ko'rish"
+          />
         </template>
       </Column>
     </DataTable>
   </div>
 </template>
+
+<style scoped>
+.vakil-status-lock :deep(.pi) {
+  font-size: 1.35rem;
+}
+</style>

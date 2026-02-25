@@ -98,6 +98,12 @@ const menuItems = [
             to: '/huquqlar',
             requiredPermissions: ['manage_permissions']
           },
+          {
+            label: "Vakil loglari",
+            icon: 'pi pi-fw pi-history',
+            to: '/vakillar/logs',
+            requiredLevel: 'rais'
+          },
         ]
       },
     ]
