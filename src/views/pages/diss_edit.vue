@@ -276,11 +276,11 @@ async function saveData() {
       body: JSON.stringify(data)
     });
 
+    const result = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error('Update failed');
+      const msg = result.error || result.details || 'Update failed';
+      throw new Error(msg);
     }
-
-    const result = await response.json();
     
     toast.add({ 
       severity: 'success', 
@@ -297,8 +297,8 @@ async function saveData() {
     toast.add({ 
       severity: 'error', 
       summary: 'Xato', 
-      detail: 'Ma\'lumotlarni yangilashda xatolik', 
-      life: 3000 
+      detail: error.message || 'Ma\'lumotlarni yangilashda xatolik', 
+      life: 5000 
     });
   }
 }
@@ -532,7 +532,7 @@ function viewCurrentFile() {
         </div>
 
         <!-- Soha kodi -->
-        <div class="form-group">
+        <div class="form-group soha-dropdown-wrapper">
           <label for="soha_kodi" class="form-label">Soha kodi</label>
           <Dropdown
             v-model="soha_kodi"
@@ -540,10 +540,11 @@ function viewCurrentFile() {
             optionLabel="label"
             optionValue="value"
             placeholder="Soha kodini tanlang"
-            class="form-input"
+            class="form-input soha-dropdown"
             :filter="true"
             filterPlaceholder="Qidirish..."
             showClear
+            appendTo="self"
           />
         </div>
 
@@ -643,6 +644,34 @@ function viewCurrentFile() {
 <style scoped>
 .form-group {
   @apply flex flex-col;
+}
+
+.soha-dropdown-wrapper {
+  position: relative;
+}
+/* Shrink the trigger field when the list is open */
+.soha-dropdown-wrapper:has(.p-dropdown-panel) :deep(.p-dropdown) {
+  max-width: 22rem;
+  width: auto;
+}
+/* Keep overlay panel fixed max width; long labels truncate so page doesn't shift */
+.soha-dropdown-wrapper :deep(.p-dropdown-panel) {
+  left: 0 !important;
+  right: auto !important;
+  min-width: 100%;
+  max-width: min(32rem, calc(100vw - 2rem)) !important;
+  width: max-content !important;
+  box-sizing: border-box;
+}
+.soha-dropdown-wrapper :deep(.p-dropdown-panel .p-dropdown-item),
+.soha-dropdown-wrapper :deep(.p-dropdown-panel .p-dropdown-item-label) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.soha-dropdown-wrapper :deep(.p-dropdown-panel .p-dropdown-items-wrapper) {
+  overflow-x: hidden;
 }
 
 .form-label {

@@ -46,6 +46,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "diss/akademik-daraja",
+          name: "diss_akademik_daraja",
+          component: () => import("@/views/pages/diss_akademik_daraja.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
           path: "diss/ip-access",
           name: "ip_access",
           component: () => import("@/views/pages/ip-access.vue"),

@@ -71,6 +71,12 @@ const menuItems = [
             requiredPermissions: ['view_dissertations']
           },
           { 
+            label: 'Akademik daraja', 
+            icon: 'pi pi-fw pi-graduation-cap', 
+            to: '/diss/akademik-daraja',
+            requiredPermissions: ['view_dissertations']
+          },
+          { 
             label: "To'liq matnga ruxsat", 
             icon: 'pi pi-fw pi-globe', 
             to: '/diss/ip-access',

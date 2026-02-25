@@ -236,9 +236,13 @@ app.locals.User = User
 app.locals.Permission = Permission
 app.locals.PermissionGroup = PermissionGroup
 
+const uploadsDir = path.resolve(process.cwd(), "uploads")
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./uploads")
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true })
+    }
+    cb(null, uploadsDir)
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now()
@@ -305,10 +309,71 @@ app.get("/diss/cats", async (req, res) => {
   }
 })
 
+// Seed default academic degrees (levels) if none exist
+const seedLevelsIfEmpty = async () => {
+  const count = await Levels.countDocuments()
+  if (count === 0) {
+    await Levels.insertMany([
+      { name: "Nomzod", mark: "nomzod", isActive: true },
+      { name: "Doktor", mark: "doktor", isActive: true },
+      { name: "Fan doktori", mark: "doktor_fan", isActive: true },
+    ])
+    console.log("Seeded default levels (nomzod, doktor, doktor_fan)")
+  }
+}
+
 app.get("/diss/levels", async (req, res) => {
   try {
-    const levelData = await Levels.find({  }).sort({ createdAt: 1 })
+    await seedLevelsIfEmpty()
+    const levelData = await Levels.find({}).sort({ createdAt: 1 }).lean()
     res.json(levelData)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post("/diss/levels", async (req, res) => {
+  try {
+    const { name, mark, isActive = true } = req.body || {}
+    if (!name || !mark) {
+      return res.status(400).json({ message: "name va mark majburiy" })
+    }
+    const existing = await Levels.findOne({ mark: String(mark).trim() })
+    if (existing) {
+      return res.status(400).json({ message: "Bunday markali daraja mavjud" })
+    }
+    const doc = await Levels.create({
+      name: name.trim(),
+      mark: mark.trim(),
+      isActive: !!isActive,
+    })
+    res.status(201).json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put("/diss/levels/:id", async (req, res) => {
+  try {
+    const id = req.params.id
+    const { name, mark, isActive } = req.body || {}
+    const update = {}
+    if (name !== undefined) update.name = name.trim()
+    if (mark !== undefined) update.mark = mark.trim()
+    if (isActive !== undefined) update.isActive = !!isActive
+    const doc = await Levels.findByIdAndUpdate(id, update, { new: true })
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    res.json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.delete("/diss/levels/:id", async (req, res) => {
+  try {
+    const doc = await Levels.findByIdAndDelete(req.params.id)
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    res.json({ message: "O'chirildi" })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -530,7 +595,7 @@ app.get("/diss_info/:uuid?", async (req, res) => {
 
 const folderplace = process.env.DISS_STORAGE_PATH || path.resolve(__dirname, "goal")
 const backupFolder = path.resolve(__dirname, "backup")
-const uploadFolder = path.resolve(__dirname, "uploads")
+const uploadFolder = uploadsDir
 
 app.get("/diss_file/:uuid", (req, res) => {
   const uuid = req.params.uuid
@@ -570,10 +635,18 @@ app.post("/diss_save/:uuid", async (req, res) => {
       return res.status(404).json({ error: `Document with UUID ${uuid} not found` })
     }
 
-    // Handle file operations if there's a filename in the request
-    if (originalUploadedFilename && existingDocument) {
-      const sourceFilePath = path.join(uploadFolder, originalUploadedFilename)
+    // Handle file operations when user uploaded a new file (edit: replace existing file)
+    if (originalUploadedFilename) {
+      const sourceFilePath = path.join(uploadFolder, path.basename(originalUploadedFilename))
       const destinationFilePath = path.join(folderplace, `${uuid}.pdf`)
+
+      if (!fs.existsSync(sourceFilePath)) {
+        console.error(`Uploaded file not found at: ${sourceFilePath}`)
+        return res.status(400).json({
+          error: "Yuklangan fayl topilmadi",
+          details: "Faylni qayta yuklab, Saqlash ni bosing.",
+        })
+      }
 
       // Backup the old file if it exists
       const oldFilePath = path.join(folderplace, `${uuid}.pdf`)
@@ -582,37 +655,27 @@ app.post("/diss_save/:uuid", async (req, res) => {
           if (!fs.existsSync(backupFolder)) {
             fs.mkdirSync(backupFolder, { recursive: true })
           }
-
           const timestamp = Date.now()
           const backupFilePath = path.join(backupFolder, `${uuid}_${timestamp}.pdf`)
           fs.copyFileSync(oldFilePath, backupFilePath)
           console.log(`Old file backed up to: ${backupFilePath}`)
         } catch (backupError) {
           console.error("Error backing up old file:", backupError)
-          // Continue with the update even if backup fails
         }
       }
 
-      // Copy the new file to storage
       try {
         if (!fs.existsSync(folderplace)) {
           fs.mkdirSync(folderplace, { recursive: true })
         }
-
         fs.copyFileSync(sourceFilePath, destinationFilePath)
-        console.log(`File copied successfully to: ${destinationFilePath}`)
-
-        // Verify the file was actually copied
-        if (fs.existsSync(destinationFilePath)) {
-          console.log(`✅ File verified at destination: ${destinationFilePath}`)
-        } else {
-          console.error(`❌ File copy verification failed: ${destinationFilePath}`)
-          throw new Error(`File copy verification failed for ${destinationFilePath}`)
+        console.log(`File copied to: ${destinationFilePath}`)
+        if (!fs.existsSync(destinationFilePath)) {
+          throw new Error(`File copy verification failed`)
         }
       } catch (error) {
         console.error("Error copying file to storage:", error)
-        // Fail the save operation if file copy fails
-        throw new Error(`Failed to save file: ${error.message}`)
+        return res.status(500).json({ error: `Faylni saqlashda xatolik: ${error.message}` })
       }
     }
 
