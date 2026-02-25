@@ -72,7 +72,7 @@ const menuItems = [
           },
           { 
             label: 'Akademik daraja', 
-            icon: 'pi pi-fw pi-graduation-cap', 
+            icon: 'pi pi-fw pi-book', 
             to: '/diss/akademik-daraja',
             requiredPermissions: ['view_dissertations']
           },

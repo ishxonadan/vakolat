@@ -42,20 +42,24 @@
             />
           </template>
         </Column>
-        <Column header="Amallar" style="width: 100px">
+        <Column header="Amallar" style="width: 160px">
           <template #body="{ data }">
             <Button
               icon="pi pi-pencil"
-              text
-              class="p-button-sm"
-              v-tooltip.top="'Tahrirlash'"
+              label="Tahrirlash"
+              severity="secondary"
+              size="small"
+              outlined
+              class="rounded-lg"
               @click="openEditDialog(data)"
             />
             <Button
               icon="pi pi-trash"
-              text
-              class="p-button-sm p-button-danger"
-              v-tooltip.top="'O\'chirish'"
+              label="O'chirish"
+              severity="danger"
+              size="small"
+              outlined
+              class="rounded-lg"
               @click="confirmDelete(data)"
             />
           </template>
@@ -86,7 +90,7 @@
           <InputText
             id="lang-code"
             v-model="formData.code"
-            placeholder="Masalan: uzb"
+            placeholder="Masalan: uz"
             class="w-full font-mono"
             :disabled="isEdit"
           />
@@ -113,8 +117,17 @@
       </template>
     </Dialog>
 
-    <ConfirmDialog />
-    <ConfirmPopup />
+    <ConfirmDialog
+      group="tillar"
+      :pt="{
+        root: { class: 'shadow-lg rounded-xl' },
+        header: { class: 'text-lg font-semibold' },
+        content: { class: 'text-gray-700 dark:text-gray-300' },
+        footer: { class: 'flex gap-2 justify-end flex-wrap' }
+      }"
+      acceptLabel="Ha, o'chirish"
+      rejectLabel="Bekor qilish"
+    />
   </div>
 </template>
 
@@ -131,7 +144,6 @@ import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 import ConfirmDialog from 'primevue/confirmdialog'
-import ConfirmPopup from 'primevue/confirmpopup'
 import { useConfirm } from 'primevue/useconfirm'
 
 const toast = useToast()
@@ -156,7 +168,7 @@ const fetchLanguages = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const res = await fetch('/diss/languages')
+    const res = await fetch('/api/diss/languages')
     if (!res.ok) throw new Error('Yuklashda xatolik')
     languages.value = await res.json()
   } catch (e) {
@@ -202,7 +214,7 @@ const saveLanguage = async () => {
   const aliases = (aliasesText || '').split(',').map(s => s.trim()).filter(Boolean)
   isSaving.value = true
   try {
-    const url = isEdit.value ? `/diss/languages/${editingId.value}` : '/diss/languages'
+    const url = isEdit.value ? `/api/diss/languages/${editingId.value}` : '/api/diss/languages'
     const method = isEdit.value ? 'PUT' : 'POST'
     const body = isEdit.value
       ? { name: name.trim(), code: code.trim(), aliases, isActive }
@@ -228,7 +240,7 @@ const saveLanguage = async () => {
 
 const toggleActive = async (row, value) => {
   try {
-    const res = await fetch(`/diss/languages/${row._id}`, {
+    const res = await fetch(`/api/diss/languages/${row._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !!value })
@@ -243,15 +255,19 @@ const toggleActive = async (row, value) => {
 
 const confirmDelete = (row) => {
   confirm.require({
+    group: 'tillar',
     message: `"${row.name}" (${row.code}) tilini o'chirmoqchimisiz?`,
-    header: 'O\'chirishni tasdiqlash',
+    header: "O'chirishni tasdiqlash",
     icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
+    rejectLabel: "Bekor qilish",
+    acceptLabel: "Ha, o'chirish",
+    rejectClass: 'p-button-secondary p-button-outlined rounded-lg',
+    acceptClass: 'p-button-danger rounded-lg',
     accept: async () => {
       try {
-        const res = await fetch(`/diss/languages/${row._id}`, { method: 'DELETE' })
-        if (!res.ok) throw new Error('O\'chirishda xatolik')
-        toast.add({ severity: 'success', summary: 'O\'chirildi', life: 2000 })
+        const res = await fetch(`/api/diss/languages/${row._id}`, { method: 'DELETE' })
+        if (!res.ok) throw new Error("O'chirishda xatolik")
+        toast.add({ severity: 'success', summary: "Muvaffaqiyat", detail: "Til o'chirildi", life: 2000 })
         await fetchLanguages()
       } catch (e) {
         toast.add({ severity: 'error', summary: 'Xato', detail: e.message, life: 3000 })

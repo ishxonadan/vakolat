@@ -1,14 +1,28 @@
 <template>
   <div>
     <Toast />
-    <div class="flex justify-between items-center p-4 bg-white dark:bg-zinc-800 shadow-md rounded-lg mb-5">
-      <h1 class="text-xl font-semibold text-gray-900 dark:text-white m-0">Soha kodlari</h1>
-      <Button
-        label="Soha qo'shish"
-        icon="pi pi-plus"
-        class="bg-blue-600 hover:bg-blue-700 border-0"
-        @click="openAddDialog"
-      />
+    <div class="bg-white dark:bg-zinc-800 shadow-md rounded-lg mb-5 overflow-hidden">
+      <div class="px-5 pt-5 pb-1">
+        <h1 class="text-xl font-semibold text-gray-900 dark:text-white m-0">Soha kodlari</h1>
+      </div>
+      <div class="p-5 pt-3 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+        <div class="flex flex-1 min-w-0 items-center rounded-lg border border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-900 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 dark:focus-within:border-blue-500">
+          <span class="flex items-center justify-center pl-4 text-gray-500 dark:text-gray-400 shrink-0" aria-hidden="true">
+            <i class="pi pi-search text-lg" />
+          </span>
+          <InputText
+            v-model="searchQuery"
+            placeholder="Kod yoki nomi bo'yicha qidirish"
+            class="flex-1 border-0 bg-transparent text-base py-3 pr-4 rounded-none focus:ring-0 focus:shadow-none min-w-0"
+          />
+        </div>
+        <Button
+          label="Soha qo'shish"
+          icon="pi pi-plus"
+          class="bg-blue-600 hover:bg-blue-700 border-0 shrink-0"
+          @click="openAddDialog"
+        />
+      </div>
     </div>
 
     <div class="card bg-white dark:bg-zinc-800 shadow-md rounded-lg">
@@ -18,7 +32,7 @@
       <Message v-else-if="error" severity="error" :closable="false">{{ error }}</Message>
       <DataTable
         v-else
-        :value="fields"
+        :value="filteredFields"
         dataKey="_id"
         responsiveLayout="scroll"
         class="p-datatable-sm"
@@ -95,7 +109,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import DataTable from 'primevue/datatable'
@@ -113,8 +127,19 @@ const toast = useToast()
 const confirm = useConfirm()
 
 const fields = ref([])
+const searchQuery = ref('')
 const isLoading = ref(false)
 const error = ref(null)
+
+const filteredFields = computed(() => {
+  const q = (searchQuery.value || '').trim().toLowerCase()
+  if (!q) return fields.value
+  return fields.value.filter(
+    (f) =>
+      (f.code && String(f.code).toLowerCase().includes(q)) ||
+      (f.name && String(f.name).toLowerCase().includes(q))
+  )
+})
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const isSaving = ref(false)
@@ -129,7 +154,7 @@ const fetchFields = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const res = await fetch('/diss/fields')
+    const res = await fetch('/api/diss/fields')
     if (!res.ok) throw new Error('Yuklashda xatolik')
     fields.value = await res.json()
   } catch (e) {
@@ -172,7 +197,7 @@ const saveField = async () => {
   }
   isSaving.value = true
   try {
-    const url = isEdit.value ? `/diss/fields/${editingId.value}` : '/diss/fields'
+    const url = isEdit.value ? `/api/diss/fields/${editingId.value}` : '/api/diss/fields'
     const method = isEdit.value ? 'PUT' : 'POST'
     const body = isEdit.value
       ? { name: name.trim() }
@@ -204,7 +229,7 @@ const confirmDelete = (row) => {
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        const res = await fetch(`/diss/fields/${row._id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/diss/fields/${row._id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('O\'chirishda xatolik')
         toast.add({ severity: 'success', summary: 'O\'chirildi', life: 2000 })
         await fetchFields()

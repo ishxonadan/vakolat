@@ -140,7 +140,7 @@ const fetchLevels = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const res = await fetch('/diss/levels')
+    const res = await fetch('/api/diss/levels')
     if (!res.ok) throw new Error('Yuklashda xatolik')
     levels.value = await res.json()
   } catch (e) {
@@ -184,7 +184,7 @@ const saveLevel = async () => {
   }
   isSaving.value = true
   try {
-    const url = isEdit.value ? `/diss/levels/${editingId.value}` : '/diss/levels'
+    const url = isEdit.value ? `/api/diss/levels/${editingId.value}` : '/api/diss/levels'
     const method = isEdit.value ? 'PUT' : 'POST'
     const body = isEdit.value
       ? { name: name.trim(), mark: mark.trim(), isActive }
@@ -210,7 +210,7 @@ const saveLevel = async () => {
 
 const toggleActive = async (row, value) => {
   try {
-    const res = await fetch(`/diss/levels/${row._id}`, {
+    const res = await fetch(`/api/diss/levels/${row._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !!value })
@@ -231,7 +231,7 @@ const confirmDelete = (row) => {
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        const res = await fetch(`/diss/levels/${row._id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/diss/levels/${row._id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('O\'chirishda xatolik')
         toast.add({ severity: 'success', summary: 'O\'chirildi', life: 2000 })
         await fetchLevels()

@@ -17,7 +17,7 @@ const collective = ref('');
 const devision = ref('');
 const year = ref('');
 const approved_date = ref(null);
-const language = ref('uzb');
+const language = ref('uz');
 const additional = ref('');
 const soha_kodi = ref('');
 const ilmiy_rahbar = ref('');
@@ -31,9 +31,7 @@ const type = ref('');
 const category_id = ref(null);
 const categories = ref([]);
 const levelOptions = ref([]);
-// Include both spellings so DB values "Dissertatsiya" and "Dissertatisya" both match
 const documentTypeOptions = ref([
-  { label: 'Dissertatisya', value: 'Dissertatisya' },
   { label: 'Dissertatsiya', value: 'Dissertatsiya' },
   { label: 'Avtoreferat', value: 'Avtoreferat' }
 ]);
@@ -50,12 +48,14 @@ const invalidLanguage = computed(() => validLanguageCodes.value.length > 0 && !v
 
 const loadLevels = async () => {
   try {
-    const response = await fetch('/diss/levels');
+    const response = await fetch('/api/diss/levels');
     const data = await response.json();
-    levelOptions.value = data.map(l => ({
-      label: l.name,
-      value: l.mark
-    }));
+    levelOptions.value = (data || [])
+      .filter(l => l.isActive === true)
+      .map(l => ({
+        label: l.name,
+        value: l.mark
+      }));
   } catch (error) {
     console.error('Error loading levels:', error);
     toast.add({
@@ -69,7 +69,7 @@ const loadLevels = async () => {
 
 const loadLanguages = async () => {
   try {
-    const response = await fetch('/diss/languages');
+    const response = await fetch('/api/diss/languages');
     const data = await response.json();
     languageOptions.value = (data || [])
       .filter(lang => lang.isActive === true)
@@ -91,20 +91,20 @@ onMounted(async () => {
 
     // Load categories, levels, languages and soha fields in parallel
     const [catsResult, levelsResult, langResult, fieldsResult] = await Promise.allSettled([
-      fetch('/diss/cats').then(r => r.json()),
-      fetch('/diss/levels').then(r => r.json()),
-      fetch('/diss/languages').then(r => r.json()),
-      fetch('/diss/fields').then(r => r.json())
+      fetch('/api/diss/cats').then(r => r.json()),
+      fetch('/api/diss/levels').then(r => r.json()),
+      fetch('/api/diss/languages').then(r => r.json()),
+      fetch('/api/diss/fields').then(r => r.json())
     ]);
 
     const catsData = catsResult.status === 'fulfilled' && Array.isArray(catsResult.value) ? catsResult.value : [];
-    categories.value = catsData.map(cat => ({
-      label: cat.name,
-      value: cat.razdel_id
-    }));
+    categories.value = catsData
+      .filter(cat => cat != null && cat.name != null && cat.razdel_id != null)
+      .map(cat => ({ label: String(cat.name), value: Number(cat.razdel_id) }));
 
     const levelsData = levelsResult.status === 'fulfilled' && Array.isArray(levelsResult.value) ? levelsResult.value : [];
-    levelOptions.value = levelsData.map(l => ({
+    const activeLevels = levelsData.filter(l => l.isActive === true);
+    levelOptions.value = activeLevels.map(l => ({
       label: l.name,
       value: l.mark
     }));
@@ -118,7 +118,7 @@ onMounted(async () => {
     sohaOptions.value = fieldsData.map(item => ({ label: `${item.code} - ${item.name}`, value: item.code }));
 
     // Load document data
-    const response = await fetch(`/diss_info/${uuid}`);
+    const response = await fetch(`/api/diss_info/${uuid}`);
     if (!response.ok) {
       throw new Error('Failed to fetch document');
     }
@@ -146,7 +146,16 @@ onMounted(async () => {
     mtt.value = data.mtt || '';
     volume.value = data.volume || '';
     level.value = data.level || '';
-    type.value = data.type || '';
+    type.value = (data.type === 'Dissertatisya' ? 'Dissertatsiya' : (data.type || ''));
+
+    // If document's level is not in active list (e.g. disabled), add it so dropdown can show selection
+    if (level.value && !levelOptions.value.some(o => o.value === level.value)) {
+      const levelDoc = levelsData.find(l => l.mark === level.value);
+      levelOptions.value = [
+        ...levelOptions.value,
+        { label: levelDoc ? levelDoc.name : level.value, value: level.value }
+      ];
+    }
 
     // Language: resolve document code via DB (code or aliases); dropdown uses canonical code from API
     const docLang = data.language || '';
@@ -193,7 +202,7 @@ const onFileSelect = async (event) => {
   formData.append('demo[]', file);
 
   try {
-    const response = await fetch('/diss/upload', {
+    const response = await fetch('/api/diss/upload', {
       method: 'POST',
       body: formData
     });
@@ -268,7 +277,7 @@ async function saveData() {
   }
 
   try {
-    const response = await fetch(`/diss_save/${uuid}`, {
+    const response = await fetch(`/api/diss_save/${uuid}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -308,7 +317,7 @@ function cancelEdit() {
 }
 
 function viewCurrentFile() {
-  window.open(`/diss_file/${uuid}`, '_blank');
+  window.open(`/api/diss_file/${uuid}`, '_blank');
 }
 </script>
 

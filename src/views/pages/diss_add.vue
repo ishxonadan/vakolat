@@ -15,7 +15,7 @@ const collective = ref('');
 const devision = ref('');
 const year = ref('');
 const approved_date = ref(null);
-const language = ref('uzb');
+const language = ref('uz');
 const additional = ref('');
 const soha_kodi = ref('');
 const ilmiy_rahbar = ref('');
@@ -30,7 +30,6 @@ const category_id = ref(null);
 const categories = ref([]);
 const levelOptions = ref([]);
 const documentTypeOptions = ref([
-  { label: 'Dissertatisya', value: 'Dissertatisya' },
   { label: 'Dissertatsiya', value: 'Dissertatsiya' },
   { label: 'Avtoreferat', value: 'Avtoreferat' }
 ]);
@@ -43,13 +42,12 @@ const sohaOptions = ref([]);
 
 const loadCategories = async () => {
   try {
-    const response = await fetch('/diss/cats');
+    const response = await fetch('/api/diss/cats');
     const data = await response.json();
     const list = Array.isArray(data) ? data : [];
-    categories.value = list.map(cat => ({
-      label: cat.name,
-      value: cat.razdel_id
-    }));
+    categories.value = list
+      .filter(cat => cat != null && cat.name != null && cat.razdel_id != null)
+      .map(cat => ({ label: String(cat.name), value: Number(cat.razdel_id) }));
     if (!response.ok) throw new Error(data?.message || 'Kategoriyalar yuklanmadi');
   } catch (error) {
     console.error('Error loading categories:', error);
@@ -64,12 +62,14 @@ const loadCategories = async () => {
 
 const loadAcademicDegrees = async () => {
   try {
-    const response = await fetch('/diss/levels');
+    const response = await fetch('/api/diss/levels');
     const data = await response.json();
-    levelOptions.value = data.map(level => ({
-      label: level.name,
-      value: level.mark
-    }));
+    levelOptions.value = (data || [])
+      .filter(level => level.isActive === true)
+      .map(level => ({
+        label: level.name,
+        value: level.mark
+      }));
   } catch (error) {
     console.error('Error loading academic degrees:', error);
     toast.add({
@@ -83,7 +83,7 @@ const loadAcademicDegrees = async () => {
 
 const loadLanguages = async () => {
   try {
-    const response = await fetch('/diss/languages');
+    const response = await fetch('/api/diss/languages');
     const data = await response.json();
     languageOptions.value = (data || [])
       .filter(lang => lang.isActive === true)
@@ -101,7 +101,7 @@ const loadLanguages = async () => {
 
 const loadSohaFields = async () => {
   try {
-    const response = await fetch('/diss/fields');
+    const response = await fetch('/api/diss/fields');
     const data = await response.json();
     const list = Array.isArray(data) ? data : [];
     sohaOptions.value = list.map(item => ({
@@ -139,7 +139,7 @@ const onFileSelect = async (event) => {
   formData.append('demo[]', file);
 
   try {
-    const response = await fetch('/diss/upload', {
+    const response = await fetch('/api/diss/upload', {
       method: 'POST',
       body: formData
     });
@@ -210,7 +210,7 @@ async function saveData() {
   };
 
   try {
-    const response = await fetch('/diss_save', {
+    const response = await fetch('/api/diss_save', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

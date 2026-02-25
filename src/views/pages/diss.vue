@@ -31,7 +31,7 @@ const fetchData = async (page = 1) => {
   error.value = null;
   try {
     const search = searchQuery.value.trim() || '';
-    const url = `/diss_list/${page}${search ? `?search=${encodeURIComponent(search)}` : ''}`;
+    const url = `/api/diss_list/${page}${search ? `?search=${encodeURIComponent(search)}` : ''}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch documents');
@@ -83,14 +83,14 @@ const editButton = (uuid) => {
 };
 
 const viewFile = (uuid) => {
-  window.open(`/diss_file/${uuid}`, '_blank');
+  window.open(`/api/diss_file/${uuid}`, '_blank');
 };
 
 const toggleStatus = async (uuid, currentStatus, newValue) => {
   try {
     // newValue is true for enabled (is_deleted = 0), false for disabled (is_deleted = 1)
     const newStatus = newValue ? 0 : 1;
-    const response = await fetch(`/diss_save/${uuid}`, {
+    const response = await fetch(`/api/diss_save/${uuid}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -126,7 +126,7 @@ const documentSchema = new mongoose.Schema(
     devision: { type: String, default: "" },
     year: { type: String },
     approved_date: { type: Date },
-    language: { type: String, default: "uzb" },
+    language: { type: String, default: "uz" },
     additional: { type: String },
     soha_kodi: { type: String },
     ilmiy_rahbar: { type: String },
@@ -300,16 +300,36 @@ app.get("/api/admin/test-permissions", [verifyToken, checkPermissions(["manage_u
   res.json({ message: "You have manage_users permission!" })
 })
 
-app.get("/diss/cats", async (req, res) => {
+// Seed default categories (razdel) if none exist; each doc must have razdel_id (Number) and name
+const seedCatsIfEmpty = async () => {
+  const count = await Categories.countDocuments()
+  if (count === 0) {
+    await Categories.insertMany([
+      { name: "Dissertatsiya", razdel_id: 1 },
+      { name: "Avtoreferat", razdel_id: 2 },
+    ])
+    console.log("Seeded default categories (razdel)")
+  }
+}
+
+app.get("/api/diss/cats", async (req, res) => {
   try {
+    await seedCatsIfEmpty()
     const razdelData = await Categories.find()
-    res.json(razdelData)
+      .sort({ razdel_id: 1 })
+      .lean()
+    // Ensure only valid entries (name + razdel_id) for dropdown
+    const list = (Array.isArray(razdelData) ? razdelData : [])
+      .filter((doc) => doc.name != null && doc.razdel_id != null)
+      .map((doc) => ({ name: String(doc.name), razdel_id: Number(doc.razdel_id) }))
+    res.json(list)
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
 })
 
-// Seed default academic degrees (levels) if none exist
+// Seed default academic degrees (levels) if none exist; ensure default levels are enabled
+const defaultLevelMarks = ["nomzod", "doktor", "doktor_fan"]
 const seedLevelsIfEmpty = async () => {
   const count = await Levels.countDocuments()
   if (count === 0) {
@@ -319,10 +339,15 @@ const seedLevelsIfEmpty = async () => {
       { name: "Fan doktori", mark: "doktor_fan", isActive: true },
     ])
     console.log("Seeded default levels (nomzod, doktor, doktor_fan)")
+  } else {
+    await Levels.updateMany(
+      { mark: { $in: defaultLevelMarks } },
+      { $set: { isActive: true } }
+    )
   }
 }
 
-app.get("/diss/levels", async (req, res) => {
+app.get("/api/diss/levels", async (req, res) => {
   try {
     await seedLevelsIfEmpty()
     const levelData = await Levels.find({}).sort({ createdAt: 1 }).lean()
@@ -332,7 +357,7 @@ app.get("/diss/levels", async (req, res) => {
   }
 })
 
-app.post("/diss/levels", async (req, res) => {
+app.post("/api/diss/levels", async (req, res) => {
   try {
     const { name, mark, isActive = true } = req.body || {}
     if (!name || !mark) {
@@ -353,7 +378,7 @@ app.post("/diss/levels", async (req, res) => {
   }
 })
 
-app.put("/diss/levels/:id", async (req, res) => {
+app.put("/api/diss/levels/:id", async (req, res) => {
   try {
     const id = req.params.id
     const { name, mark, isActive } = req.body || {}
@@ -369,7 +394,7 @@ app.put("/diss/levels/:id", async (req, res) => {
   }
 })
 
-app.delete("/diss/levels/:id", async (req, res) => {
+app.delete("/api/diss/levels/:id", async (req, res) => {
   try {
     const doc = await Levels.findByIdAndDelete(req.params.id)
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
@@ -379,21 +404,67 @@ app.delete("/diss/levels/:id", async (req, res) => {
   }
 })
 
-// Seed default languages if none exist
-const defaultLanguageAliases = { uzb: ["uz"], rus: ["ru"], eng: ["en"] }
+// Seed default languages. Canonical codes (uz, ru, en) have long-form aliases (uzb, rus, eng). All seeded languages are enabled.
+const defaultSeedLanguages = [
+  { name: "O'zbekcha", code: "uz", aliases: ["uzb"], isActive: true },
+  { name: "Русский", code: "ru", aliases: ["rus"], isActive: true },
+  { name: "English", code: "en", aliases: ["eng"], isActive: true },
+  { name: "Українська", code: "uk", aliases: ["ukr"], isActive: true },
+  { name: "Қазақша", code: "kk", aliases: ["kaz"], isActive: true },
+  { name: "Тоҷикӣ", code: "tg", aliases: ["tgk"], isActive: true },
+  { name: "Кыргызча", code: "ky", aliases: ["kir"], isActive: true },
+  { name: "Türkmençe", code: "tk", aliases: ["tuk"], isActive: true },
+  { name: "Deutsch", code: "de", aliases: ["deu", "ger"], isActive: true },
+  { name: "Français", code: "fr", aliases: ["fra", "fre"], isActive: true },
+  { name: "Türkçe", code: "tr", aliases: ["tur"], isActive: true },
+  { name: "العربية", code: "ar", aliases: ["ara"], isActive: true },
+  { name: "فارسی", code: "fa", aliases: ["per", "fas"], isActive: true },
+  { name: "中文", code: "zh", aliases: ["chi", "zho"], isActive: true },
+  { name: "Qaraqalpaqsha", code: "kaa", aliases: [], isActive: true },
+  { name: "ئۇيغۇرچە", code: "ug", aliases: ["uig", "uyghur"], isActive: true },
+]
+const defaultLanguageCodes = defaultSeedLanguages.map((l) => l.code)
+const defaultLanguageAliases = { uz: ["uzb"], ru: ["rus"], en: ["eng"] }
 
 const seedLanguagesIfEmpty = async () => {
   const count = await Languages.countDocuments()
   if (count === 0) {
-    await Languages.insertMany([
-      { name: "O'zbekcha", code: "uzb", aliases: ["uz"], isActive: true },
-      { name: "Русский", code: "rus", aliases: ["ru"], isActive: true },
-      { name: "English", code: "eng", aliases: ["en"], isActive: true },
-    ])
-    console.log("Seeded default languages (uzb, rus, eng) with aliases uz, ru, en")
+    await Languages.insertMany(defaultSeedLanguages)
+    console.log("Seeded", defaultSeedLanguages.length, "default languages")
     return
   }
-  // Ensure existing seeded languages have aliases (one-time backfill)
+  // Insert any default language that is missing (e.g. after user deleted some or all)
+  for (const lang of defaultSeedLanguages) {
+    const exists = await Languages.findOne({ code: lang.code })
+    if (!exists) {
+      await Languages.create(lang)
+      console.log("Seeded missing language:", lang.code)
+    }
+  }
+  // Migrate old codes (uzb, rus, eng) to canonical (uz, ru, en) and set aliases
+  const migrations = [
+    { oldCode: "uzb", newCode: "uz", aliases: ["uzb"] },
+    { oldCode: "rus", newCode: "ru", aliases: ["rus"] },
+    { oldCode: "eng", newCode: "en", aliases: ["eng"] },
+  ]
+  for (const { oldCode, newCode, aliases } of migrations) {
+    const hasNew = await Languages.findOne({ code: newCode })
+    if (hasNew) {
+      await Languages.updateOne({ code: newCode }, { $set: { isActive: true, aliases } })
+      continue
+    }
+    const hasOld = await Languages.findOne({ code: oldCode })
+    if (hasOld) {
+      await Languages.updateOne({ code: oldCode }, { $set: { code: newCode, aliases, isActive: true } })
+      console.log("Migrated language code:", oldCode, "->", newCode)
+    }
+  }
+  // Ensure all default languages are enabled
+  await Languages.updateMany(
+    { code: { $in: defaultLanguageCodes } },
+    { $set: { isActive: true } }
+  )
+  // Backfill aliases for canonical codes that have a default alias list
   for (const [code, aliasList] of Object.entries(defaultLanguageAliases)) {
     const doc = await Languages.findOne({ code })
     if (doc && (!doc.aliases || doc.aliases.length === 0)) {
@@ -403,7 +474,7 @@ const seedLanguagesIfEmpty = async () => {
   }
 }
 
-app.get("/diss/languages", async (req, res) => {
+app.get("/api/diss/languages", async (req, res) => {
   try {
     await seedLanguagesIfEmpty()
     const list = await Languages.find().sort({ createdAt: 1 }).lean()
@@ -413,7 +484,7 @@ app.get("/diss/languages", async (req, res) => {
   }
 })
 
-app.post("/diss/languages", async (req, res) => {
+app.post("/api/diss/languages", async (req, res) => {
   try {
     const { name, code, isActive = true, aliases } = req.body || {}
     if (!name || !code) {
@@ -435,7 +506,7 @@ app.post("/diss/languages", async (req, res) => {
   }
 })
 
-app.put("/diss/languages/:id", async (req, res) => {
+app.put("/api/diss/languages/:id", async (req, res) => {
   try {
     const id = req.params.id
     const { name, code, isActive, aliases } = req.body || {}
@@ -452,7 +523,7 @@ app.put("/diss/languages/:id", async (req, res) => {
   }
 })
 
-app.delete("/diss/languages/:id", async (req, res) => {
+app.delete("/api/diss/languages/:id", async (req, res) => {
   try {
     const doc = await Languages.findByIdAndDelete(req.params.id)
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
@@ -478,7 +549,7 @@ const seedFieldsIfEmpty = async () => {
   }
 }
 
-app.get("/diss/fields", async (req, res) => {
+app.get("/api/diss/fields", async (req, res) => {
   try {
     await seedFieldsIfEmpty()
     const list = await Fields.find().sort({ code: 1 }).lean()
@@ -488,7 +559,7 @@ app.get("/diss/fields", async (req, res) => {
   }
 })
 
-app.post("/diss/fields", async (req, res) => {
+app.post("/api/diss/fields", async (req, res) => {
   try {
     const { code, name } = req.body || {}
     if (!code || !name) {
@@ -508,7 +579,7 @@ app.post("/diss/fields", async (req, res) => {
   }
 })
 
-app.put("/diss/fields/:id", async (req, res) => {
+app.put("/api/diss/fields/:id", async (req, res) => {
   try {
     const id = req.params.id
     const { code, name } = req.body || {}
@@ -523,7 +594,7 @@ app.put("/diss/fields/:id", async (req, res) => {
   }
 })
 
-app.delete("/diss/fields/:id", async (req, res) => {
+app.delete("/api/diss/fields/:id", async (req, res) => {
   try {
     const doc = await Fields.findByIdAndDelete(req.params.id)
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
@@ -533,7 +604,7 @@ app.delete("/diss/fields/:id", async (req, res) => {
   }
 })
 
-app.post("/diss/upload", upload.single("demo[]"), (req, res) => {
+app.post("/api/diss/upload", upload.single("demo[]"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded or invalid file format" })
   }
@@ -549,7 +620,7 @@ function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-app.get("/diss_list/:page?", async (req, res) => {
+app.get("/api/diss_list/:page?", async (req, res) => {
   try {
     const page = Number.parseInt(req.params.page, 10) || 1
     const limit = Math.min(Number.parseInt(req.query.limit, 10) || 30, 100)
@@ -583,7 +654,7 @@ app.get("/diss_list/:page?", async (req, res) => {
   }
 })
 
-app.get("/diss_info/:uuid?", async (req, res) => {
+app.get("/api/diss_info/:uuid?", async (req, res) => {
   try {
     const uuid = req.params.uuid
     const result = await Documents.findOne({ uuid: uuid })
@@ -597,7 +668,7 @@ const folderplace = process.env.DISS_STORAGE_PATH || path.resolve(__dirname, "go
 const backupFolder = path.resolve(__dirname, "backup")
 const uploadFolder = uploadsDir
 
-app.get("/diss_file/:uuid", (req, res) => {
+app.get("/api/diss_file/:uuid", (req, res) => {
   const uuid = req.params.uuid
   const filePath = path.join(folderplace, `${uuid}.pdf`)
 
@@ -610,7 +681,7 @@ app.get("/diss_file/:uuid", (req, res) => {
   }
 })
 
-app.post("/diss_save/:uuid", async (req, res) => {
+app.post("/api/diss_save/:uuid", async (req, res) => {
   try {
     const requestData = req.body
     const uuid = req.params.uuid
@@ -689,7 +760,7 @@ app.post("/diss_save/:uuid", async (req, res) => {
   }
 })
 
-app.post("/diss_save", async (req, res) => {
+app.post("/api/diss_save", async (req, res) => {
   try {
     const requestData = req.body
     const generatedUuid = uuidv4()
