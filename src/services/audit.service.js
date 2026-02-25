@@ -14,57 +14,111 @@ const shouldSkipUser = (user) => {
 }
 
 /**
- * Generic middleware to log authenticated API requests for non-rais users.
- * Logs method, path, query and a redacted body snapshot.
- * Fire-and-forget: never awaits log write, always calls next() once so response is never delayed or double-sent.
+ * Attach a post-response audit hook for authenticated API requests (non-rais users).
+ * Called once per request; logs after the response has been sent (res.on('finish')).
  */
-const auditRequestMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return next()
-  }
-
-  const token = authHeader.split(" ")[1]
-  let decoded
-  try {
-    decoded = jwt.verify(token, JWT_SECRET)
-  } catch {
-    return next()
-  }
-
-  if (shouldSkipUser(decoded)) {
-    return next()
-  }
-
+const attachApiAudit = (req, res, next) => {
   const AuditLog = getAuditModel(req)
   if (!AuditLog) return next()
 
-  const safeBody = { ...(req.body || {}) }
-  if (Object.prototype.hasOwnProperty.call(safeBody, "password")) {
-    safeBody.password = "***"
-  }
-  if (Object.prototype.hasOwnProperty.call(safeBody, "newPassword")) {
-    safeBody.newPassword = "***"
-  }
+  const startedAt = Date.now()
 
-  const payload = {
-    user: decoded.id,
-    level: decoded.level,
-    action: `${req.method} ${req.path}`,
-    entityType: "api",
-    entityId: null,
-    meta: {
-      method: req.method,
-      path: req.originalUrl,
-      query: req.query,
-      body: safeBody,
-    },
-    ip: req.ip,
-    userAgent: req.headers["user-agent"],
-  }
+  res.on("finish", () => {
+    try {
+      // Skip if response is not from API handler (defensive) or is auth login/logout (handled explicitly)
+      if (!req.path.startsWith("/api/") || req.path.startsWith("/api/auth")) {
+        return
+      }
 
-  // Fire-and-forget: do not await; call next() immediately so we never block or double-send
-  AuditLog.create(payload).catch((err) => console.error("Error writing audit log:", err))
+      let actor = req.user || null
+
+      // If route didn't populate req.user (e.g. uses only verifyToken inside middleware),
+      // try to decode JWT directly from Authorization header.
+      if (!actor) {
+        const authHeader = req.headers.authorization
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          const token = authHeader.split(" ")[1]
+          try {
+            actor = jwt.verify(token, JWT_SECRET)
+          } catch {
+            actor = null
+          }
+        }
+      }
+
+      if (shouldSkipUser(actor)) {
+        return
+      }
+
+      const safeBody = { ...(req.body || {}) }
+      if (Object.prototype.hasOwnProperty.call(safeBody, "password")) {
+        safeBody.password = "***"
+      }
+      if (Object.prototype.hasOwnProperty.call(safeBody, "newPassword")) {
+        safeBody.newPassword = "***"
+      }
+
+      // Default generic action + entity
+      let action = `${req.method} ${req.path}`
+      let entityType = "api"
+      let entityId = null
+
+      // Semantic mapping for important dissertation actions
+      if (req.path.startsWith("/api/diss_save")) {
+        entityType = "dissertation"
+        const pathParts = req.path.split("/")
+        const pathUuid = pathParts.length > 3 ? pathParts[3] : null
+        const bodyUuid = safeBody.uuid
+        entityId = pathUuid || bodyUuid || null
+
+        if (req.method === "POST") {
+          if (pathUuid) {
+            // Edit existing dissertation; check is_deleted toggle
+            if (typeof safeBody.is_deleted !== "undefined") {
+              action = safeBody.is_deleted ? "disable_dissertation" : "enable_dissertation"
+            } else {
+              action = "edit_dissertation"
+            }
+          } else {
+            // New dissertation
+            action = "add_dissertation"
+          }
+        }
+      } else if (req.path.startsWith("/api/diss_list")) {
+        entityType = "dissertation"
+        action = "view_dissertation_list"
+      } else if (req.path.startsWith("/api/diss_info")) {
+        entityType = "dissertation"
+        const parts = req.path.split("/")
+        const uuid = parts.length > 3 ? parts[3] : null
+        entityId = uuid || null
+        action = "view_dissertation_detail"
+      }
+
+      const payload = {
+        user: actor.id || actor._id,
+        level: actor.level,
+        action,
+        entityType,
+        entityId,
+        meta: {
+          method: req.method,
+          path: req.originalUrl,
+          query: req.query,
+          body: safeBody,
+          statusCode: res.statusCode,
+          durationMs: Date.now() - startedAt,
+        },
+        ip: req.ip,
+        userAgent: req.headers["user-agent"],
+      }
+
+      AuditLog.create(payload).catch((err) => console.error("Error writing audit log:", err))
+    } catch (error) {
+      console.error("Error writing API audit log:", error)
+    }
+  })
+
   next()
 }
 
@@ -96,7 +150,7 @@ const logExplicitAction = async (req, userOverride, { action, entityType, entity
 }
 
 module.exports = {
-  auditRequestMiddleware,
+  attachApiAudit,
   logExplicitAction,
 }
 

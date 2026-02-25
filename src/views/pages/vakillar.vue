@@ -136,7 +136,7 @@ const viewLogs = (expert) => {
           <span v-else class="text-gray-400">Belgilanmagan</span>
         </template>
       </Column>
-      <Column field="isActive" header="Holat" style="width: 12%">
+      <Column field="isActive" header="Holat" style="width: 10%">
         <template #body="slotProps">
           <Button 
             :icon="slotProps.data.isActive !== false ? 'pi pi-lock-open' : 'pi pi-lock'" 
@@ -148,35 +148,34 @@ const viewLogs = (expert) => {
           />
         </template>
       </Column>
-      <Column style="width: 10%" header="Amallar">
+      <Column style="width: 20%" header="Amallar">
         <template #body="slotProps">
-          <Button 
-            icon="pi pi-pencil" 
-            type="button" 
-            class="p-button-text p-button-sm" 
-            @click="editButton(slotProps.data._id)"
-            v-tooltip="'Tahrirlash'"
-          />
-        </template>
-      </Column>
-      <!-- Add Login As / Logs column for superadmins -->
-      <Column v-if="isSuperAdmin" style="width: 8%" header="Kirish / Loglar">
-        <template #body="slotProps">
-          <Button 
-            icon="pi pi-user" 
-            type="button" 
-            class="p-button-text p-button-success p-button-sm" 
-            @click="loginAsExpert(slotProps.data)"
-            title="Ekspert sifatida kirish"
-            :disabled="slotProps.data.isActive === false"
-          />
-          <Button
-            icon="pi pi-history"
-            type="button"
-            class="p-button-text p-button-sm p-button-secondary ml-1"
-            @click="viewLogs(slotProps.data)"
-            title="Faoliyat loglarini ko'rish"
-          />
+          <div class="vakil-actions">
+            <Button
+              icon="pi pi-pencil"
+              type="button"
+              class="vakil-action-btn p-button-text p-button-rounded"
+              @click="editButton(slotProps.data._id)"
+              v-tooltip="'Tahrirlash'"
+            />
+            <Button
+              v-if="isSuperAdmin"
+              icon="pi pi-history"
+              type="button"
+              class="vakil-action-btn p-button-text p-button-rounded p-button-secondary"
+              @click="viewLogs(slotProps.data)"
+              v-tooltip="'Faoliyat loglarini ko\'rish'"
+            />
+            <Button
+              v-if="isSuperAdmin"
+              icon="pi pi-user"
+              type="button"
+              class="vakil-action-btn vakil-action-btn--right p-button-text p-button-rounded p-button-success"
+              @click="loginAsExpert(slotProps.data)"
+              v-tooltip="'Ekspert sifatida kirish'"
+              :disabled="slotProps.data.isActive === false"
+            />
+          </div>
         </template>
       </Column>
     </DataTable>
@@ -186,5 +185,34 @@ const viewLogs = (expert) => {
 <style scoped>
 .vakil-status-lock :deep(.pi) {
   font-size: 1.35rem;
+}
+
+/* Shrink gap between Holat and Amallar (last two columns) */
+:deep(.p-datatable-tbody > tr > td:nth-last-child(2)) {
+  padding-right: 0.25rem !important;
+}
+:deep(.p-datatable-tbody > tr > td:last-child) {
+  padding-left: 0.25rem !important;
+}
+
+.vakil-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  width: 100%;
+}
+
+.vakil-action-btn {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
+.vakil-action-btn :deep(.pi) {
+  font-size: 1.2rem;
+}
+
+.vakil-action-btn--right {
+  margin-left: 0.5rem;
 }
 </style>

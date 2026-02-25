@@ -201,14 +201,6 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
         <template #body="slotProps">
           <div class="flex gap-1">
             <Button
-              v-if="canDownload && slotProps.data.filename"
-              icon="pi pi-download"
-              type="button"
-              class="p-button-text p-button-sm"
-              @click="viewFile(slotProps.data.uuid)"
-              v-tooltip="'Yuklab olish'"
-            />
-            <Button
               v-if="canEdit"
               icon="pi pi-pencil"
               type="button"

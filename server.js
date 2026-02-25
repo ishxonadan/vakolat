@@ -221,6 +221,7 @@ const userRatingModel = require("./src/model/user-rating.model")
 const surveyVoteModel = require("./src/model/survey-vote.model")
 const plausibleCacheModel = require("./src/model/plausible-cache.model")
 const auditLogModel = require("./src/model/audit-log.model")
+const { attachApiAudit } = require("./src/services/audit.service")
 
 const Permission = vakolat.model("Permission", permissionSchema)
 const PermissionGroup = vakolat.model("PermissionGroup", permissionGroupSchema)
@@ -262,6 +263,14 @@ const upload = multer({
     }
     cb(null, true)
   },
+})
+
+// Attach audit logging for all API routes (except /api/auth which is handled explicitly).
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api/") || req.path.startsWith("/api/auth")) {
+    return next()
+  }
+  return attachApiAudit(req, res, next)
 })
 
 app.get("/api/admin/fix-indexes", async (req, res) => {
