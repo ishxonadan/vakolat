@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -31,8 +31,10 @@ const type = ref('');
 const category_id = ref(null);
 const categories = ref([]);
 const levelOptions = ref([]);
+// Include both spellings so DB values "Dissertatsiya" and "Dissertatisya" both match
 const documentTypeOptions = ref([
   { label: 'Dissertatisya', value: 'Dissertatisya' },
+  { label: 'Dissertatsiya', value: 'Dissertatsiya' },
   { label: 'Avtoreferat', value: 'Avtoreferat' }
 ]);
 const loading = ref(true);
@@ -41,11 +43,10 @@ const uploadedFileName = ref('');
 const isUploading = ref(false);
 const currentFileName = ref('');
 
-const languageOptions = [
-  { label: 'O\'zbekcha', value: 'uzb' },
-  { label: 'Русский', value: 'rus' },
-  { label: 'English', value: 'eng' }
-];
+const languageOptions = ref([]);
+const sohaOptions = ref([]);
+const validLanguageCodes = ref([]);
+const invalidLanguage = computed(() => validLanguageCodes.value.length > 0 && !validLanguageCodes.value.includes(language.value));
 
 const loadLevels = async () => {
   try {
@@ -66,27 +67,55 @@ const loadLevels = async () => {
   }
 };
 
+const loadLanguages = async () => {
+  try {
+    const response = await fetch('/diss/languages');
+    const data = await response.json();
+    languageOptions.value = (data || [])
+      .filter(lang => lang.isActive === true)
+      .map(lang => ({ label: lang.name, value: lang.code }));
+  } catch (error) {
+    console.error('Error loading languages:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Tillarni yuklashda xatolik',
+      life: 3000
+    });
+  }
+};
+
 onMounted(async () => {
   try {
     loading.value = true;
 
-    // Load categories and levels in parallel
-    const [catsResponse, levelsResponse] = await Promise.all([
-      fetch('/diss/cats'),
-      fetch('/diss/levels')
+    // Load categories, levels, languages and soha fields in parallel
+    const [catsResult, levelsResult, langResult, fieldsResult] = await Promise.allSettled([
+      fetch('/diss/cats').then(r => r.json()),
+      fetch('/diss/levels').then(r => r.json()),
+      fetch('/diss/languages').then(r => r.json()),
+      fetch('/diss/fields').then(r => r.json())
     ]);
 
-    const catsData = await catsResponse.json();
+    const catsData = catsResult.status === 'fulfilled' && Array.isArray(catsResult.value) ? catsResult.value : [];
     categories.value = catsData.map(cat => ({
       label: cat.name,
       value: cat.razdel_id
     }));
 
-    const levelsData = await levelsResponse.json();
+    const levelsData = levelsResult.status === 'fulfilled' && Array.isArray(levelsResult.value) ? levelsResult.value : [];
     levelOptions.value = levelsData.map(l => ({
       label: l.name,
       value: l.mark
     }));
+
+    const langData = langResult.status === 'fulfilled' ? (langResult.value || []) : [];
+    const activeLangs = (Array.isArray(langData) ? langData : []).filter(l => l.isActive === true);
+    validLanguageCodes.value = activeLangs.map(l => l.code);
+    languageOptions.value = activeLangs.map(l => ({ label: l.name, value: l.code }));
+
+    const fieldsData = fieldsResult.status === 'fulfilled' && Array.isArray(fieldsResult.value) ? fieldsResult.value : [];
+    sohaOptions.value = fieldsData.map(item => ({ label: `${item.code} - ${item.name}`, value: item.code }));
 
     // Load document data
     const response = await fetch(`/diss_info/${uuid}`);
@@ -104,9 +133,12 @@ onMounted(async () => {
     devision.value = data.devision || '';
     year.value = data.year || '';
     approved_date.value = data.approved_date ? new Date(data.approved_date) : null;
-    language.value = data.language || 'uzb';
     additional.value = data.additional || '';
     soha_kodi.value = data.soha_kodi || '';
+    // If document's soha_kodi is not in the list (e.g. legacy free text), add it so dropdown can show selection
+    if (soha_kodi.value && !sohaOptions.value.some(o => o.value === soha_kodi.value)) {
+      sohaOptions.value = [...sohaOptions.value, { label: soha_kodi.value, value: soha_kodi.value }];
+    }
     ilmiy_rahbar.value = data.ilmiy_rahbar || '';
     annotation.value = data.annotation || '';
     ashyo.value = data.ashyo || '';
@@ -115,7 +147,18 @@ onMounted(async () => {
     volume.value = data.volume || '';
     level.value = data.level || '';
     type.value = data.type || '';
-    category_id.value = data.category_id || null;
+
+    // Language: resolve document code via DB (code or aliases); dropdown uses canonical code from API
+    const docLang = data.language || '';
+    const resolved = activeLangs.find(l => l.code === docLang || (l.aliases && l.aliases.includes(docLang)));
+    language.value = resolved ? resolved.code : docLang;
+    if (!resolved && docLang) {
+      languageOptions.value = [...languageOptions.value, { label: `${docLang} (ro'yxatda yo'q)`, value: docLang }];
+    }
+
+    // Category: ensure number type so dropdown matches (Mongo may return NumberLong or string)
+    category_id.value = data.category_id != null ? Number(data.category_id) : null;
+
     currentFileName.value = data.filename || '';
 
   } catch (error) {
@@ -370,13 +413,19 @@ function viewCurrentFile() {
           </div>
           <div class="form-group">
             <label for="language" class="form-label">Til</label>
-            <Dropdown 
-              v-model="language" 
-              :options="languageOptions"
-              optionLabel="label"
-              optionValue="value"
-              class="form-input"
-            />
+            <div :class="{ 'language-invalid': invalidLanguage }">
+              <Dropdown 
+                v-model="language" 
+                :options="languageOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Tilni tanlang"
+                :class="['form-input', { 'p-invalid': invalidLanguage }]"
+              />
+              <small v-if="invalidLanguage" class="text-red-600 dark:text-red-400 font-medium block mt-1">
+                Bu til ro'yxatda mavjud emas. Tilni Tillar bo'limida qo'shing yoki boshqa tilni tanlang.
+              </small>
+            </div>
           </div>
         </div>
 
@@ -485,12 +534,16 @@ function viewCurrentFile() {
         <!-- Soha kodi -->
         <div class="form-group">
           <label for="soha_kodi" class="form-label">Soha kodi</label>
-          <Textarea
+          <Dropdown
             v-model="soha_kodi"
-            id="soha_kodi"
-            rows="4"
+            :options="sohaOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Soha kodini tanlang"
             class="form-input"
-            placeholder="Soha kodini kiriting. Bir nechta soha kodini kiritsa bo'ladi"
+            :filter="true"
+            filterPlaceholder="Qidirish..."
+            showClear
           />
         </div>
 
@@ -624,5 +677,13 @@ function viewCurrentFile() {
          hover:from-blue-700 hover:to-indigo-700 
          border-0 rounded-lg shadow-md transition-all;
   padding: 0.75rem 1.5rem;
+}
+
+.language-invalid :deep(.p-dropdown) {
+  @apply border-red-500 dark:border-red-400;
+}
+.language-invalid :deep(.p-dropdown .p-dropdown-label),
+.language-invalid :deep(.p-dropdown .p-inputtext) {
+  @apply text-red-600 dark:text-red-400 font-medium;
 }
 </style>

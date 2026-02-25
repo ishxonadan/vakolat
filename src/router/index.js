@@ -34,6 +34,18 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "diss/languages",
+          name: "diss_languages",
+          component: () => import("@/views/pages/diss_languages.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: "diss/soha",
+          name: "diss_soha",
+          component: () => import("@/views/pages/diss_soha.vue"),
+          meta: { requiresAuth: true },
+        },
+        {
           path: "diss/ip-access",
           name: "ip_access",
           component: () => import("@/views/pages/ip-access.vue"),

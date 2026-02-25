@@ -31,26 +31,26 @@ const categories = ref([]);
 const levelOptions = ref([]);
 const documentTypeOptions = ref([
   { label: 'Dissertatisya', value: 'Dissertatisya' },
+  { label: 'Dissertatsiya', value: 'Dissertatsiya' },
   { label: 'Avtoreferat', value: 'Avtoreferat' }
 ]);
 const uploadedFile = ref(null);
 const uploadedFileName = ref('');
 const isUploading = ref(false);
 
-const languageOptions = [
-  { label: 'O\'zbekcha', value: 'uzb' },
-  { label: 'Русский', value: 'rus' },
-  { label: 'English', value: 'eng' }
-];
+const languageOptions = ref([]);
+const sohaOptions = ref([]);
 
 const loadCategories = async () => {
   try {
     const response = await fetch('/diss/cats');
     const data = await response.json();
-    categories.value = data.map(cat => ({
+    const list = Array.isArray(data) ? data : [];
+    categories.value = list.map(cat => ({
       label: cat.name,
       value: cat.razdel_id
     }));
+    if (!response.ok) throw new Error(data?.message || 'Kategoriyalar yuklanmadi');
   } catch (error) {
     console.error('Error loading categories:', error);
     toast.add({
@@ -76,6 +76,45 @@ const loadAcademicDegrees = async () => {
       severity: 'error',
       summary: 'Xato',
       detail: 'Akademik darajalarni yuklashda xatolik',
+      life: 3000
+    });
+  }
+};
+
+const loadLanguages = async () => {
+  try {
+    const response = await fetch('/diss/languages');
+    const data = await response.json();
+    languageOptions.value = (data || [])
+      .filter(lang => lang.isActive === true)
+      .map(lang => ({ label: lang.name, value: lang.code }));
+  } catch (error) {
+    console.error('Error loading languages:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Tillarni yuklashda xatolik',
+      life: 3000
+    });
+  }
+};
+
+const loadSohaFields = async () => {
+  try {
+    const response = await fetch('/diss/fields');
+    const data = await response.json();
+    const list = Array.isArray(data) ? data : [];
+    sohaOptions.value = list.map(item => ({
+      label: `${item.code} - ${item.name}`,
+      value: item.code
+    }));
+    if (!response.ok) throw new Error('Soha kodlari yuklanmadi');
+  } catch (error) {
+    console.error('Error loading soha fields:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Xato',
+      detail: 'Soha kodlarini yuklashda xatolik',
       life: 3000
     });
   }
@@ -211,8 +250,16 @@ function cancelAdd() {
 }
 
 onMounted(async () => {
-  await loadCategories();
-  await loadAcademicDegrees();
+  const [catResult, levelResult, langResult, sohaResult] = await Promise.allSettled([
+    loadCategories(),
+    loadAcademicDegrees(),
+    loadLanguages(),
+    loadSohaFields()
+  ]);
+  if (catResult.status === 'rejected') console.error('Categories load failed', catResult.reason);
+  if (levelResult.status === 'rejected') console.error('Levels load failed', levelResult.reason);
+  if (langResult.status === 'rejected') console.error('Languages load failed', langResult.reason);
+  if (sohaResult.status === 'rejected') console.error('Soha fields load failed', sohaResult.reason);
 });
 </script>
 
@@ -319,6 +366,7 @@ onMounted(async () => {
               :options="languageOptions"
               optionLabel="label"
               optionValue="value"
+              placeholder="Tilni tanlang"
               class="form-input"
             />
           </div>
@@ -429,12 +477,16 @@ onMounted(async () => {
         <!-- Soha kodi -->
         <div class="form-group">
           <label for="soha_kodi" class="form-label">Soha kodi</label>
-          <Textarea
+          <Dropdown
             v-model="soha_kodi"
-            id="soha_kodi"
-            rows="4"
+            :options="sohaOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Soha kodini tanlang"
             class="form-input"
-            placeholder="Soha kodini kiriting. Bir nechta soha kodini kiritsa bo'ladi"
+            :filter="true"
+            filterPlaceholder="Qidirish..."
+            showClear
           />
         </div>
 

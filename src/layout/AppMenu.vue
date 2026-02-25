@@ -56,13 +56,25 @@ const menuItems = [
             label: 'Hujjatlar', 
             icon: 'pi pi-fw pi-chart-line', 
             to: '/diss',
-            requiredPermissions: ['view_dissertations'] // Specific permission
+            requiredPermissions: ['view_dissertations']
+          },
+          { 
+            label: 'Tillar', 
+            icon: 'pi pi-fw pi-language', 
+            to: '/diss/languages',
+            requiredPermissions: ['view_dissertations']
+          },
+          { 
+            label: 'Soha', 
+            icon: 'pi pi-fw pi-list', 
+            to: '/diss/soha',
+            requiredPermissions: ['view_dissertations']
           },
           { 
             label: "To'liq matnga ruxsat", 
             icon: 'pi pi-fw pi-globe', 
             to: '/diss/ip-access',
-            requiredPermissions: ['view_statistics'] // Specific permission
+            requiredPermissions: ['view_statistics']
           },
         ]
       },

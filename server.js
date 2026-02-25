@@ -145,10 +145,13 @@ const documentSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-const razdelSchema = new mongoose.Schema({
-  name: String,
-  razdel_id: Number,
-})
+const razdelSchema = new mongoose.Schema(
+  {
+    name: String,
+    razdel_id: Number,
+  },
+  { collection: 'razdel' }
+)
 
 const levelSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -156,6 +159,20 @@ const levelSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 })
+
+const languageSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  code: { type: String, required: true, unique: true },
+  aliases: { type: [String], default: [] },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+})
+
+const fieldSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+}, { collection: 'fields' })
 
 const libraryUserSchema = new mongoose.Schema(
   {
@@ -194,6 +211,8 @@ const ticketSchema = new mongoose.Schema(
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
 const Levels = yoqlama.model("Level", levelSchema)
+const Languages = yoqlama.model("Language", languageSchema)
+const Fields = yoqlama.model("Field", fieldSchema)
 const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
 const Tickets = nazorat.model("Ticket", ticketSchema)
 
@@ -295,6 +314,160 @@ app.get("/diss/levels", async (req, res) => {
   }
 })
 
+// Seed default languages if none exist
+const defaultLanguageAliases = { uzb: ["uz"], rus: ["ru"], eng: ["en"] }
+
+const seedLanguagesIfEmpty = async () => {
+  const count = await Languages.countDocuments()
+  if (count === 0) {
+    await Languages.insertMany([
+      { name: "O'zbekcha", code: "uzb", aliases: ["uz"], isActive: true },
+      { name: "Русский", code: "rus", aliases: ["ru"], isActive: true },
+      { name: "English", code: "eng", aliases: ["en"], isActive: true },
+    ])
+    console.log("Seeded default languages (uzb, rus, eng) with aliases uz, ru, en")
+    return
+  }
+  // Ensure existing seeded languages have aliases (one-time backfill)
+  for (const [code, aliasList] of Object.entries(defaultLanguageAliases)) {
+    const doc = await Languages.findOne({ code })
+    if (doc && (!doc.aliases || doc.aliases.length === 0)) {
+      await Languages.updateOne({ code }, { $set: { aliases: aliasList } })
+      console.log("Backfilled aliases for language:", code)
+    }
+  }
+}
+
+app.get("/diss/languages", async (req, res) => {
+  try {
+    await seedLanguagesIfEmpty()
+    const list = await Languages.find().sort({ createdAt: 1 }).lean()
+    res.json(list)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post("/diss/languages", async (req, res) => {
+  try {
+    const { name, code, isActive = true, aliases } = req.body || {}
+    if (!name || !code) {
+      return res.status(400).json({ message: "name va code majburiy" })
+    }
+    const existing = await Languages.findOne({ code: code.trim() })
+    if (existing) {
+      return res.status(400).json({ message: "Bunday kodli til mavjud" })
+    }
+    const doc = await Languages.create({
+      name: name.trim(),
+      code: code.trim(),
+      isActive: !!isActive,
+      aliases: Array.isArray(aliases) ? aliases.map(a => String(a).trim()).filter(Boolean) : [],
+    })
+    res.status(201).json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put("/diss/languages/:id", async (req, res) => {
+  try {
+    const id = req.params.id
+    const { name, code, isActive, aliases } = req.body || {}
+    const update = {}
+    if (name !== undefined) update.name = name.trim()
+    if (code !== undefined) update.code = code.trim()
+    if (isActive !== undefined) update.isActive = !!isActive
+    if (aliases !== undefined) update.aliases = Array.isArray(aliases) ? aliases.map(a => String(a).trim()).filter(Boolean) : []
+    const doc = await Languages.findByIdAndUpdate(id, update, { new: true })
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    res.json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.delete("/diss/languages/:id", async (req, res) => {
+  try {
+    const doc = await Languages.findByIdAndDelete(req.params.id)
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    res.json({ message: "O'chirildi" })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Seed fields (soha) from content/soha.json only when DB has no data; after that all data is from DB
+const seedFieldsIfEmpty = async () => {
+  const count = await Fields.countDocuments()
+  if (count > 0) return
+  const sohaPath = path.join(__dirname, "content", "soha.json")
+  if (!fs.existsSync(sohaPath)) {
+    console.warn("content/soha.json not found, fields collection not seeded")
+    return
+  }
+  const sohaList = JSON.parse(fs.readFileSync(sohaPath, "utf8"))
+  if (Array.isArray(sohaList) && sohaList.length > 0) {
+    await Fields.insertMany(sohaList.map(({ code, name }) => ({ code, name })))
+    console.log("Seeded fields (soha) from content/soha.json:", sohaList.length, "items")
+  }
+}
+
+app.get("/diss/fields", async (req, res) => {
+  try {
+    await seedFieldsIfEmpty()
+    const list = await Fields.find().sort({ code: 1 }).lean()
+    res.json(list)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post("/diss/fields", async (req, res) => {
+  try {
+    const { code, name } = req.body || {}
+    if (!code || !name) {
+      return res.status(400).json({ message: "code va name majburiy" })
+    }
+    const existing = await Fields.findOne({ code: String(code).trim() })
+    if (existing) {
+      return res.status(400).json({ message: "Bunday kodli soha mavjud" })
+    }
+    const doc = await Fields.create({
+      code: String(code).trim(),
+      name: String(name).trim()
+    })
+    res.status(201).json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put("/diss/fields/:id", async (req, res) => {
+  try {
+    const id = req.params.id
+    const { code, name } = req.body || {}
+    const update = {}
+    if (code !== undefined) update.code = String(code).trim()
+    if (name !== undefined) update.name = String(name).trim()
+    const doc = await Fields.findByIdAndUpdate(id, update, { new: true })
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    res.json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.delete("/diss/fields/:id", async (req, res) => {
+  try {
+    const doc = await Fields.findByIdAndDelete(req.params.id)
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    res.json({ message: "O'chirildi" })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
 app.post("/diss/upload", upload.single("demo[]"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded or invalid file format" })
@@ -306,6 +479,11 @@ app.post("/diss/upload", upload.single("demo[]"), (req, res) => {
   })
 })
 
+// Escape special regex characters so search term is matched literally
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 app.get("/diss_list/:page?", async (req, res) => {
   try {
     const page = Number.parseInt(req.params.page, 10) || 1
@@ -315,7 +493,13 @@ app.get("/diss_list/:page?", async (req, res) => {
 
     const filter = {}
     if (search) {
-      filter.code = { $regex: search, $options: "i" }
+      const pattern = escapeRegex(search)
+      const regex = { $regex: pattern, $options: "i" }
+      filter.$or = [
+        { code: regex },
+        { title: regex },
+        { author: regex },
+      ]
     }
 
     const [results, total] = await Promise.all([
