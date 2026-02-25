@@ -75,6 +75,14 @@ const router = createRouter({
           },
         },
         {
+          path: "/settings",
+          name: "settings",
+          component: () => import("@/views/pages/settings.vue"),
+          meta: {
+            requiresAuth: true,
+          },
+        },
+        {
           path: "/vakil_add",
           name: "vakil_add",
           component: () => import("@/views/pages/vakil_add.vue"),

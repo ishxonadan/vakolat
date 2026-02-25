@@ -125,8 +125,11 @@ const viewLogs = (expert) => {
           </span>
         </template>
       </Column>
-      <Column field="firstname" header="Ismi" :sortable="true" style="width: 15%"></Column>
-      <Column field="lastname" header="Sharifi" :sortable="true" style="width: 15%"></Column>
+      <Column header="Ismi sharif" :sortable="true" style="width: 30%">
+        <template #body="slotProps">
+          {{ slotProps.data.firstname }} {{ slotProps.data.lastname }}
+        </template>
+      </Column>
       <Column field="position" header="Lavozimi" :sortable="true" style="width: 15%"></Column>
       <Column field="permissionGroup" header="Huquq guruhi" style="width: 15%">
         <template #body="slotProps">
@@ -154,7 +157,7 @@ const viewLogs = (expert) => {
             <Button
               icon="pi pi-pencil"
               type="button"
-              class="vakil-action-btn p-button-text p-button-rounded"
+              class="vakil-action-btn p-button-text p-button-rounded p-button-info"
               @click="editButton(slotProps.data._id)"
               v-tooltip="'Tahrirlash'"
             />
@@ -162,7 +165,7 @@ const viewLogs = (expert) => {
               v-if="isSuperAdmin"
               icon="pi pi-history"
               type="button"
-              class="vakil-action-btn p-button-text p-button-rounded p-button-secondary"
+              class="vakil-action-btn p-button-text p-button-rounded p-button-warning"
               @click="viewLogs(slotProps.data)"
               v-tooltip="'Faoliyat loglarini ko\'rish'"
             />

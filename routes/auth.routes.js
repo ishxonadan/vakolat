@@ -109,7 +109,40 @@ module.exports = function(vakolat, JWT_SECRET) {
     }
     res.json({ status: "ok" })
   })
-  
+
+  // Change password for current user
+  router.post("/api/auth/change-password", verifyToken, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Joriy va yangi parol kiriting" })
+      }
+
+      if (String(newPassword).length < 6) {
+        return res.status(400).json({ error: "Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak" })
+      }
+
+      const user = await User.findById(req.user.id)
+      if (!user) {
+        return res.status(404).json({ error: "Foydalanuvchi topilmadi" })
+      }
+
+      const match = await bcrypt.compare(currentPassword, user.password)
+      if (!match) {
+        return res.status(400).json({ error: "Joriy parol noto'g'ri" })
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10)
+      await user.save()
+
+      res.json({ message: "Parol muvaffaqiyatli o'zgartirildi" })
+    } catch (error) {
+      console.error("Error changing password:", error)
+      res.status(500).json({ error: "Parolni o'zgartirishda xatolik" })
+    }
+  })
+
   // Protected route to get current user info
   router.get("/api/me", verifyToken, async (req, res) => {
     try {

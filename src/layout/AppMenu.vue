@@ -106,6 +106,17 @@ const menuItems = [
           },
         ]
       },
+      {
+        label: "Sozlamalar",
+        icon: 'pi pi-fw pi-cog',
+        items: [
+          {
+            label: "Parolni o'zgartirish",
+            icon: 'pi pi-fw pi-key',
+            to: '/settings',
+          },
+        ],
+      },
     ]
   },
 
