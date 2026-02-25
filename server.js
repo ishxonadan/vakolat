@@ -150,7 +150,16 @@ const razdelSchema = new mongoose.Schema(
     name: String,
     razdel_id: Number,
   },
-  { collection: 'razdel' }
+  { collection: "razdel" },
+)
+
+// Legacy secondary collection for dissertation categories (Kategoriya)
+const razdelsSchema = new mongoose.Schema(
+  {
+    name: String,
+    razdel_id: Number,
+  },
+  { collection: "razdels" },
 )
 
 const levelSchema = new mongoose.Schema({
@@ -210,6 +219,7 @@ const ticketSchema = new mongoose.Schema(
 
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
+const Razdels = yoqlama.model("Razdels", razdelsSchema)
 const Levels = yoqlama.model("Level", levelSchema)
 const Languages = yoqlama.model("Language", languageSchema)
 const Fields = yoqlama.model("Field", fieldSchema)
@@ -411,6 +421,19 @@ app.get("/api/diss/cats", verifyToken, async (req, res) => {
       .lean()
     // Ensure only valid entries (name + razdel_id) for dropdown
     const list = (Array.isArray(razdelData) ? razdelData : [])
+      .filter((doc) => doc.name != null && doc.razdel_id != null)
+      .map((doc) => ({ name: String(doc.name), razdel_id: Number(doc.razdel_id) }))
+    res.json(list)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Legacy categories for Kategoriya (collection 'razdels')
+app.get("/api/diss/razdels", verifyToken, async (req, res) => {
+  try {
+    const razdelsData = await Razdels.find().sort({ razdel_id: 1 }).lean()
+    const list = (Array.isArray(razdelsData) ? razdelsData : [])
       .filter((doc) => doc.name != null && doc.razdel_id != null)
       .map((doc) => ({ name: String(doc.name), razdel_id: Number(doc.razdel_id) }))
     res.json(list)

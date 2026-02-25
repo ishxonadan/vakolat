@@ -91,9 +91,9 @@ onMounted(async () => {
   try {
     loading.value = true;
 
-    // Load categories, levels, languages and soha fields in parallel
+    // Load Kategoriya (razdels), levels, languages and soha fields in parallel
     const [catsResult, levelsResult, langResult, fieldsResult] = await Promise.allSettled([
-      apiFetch('/api/diss/cats').then(r => r.json()),
+      apiFetch('/api/diss/razdels').then(r => r.json()),
       apiFetch('/api/diss/levels').then(r => r.json()),
       apiFetch('/api/diss/languages').then(r => r.json()),
       apiFetch('/api/diss/fields').then(r => r.json())

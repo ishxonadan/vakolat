@@ -44,7 +44,7 @@ const sohaOptions = ref([]);
 
 const loadCategories = async () => {
   try {
-    const response = await apiFetch('/api/diss/cats');
+    const response = await apiFetch('/api/diss/razdels');
     const data = await response.json();
     const list = Array.isArray(data) ? data : [];
     categories.value = list
