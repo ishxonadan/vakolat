@@ -42,12 +42,12 @@ module.exports = (vakolat) => {
     }
   })
 
-  // GET per-user dissertation statistics (adds, edits, enables/disables, etc.)
+  // GET per-user statistics (dissertations, registrations, one-day tickets, etc.)
   router.get("/audit-stats", requireRais, async (req, res) => {
     try {
       const { userId } = req.query
 
-      const match = { entityType: "dissertation" }
+      const match = {}
       if (userId) {
         match.user = userId
       }
@@ -62,31 +62,59 @@ module.exports = (vakolat) => {
           byUser.set(uid, {
             userId: uid,
             user: log.user || null,
+            // Dissertations
             addCount: 0,
             editCount: 0,
             disableCount: 0,
             enableCount: 0,
             totalDissertationActions: 0,
+            // Users (registration / vakillar)
+            registerUserCount: 0,
+            editExpertCount: 0,
+            totalUserActions: 0,
+            // One-day tickets
+            addTicketCount: 0,
+            viewTicketCount: 0,
+            totalTicketActions: 0,
           })
         }
         const entry = byUser.get(uid)
         switch (log.action) {
           case "add_dissertation":
             entry.addCount++
+            entry.totalDissertationActions++
             break
           case "edit_dissertation":
             entry.editCount++
+            entry.totalDissertationActions++
             break
           case "disable_dissertation":
             entry.disableCount++
+            entry.totalDissertationActions++
             break
           case "enable_dissertation":
             entry.enableCount++
+            entry.totalDissertationActions++
+            break
+          case "register_user":
+            entry.registerUserCount++
+            entry.totalUserActions++
+            break
+          case "edit_expert":
+            entry.editExpertCount++
+            entry.totalUserActions++
+            break
+          case "add_ticket":
+            entry.addTicketCount++
+            entry.totalTicketActions++
+            break
+          case "view_tickets":
+            entry.viewTicketCount++
+            entry.totalTicketActions++
             break
           default:
             break
         }
-        entry.totalDissertationActions++
       }
 
       const items = Array.from(byUser.values())

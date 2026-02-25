@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import TabView from 'primevue/tabview';
@@ -72,6 +72,22 @@ const loadStats = async () => {
   }
 };
 
+const dissertationUsers = computed(() =>
+  stats.value.filter((s) => s.totalDissertationActions > 0)
+);
+const ticketUsers = computed(() =>
+  stats.value.filter((s) => s.totalTicketActions > 0)
+);
+const registrationUsers = computed(() =>
+  stats.value.filter((s) => s.totalUserActions > 0)
+);
+
+const selectUserForLogs = (entry) => {
+  if (!entry) return;
+  selectedUserId.value = entry.userId;
+  loadLogs(1);
+};
+
 const actionLabel = (action) => {
   switch (action) {
     case 'login':
@@ -90,6 +106,14 @@ const actionLabel = (action) => {
       return "Dissertatsiyalar ro'yxatini ko'rdi";
     case 'view_dissertation_detail':
       return "Dissertatsiya ma'lumotini ko'rdi";
+    case 'register_user':
+      return "Foydalanuvchini ro'yxatga oldi";
+    case 'edit_expert':
+      return "Vakil ma'lumotlarini tahrirladi";
+    case 'add_ticket':
+      return "Bir martalik chipta yaratdi";
+    case 'view_tickets':
+      return "Bir martalik chiptalar ro'yxatini ko'rdi";
     default:
       return action || '';
   }
@@ -171,29 +195,89 @@ onMounted(() => {
       </TabPanel>
 
       <TabPanel header="Statistikalar">
-        <DataTable
-          :value="stats"
-          :loading="loadingStats"
-          responsiveLayout="scroll"
-        >
-          <Column field="user" header="Foydalanuvchi" style="width: 30%">
-            <template #body="slotProps">
-              <div v-if="slotProps.data.user">
-                <div class="font-semibold">{{ slotProps.data.user.nickname }}</div>
-                <div class="text-xs text-gray-500">
-                  {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
-                  ({{ slotProps.data.user.level }})
+        <!-- Registratsiya -->
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold mb-2">Registratsiya</h2>
+          <DataTable
+            :value="registrationUsers"
+            :loading="loadingStats"
+            responsiveLayout="scroll"
+          >
+            <Column field="user" header="Foydalanuvchi" style="width: 40%">
+              <template #body="slotProps">
+                <div v-if="slotProps.data.user">
+                  <div class="font-semibold cursor-pointer" @click="selectUserForLogs(slotProps.data)">
+                    {{ slotProps.data.user.nickname }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
+                    ({{ slotProps.data.user.level }})
+                  </div>
                 </div>
-              </div>
-              <span v-else class="text-gray-400 text-sm">Noma'lum</span>
-            </template>
-          </Column>
-          <Column field="addCount" header="Qo'shganlari" style="width: 14%"></Column>
-          <Column field="editCount" header="Tahrirlaganlari" style="width: 14%"></Column>
-          <Column field="disableCount" header="Bloklaganlari" style="width: 14%"></Column>
-          <Column field="enableCount" header="Faollashtirganlari" style="width: 14%"></Column>
-          <Column field="totalDissertationActions" header="Jami amal" style="width: 14%"></Column>
-        </DataTable>
+                <span v-else class="text-gray-400 text-sm">Noma'lum</span>
+              </template>
+            </Column>
+            <Column field="registerUserCount" header="Ro'yxatga olgan foydalanuvchilar" style="width: 30%"></Column>
+            <Column field="totalUserActions" header="Jami registratsiya amallari" style="width: 30%"></Column>
+          </DataTable>
+        </div>
+
+        <!-- Bir martalik chipta -->
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold mb-2">Bir martalik chipta</h2>
+          <DataTable
+            :value="ticketUsers"
+            :loading="loadingStats"
+            responsiveLayout="scroll"
+          >
+            <Column field="user" header="Foydalanuvchi" style="width: 40%">
+              <template #body="slotProps">
+                <div v-if="slotProps.data.user">
+                  <div class="font-semibold cursor-pointer" @click="selectUserForLogs(slotProps.data)">
+                    {{ slotProps.data.user.nickname }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
+                    ({{ slotProps.data.user.level }})
+                  </div>
+                </div>
+                <span v-else class="text-gray-400 text-sm">Noma'lum</span>
+              </template>
+            </Column>
+            <Column field="addTicketCount" header="Yaratgan chiptalari" style="width: 30%"></Column>
+            <Column field="totalTicketActions" header="Jami chipta amallari" style="width: 30%"></Column>
+          </DataTable>
+        </div>
+
+        <!-- Dissertatsiya -->
+        <div>
+          <h2 class="text-lg font-semibold mb-2">Dissertatsiya</h2>
+          <DataTable
+            :value="dissertationUsers"
+            :loading="loadingStats"
+            responsiveLayout="scroll"
+          >
+            <Column field="user" header="Foydalanuvchi" style="width: 30%">
+              <template #body="slotProps">
+                <div v-if="slotProps.data.user">
+                  <div class="font-semibold cursor-pointer" @click="selectUserForLogs(slotProps.data)">
+                    {{ slotProps.data.user.nickname }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
+                    ({{ slotProps.data.user.level }})
+                  </div>
+                </div>
+                <span v-else class="text-gray-400 text-sm">Noma'lum</span>
+              </template>
+            </Column>
+            <Column field="addCount" header="Qo'shganlari" style="width: 14%"></Column>
+            <Column field="editCount" header="Tahrirlaganlari" style="width: 14%"></Column>
+            <Column field="disableCount" header="Bloklaganlari" style="width: 14%"></Column>
+            <Column field="enableCount" header="Faollashtirganlari" style="width: 14%"></Column>
+            <Column field="totalDissertationActions" header="Jami dissertatsiya amallari" style="width: 24%"></Column>
+          </DataTable>
+        </div>
       </TabPanel>
     </TabView>
   </div>

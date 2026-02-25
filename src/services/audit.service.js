@@ -93,6 +93,25 @@ const attachApiAudit = (req, res, next) => {
         const uuid = parts.length > 3 ? parts[3] : null
         entityId = uuid || null
         action = "view_dissertation_detail"
+      } else if (req.path.startsWith("/api/admin/register") && req.method === "POST") {
+        // Foydalanuvchilar (registratsiya)
+        entityType = "user"
+        action = "register_user"
+      } else if (req.path.startsWith("/api/experts") && req.method === "PUT") {
+        // Vakillarni tahrirlash
+        entityType = "user"
+        const parts = req.path.split("/")
+        const expertId = parts.length > 3 ? parts[3] : null
+        entityId = expertId || null
+        action = "edit_expert"
+      } else if (req.path.startsWith("/api/tickets")) {
+        // Bir martalik chiptalar
+        entityType = "ticket"
+        if (req.method === "POST" && req.path === "/api/tickets") {
+          action = "add_ticket"
+        } else if (req.method === "GET") {
+          action = "view_tickets"
+        }
       }
 
       const payload = {
