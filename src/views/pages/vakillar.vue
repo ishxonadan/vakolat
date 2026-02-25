@@ -175,7 +175,7 @@ const viewLogs = (expert) => {
               type="button"
               class="vakil-action-btn vakil-action-btn--right p-button-text p-button-rounded p-button-success"
               @click="loginAsExpert(slotProps.data)"
-              v-tooltip="'Ekspert sifatida kirish'"
+              v-tooltip="'Vakil sifatida kirish'"
               :disabled="slotProps.data.isActive === false"
             />
           </div>

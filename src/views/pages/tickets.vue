@@ -2,7 +2,12 @@
   <div class="card">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-semibold">Chiptalar</h1>
-      <Button @click="$router.push('/ticket_add')" icon="pi pi-plus" label="Yangi chipta" />
+      <Button 
+        v-if="canCreate"
+        @click="$router.push('/ticket_add')" 
+        icon="pi pi-plus" 
+        label="Yangi chipta" 
+      />
     </div>
 
     <!-- Search Section -->
@@ -165,12 +170,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import apiService from '@/service/api.service';
+import authService from '@/service/auth.service';
 import LibraryLogo from '@/components/LibraryLogo.vue';
 
 const toast = useToast();
+const canCreate = computed(() => authService.hasPermission('create_tickets'));
 const allTickets = ref([]);
 const tickets = ref([]);
 const loading = ref(false);

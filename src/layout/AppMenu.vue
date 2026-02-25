@@ -29,8 +29,7 @@ const menuItems = [
             label: "Bir martalik chipta",
             icon: 'pi pi-fw pi-tags',
             to: '/tickets',
-            requiredLevel: 'admin',
-            requiredPermissions: ['manage_tickets'] // Specific permission
+            requiredPermissions: ['view_tickets']
           },
           {
             label: "Tashriflar",

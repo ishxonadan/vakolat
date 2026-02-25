@@ -332,7 +332,8 @@ const ALL_PERMISSIONS = [
   { name: "view_members",          description: "A'zo bo'lganlar ro'yxatini ko'rish" },
   // Foydalanuvchilar
   { name: "manage_users",          description: "Foydalanuvchilar (vakillar) boshqaruvi" },
-  { name: "manage_tickets",        description: "Bir martalik chiptalar boshqaruvi" },
+  { name: "view_tickets",          description: "Bir martalik chiptalar ro'yxatini ko'rish" },
+  { name: "create_tickets",        description: "Bir martalik chiptalar yaratish" },
   // Huquqlar
   { name: "manage_permissions",    description: "Huquqlar va huquq guruhlarini boshqarish" },
 ]
@@ -986,7 +987,7 @@ const createTicketsRoutes = () => {
     }
   }
 
-  router.get("/", async (req, res) => {
+  router.get("/", checkPermissions(["view_tickets"]), async (req, res) => {
     try {
       const tickets = await Tickets.find().sort({ createdAt: -1 })
       res.json(tickets)
@@ -996,7 +997,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  router.get("/:id", async (req, res) => {
+  router.get("/:id", checkPermissions(["view_tickets"]), async (req, res) => {
     try {
       const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
       if (!ticket) {
@@ -1009,7 +1010,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  router.get("/user/:passport", async (req, res) => {
+  router.get("/user/:passport", checkPermissions(["view_tickets"]), async (req, res) => {
     try {
       const user = await LibraryUsers.findOne({ passport: req.params.passport })
       if (!user) {
@@ -1022,7 +1023,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  router.post("/", async (req, res) => {
+  router.post("/", checkPermissions(["create_tickets"]), async (req, res) => {
     try {
       const { fullname, passport } = req.body
 
@@ -1132,7 +1133,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  router.get("/:id/qr", async (req, res) => {
+  router.get("/:id/qr", checkPermissions(["view_tickets"]), async (req, res) => {
     try {
       const ticket = await Tickets.findOne({ ticketId: req.params.id }).sort({ createdAt: -1 })
       if (!ticket) {
@@ -1156,7 +1157,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  router.get("/count/:passport", async (req, res) => {
+  router.get("/count/:passport", checkPermissions(["view_tickets"]), async (req, res) => {
     try {
       const user = await LibraryUsers.findOne({ passport: req.params.passport })
       const count = user ? user.ticketHistory.length : 0
@@ -1167,7 +1168,7 @@ const createTicketsRoutes = () => {
     }
   })
 
-  router.delete("/:id", async (req, res) => {
+  router.delete("/:id", checkPermissions(["create_tickets"]), async (req, res) => {
     try {
       const ticket = await Tickets.findOneAndDelete({ ticketId: req.params.id })
       if (!ticket) {

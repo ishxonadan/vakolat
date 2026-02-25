@@ -159,7 +159,6 @@ onMounted(() => {
                 <div class="font-semibold">{{ slotProps.data.user.nickname }}</div>
                 <div class="text-xs text-gray-500">
                   {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
-                  ({{ slotProps.data.user.level }})
                 </div>
               </div>
               <span v-else class="text-gray-400 text-sm">Noma'lum</span>
@@ -211,7 +210,6 @@ onMounted(() => {
                   </div>
                   <div class="text-xs text-gray-500">
                     {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
-                    ({{ slotProps.data.user.level }})
                   </div>
                 </div>
                 <span v-else class="text-gray-400 text-sm">Noma'lum</span>
@@ -238,7 +236,6 @@ onMounted(() => {
                   </div>
                   <div class="text-xs text-gray-500">
                     {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
-                    ({{ slotProps.data.user.level }})
                   </div>
                 </div>
                 <span v-else class="text-gray-400 text-sm">Noma'lum</span>
@@ -265,7 +262,6 @@ onMounted(() => {
                   </div>
                   <div class="text-xs text-gray-500">
                     {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
-                    ({{ slotProps.data.user.level }})
                   </div>
                 </div>
                 <span v-else class="text-gray-400 text-sm">Noma'lum</span>

@@ -30,6 +30,16 @@ const attachApiAudit = (req, res, next) => {
         return
       }
 
+      // Skip noisy technical endpoints that are not useful in vakillar logs
+      const noisyPaths = new Set([
+        "/api/me",
+        "/api/admin/audit-logs",
+        "/api/admin/audit-stats",
+      ])
+      if (noisyPaths.has(req.path)) {
+        return
+      }
+
       let actor = req.user || null
 
       // If route didn't populate req.user (e.g. uses only verifyToken inside middleware),

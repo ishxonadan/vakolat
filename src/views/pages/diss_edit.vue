@@ -134,7 +134,28 @@ onMounted(async () => {
     collective.value = data.collective || '';
     devision.value = data.devision || '';
     year.value = data.year || '';
-    approved_date.value = data.approved_date ? new Date(data.approved_date) : null;
+
+    // approved_date in DB may be a real Date (ISO string) or legacy string "dd.MM.yyyy"
+    if (data.approved_date) {
+      if (data.approved_date instanceof Date) {
+        approved_date.value = data.approved_date;
+      } else if (typeof data.approved_date === 'string') {
+        const match = data.approved_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+        if (match) {
+          const [, dd, mm, yyyy] = match;
+          approved_date.value = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+        } else {
+          // Fallback for ISO or other parseable formats
+          const parsed = new Date(data.approved_date);
+          approved_date.value = isNaN(parsed.getTime()) ? null : parsed;
+        }
+      } else {
+        const parsed = new Date(data.approved_date);
+        approved_date.value = isNaN(parsed.getTime()) ? null : parsed;
+      }
+    } else {
+      approved_date.value = null;
+    }
     additional.value = data.additional || '';
     soha_kodi.value = data.soha_kodi || '';
     // If document's soha_kodi is not in the list (e.g. legacy free text), add it so dropdown can show selection
