@@ -12,4 +12,27 @@
 
 **Akademik daraja (levels)** — Level schema: name, mark (unique), isActive. Seed when empty: nomzod, doktor, doktor_fan. CRUD GET/POST/PUT/DELETE `/diss/levels`. Admin page `/diss/akademik-daraja` (diss_akademik_daraja.vue). Add/edit use levelOptions from API (diss add/edit already use GET /diss/levels).
 
-**Routes/menu** — Dissertatsiya: Hujjatlar, Tillar (`/diss/languages`), Soha (`/diss/soha`), Akademik daraja (`/diss/akademik-daraja`), To'liq matnga ruxsat. Permission `view_dissertations` for diss pages.
+**Routes/menu** — Dissertatsiya: Hujjatlar, Tillar (`/diss/languages`), Soha (`/diss/soha`), Akademik daraja (`/diss/akademik-daraja`), To'liq matnga ruxsat. Each menu item guarded by its specific permission (see Huquqlar).
+
+**Huquqlar (permissions)** — Permission model: `name`, `description`, `isActive`. PermissionGroup model: `name`, `description`, `permissions[]` (ObjectId refs), `isActive`. User has `permissionGroup` (single group). Access chain: User → permissionGroup → permissions[].name. `rais` level bypasses all checks. Middleware: `checkPermissions(names[])` in `src/middleware/auth.middleware.js` — traverses the chain, requires ALL listed names. `verifyToken` for read-only routes.
+
+Named permissions (seeded on startup, upsert-safe):
+- `view_dissertations` — list/view diss
+- `add_dissertation` — POST /api/diss_save
+- `edit_dissertation` — POST /api/diss_save/:uuid (incl. hide/unhide)
+- `delete_dissertation` — toggle is_deleted UI guard
+- `download_dissertation` — GET /api/diss_file/:uuid
+- `manage_diss_languages` — CRUD /api/diss/languages POST/PUT/DELETE
+- `manage_diss_levels` — CRUD /api/diss/levels POST/PUT/DELETE
+- `manage_diss_fields` — CRUD /api/diss/fields POST/PUT/DELETE
+- `manage_diss_categories` — razdel management
+- `manage_ip_access` — IP access page
+- `view_statistics` — tashriflar
+- `view_members` — a'zo bo'lganlar
+- `manage_users` — vakillar
+- `manage_tickets` — chiptalar
+- `manage_permissions` — huquqlar page
+
+Default groups seeded: "Admin" (all), "Dissertatsiya mutaxassisi" (view+add+edit+download+stats), "Kuzatuvchi" (view only). Login returns `permissions` array (names). Auth headers: all diss API calls use `apiFetch` from `src/utils/api.js` which injects `Authorization: Bearer <token>`.
+
+**Impersonation (superuser → vakil → back)** — Admin can "enter" a vakil via `/api/admin/login-as-expert`. Backend (`routes/admin.routes.js`) must: find the expert, populate `permissionGroup.permissions`, and return `{ token, user, permissions[] }` where `permissions` is the expert's active permission names. Frontend (`vakillar.vue`) must, before switching, save current session to `originalUser = { token, user, permissions }` and set `isImpersonating = 'true'`, then replace `token`, `user` and `permissions` with the expert's values and reload `/`. Topbar (`AppTopbar.vue`) must detect impersonation from localStorage and `originalUser`, and "Return to admin" must restore `token`, `user` and `permissions` from `originalUser`, clear impersonation flags, and redirect to `/vakillar`. This guarantees the menu and access rights match the active (real or impersonated) user.

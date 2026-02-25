@@ -46,20 +46,24 @@
           </template>
         </Column>
         <Column field="name" header="Nomi" sortable />
-        <Column header="Amallar" style="width: 100px">
+        <Column header="Amallar" style="width: 160px">
           <template #body="{ data }">
             <Button
               icon="pi pi-pencil"
-              text
-              class="p-button-sm"
-              v-tooltip.top="'Tahrirlash'"
+              label="Tahrirlash"
+              severity="secondary"
+              size="small"
+              outlined
+              class="rounded-lg"
               @click="openEditDialog(data)"
             />
             <Button
               icon="pi pi-trash"
-              text
-              class="p-button-sm p-button-danger"
-              v-tooltip.top="'O\'chirish'"
+              label="O'chirish"
+              severity="danger"
+              size="small"
+              outlined
+              class="rounded-lg"
               @click="confirmDelete(data)"
             />
           </template>
@@ -111,6 +115,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { apiFetch } from '@/utils/api'
 import Toast from 'primevue/toast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -154,7 +159,7 @@ const fetchFields = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const res = await fetch('/api/diss/fields')
+    const res = await apiFetch('/api/diss/fields')
     if (!res.ok) throw new Error('Yuklashda xatolik')
     fields.value = await res.json()
   } catch (e) {
@@ -199,14 +204,8 @@ const saveField = async () => {
   try {
     const url = isEdit.value ? `/api/diss/fields/${editingId.value}` : '/api/diss/fields'
     const method = isEdit.value ? 'PUT' : 'POST'
-    const body = isEdit.value
-      ? { name: name.trim() }
-      : { code: code.trim(), name: name.trim() }
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
+    const body = isEdit.value ? { name: name.trim() } : { code: code.trim(), name: name.trim() }
+    const res = await apiFetch(url, { method, body: JSON.stringify(body) })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       throw new Error(data.message || 'Saqlashda xatolik')
@@ -229,7 +228,7 @@ const confirmDelete = (row) => {
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        const res = await fetch(`/api/diss/fields/${row._id}`, { method: 'DELETE' })
+        const res = await apiFetch(`/api/diss/fields/${row._id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('O\'chirishda xatolik')
         toast.add({ severity: 'success', summary: 'O\'chirildi', life: 2000 })
         await fetchFields()

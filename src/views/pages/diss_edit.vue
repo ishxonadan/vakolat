@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import { apiFetch } from '@/utils/api';
+import authService from '@/service/auth.service';
 import { useRoute, useRouter } from 'vue-router';
 
 const toast = useToast();
@@ -48,7 +50,7 @@ const invalidLanguage = computed(() => validLanguageCodes.value.length > 0 && !v
 
 const loadLevels = async () => {
   try {
-    const response = await fetch('/api/diss/levels');
+    const response = await apiFetch('/api/diss/levels');
     const data = await response.json();
     levelOptions.value = (data || [])
       .filter(l => l.isActive === true)
@@ -69,7 +71,7 @@ const loadLevels = async () => {
 
 const loadLanguages = async () => {
   try {
-    const response = await fetch('/api/diss/languages');
+    const response = await apiFetch('/api/diss/languages');
     const data = await response.json();
     languageOptions.value = (data || [])
       .filter(lang => lang.isActive === true)
@@ -91,10 +93,10 @@ onMounted(async () => {
 
     // Load categories, levels, languages and soha fields in parallel
     const [catsResult, levelsResult, langResult, fieldsResult] = await Promise.allSettled([
-      fetch('/api/diss/cats').then(r => r.json()),
-      fetch('/api/diss/levels').then(r => r.json()),
-      fetch('/api/diss/languages').then(r => r.json()),
-      fetch('/api/diss/fields').then(r => r.json())
+      apiFetch('/api/diss/cats').then(r => r.json()),
+      apiFetch('/api/diss/levels').then(r => r.json()),
+      apiFetch('/api/diss/languages').then(r => r.json()),
+      apiFetch('/api/diss/fields').then(r => r.json())
     ]);
 
     const catsData = catsResult.status === 'fulfilled' && Array.isArray(catsResult.value) ? catsResult.value : [];
@@ -118,7 +120,7 @@ onMounted(async () => {
     sohaOptions.value = fieldsData.map(item => ({ label: `${item.code} - ${item.name}`, value: item.code }));
 
     // Load document data
-    const response = await fetch(`/api/diss_info/${uuid}`);
+    const response = await apiFetch(`/api/diss_info/${uuid}`);
     if (!response.ok) {
       throw new Error('Failed to fetch document');
     }
@@ -204,6 +206,7 @@ const onFileSelect = async (event) => {
   try {
     const response = await fetch('/api/diss/upload', {
       method: 'POST',
+      headers: { 'Authorization': `Bearer ${authService.getToken()}` },
       body: formData
     });
 
@@ -277,11 +280,8 @@ async function saveData() {
   }
 
   try {
-    const response = await fetch(`/api/diss_save/${uuid}`, {
+    const response = await apiFetch(`/api/diss_save/${uuid}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify(data)
     });
 

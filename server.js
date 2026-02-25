@@ -300,6 +300,84 @@ app.get("/api/admin/test-permissions", [verifyToken, checkPermissions(["manage_u
   res.json({ message: "You have manage_users permission!" })
 })
 
+// ─── Seed all permissions and default permission groups ───────────────────────
+const ALL_PERMISSIONS = [
+  // Dissertatsiya – hujjatlar
+  { name: "view_dissertations",    description: "Dissertatsiyalar ro'yxatini ko'rish" },
+  { name: "add_dissertation",      description: "Yangi dissertatsiya qo'shish" },
+  { name: "edit_dissertation",     description: "Dissertatsiyani tahrirlash" },
+  { name: "delete_dissertation",   description: "Dissertatsiyani yashirish / o'chirish" },
+  { name: "download_dissertation", description: "Dissertatsiya to'liq matnini yuklab olish" },
+  // Dissertatsiya – qo'shimcha ma'lumotlar
+  { name: "manage_diss_languages", description: "Tillarni boshqarish (qo'shish, tahrirlash, o'chirish)" },
+  { name: "manage_diss_levels",    description: "Akademik darajalarni boshqarish" },
+  { name: "manage_diss_fields",    description: "Soha kodlarini boshqarish" },
+  { name: "manage_diss_categories",description: "Kategoriyalarni (razdel) boshqarish" },
+  // IP ruxsat
+  { name: "manage_ip_access",      description: "To'liq matnga IP ruxsatlarni boshqarish" },
+  // Statistika / tashriflar
+  { name: "view_statistics",       description: "Statistika va tashriflarni ko'rish" },
+  { name: "view_members",          description: "A'zo bo'lganlar ro'yxatini ko'rish" },
+  // Foydalanuvchilar
+  { name: "manage_users",          description: "Foydalanuvchilar (vakillar) boshqaruvi" },
+  { name: "manage_tickets",        description: "Bir martalik chiptalar boshqaruvi" },
+  // Huquqlar
+  { name: "manage_permissions",    description: "Huquqlar va huquq guruhlarini boshqarish" },
+]
+
+const seedPermissionsAndGroups = async () => {
+  // Upsert each permission (insert if not exists)
+  for (const perm of ALL_PERMISSIONS) {
+    const exists = await Permission.findOne({ name: perm.name })
+    if (!exists) {
+      await Permission.create({ ...perm, isActive: true })
+      console.log("Seeded permission:", perm.name)
+    }
+  }
+
+  // Build name→_id map
+  const allPerms = await Permission.find({ isActive: true }).lean()
+  const permMap = {}
+  for (const p of allPerms) permMap[p.name] = p._id
+
+  // Helper: resolve names to IDs
+  const ids = (names) => names.filter((n) => permMap[n]).map((n) => permMap[n])
+
+  // Default groups
+  const defaultGroups = [
+    {
+      name: "Admin",
+      description: "Barcha huquqlarga ega administrator",
+      permissions: ids(ALL_PERMISSIONS.map((p) => p.name)),
+    },
+    {
+      name: "Dissertatsiya mutaxassisi",
+      description: "Dissertatsiyalarni ko'rish, qo'shish va tahrirlash",
+      permissions: ids([
+        "view_dissertations", "add_dissertation", "edit_dissertation",
+        "download_dissertation", "view_statistics",
+      ]),
+    },
+    {
+      name: "Kuzatuvchi",
+      description: "Faqat ko'rish huquqlari",
+      permissions: ids(["view_dissertations", "view_statistics", "view_members"]),
+    },
+  ]
+
+  for (const group of defaultGroups) {
+    const exists = await PermissionGroup.findOne({ name: group.name })
+    if (!exists) {
+      await PermissionGroup.create({ ...group, isActive: true })
+      console.log("Seeded permission group:", group.name)
+    }
+  }
+}
+
+// Run seed on startup (non-blocking)
+seedPermissionsAndGroups().catch((e) => console.error("Permission seed error:", e))
+// ──────────────────────────────────────────────────────────────────────────────
+
 // Seed default categories (razdel) if none exist; each doc must have razdel_id (Number) and name
 const seedCatsIfEmpty = async () => {
   const count = await Categories.countDocuments()
@@ -312,7 +390,7 @@ const seedCatsIfEmpty = async () => {
   }
 }
 
-app.get("/api/diss/cats", async (req, res) => {
+app.get("/api/diss/cats", verifyToken, async (req, res) => {
   try {
     await seedCatsIfEmpty()
     const razdelData = await Categories.find()
@@ -347,7 +425,7 @@ const seedLevelsIfEmpty = async () => {
   }
 }
 
-app.get("/api/diss/levels", async (req, res) => {
+app.get("/api/diss/levels", verifyToken, async (req, res) => {
   try {
     await seedLevelsIfEmpty()
     const levelData = await Levels.find({}).sort({ createdAt: 1 }).lean()
@@ -357,7 +435,7 @@ app.get("/api/diss/levels", async (req, res) => {
   }
 })
 
-app.post("/api/diss/levels", async (req, res) => {
+app.post("/api/diss/levels", checkPermissions(["manage_diss_levels"]), async (req, res) => {
   try {
     const { name, mark, isActive = true } = req.body || {}
     if (!name || !mark) {
@@ -378,7 +456,7 @@ app.post("/api/diss/levels", async (req, res) => {
   }
 })
 
-app.put("/api/diss/levels/:id", async (req, res) => {
+app.put("/api/diss/levels/:id", checkPermissions(["manage_diss_levels"]), async (req, res) => {
   try {
     const id = req.params.id
     const { name, mark, isActive } = req.body || {}
@@ -394,7 +472,7 @@ app.put("/api/diss/levels/:id", async (req, res) => {
   }
 })
 
-app.delete("/api/diss/levels/:id", async (req, res) => {
+app.delete("/api/diss/levels/:id", checkPermissions(["manage_diss_levels"]), async (req, res) => {
   try {
     const doc = await Levels.findByIdAndDelete(req.params.id)
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
@@ -474,7 +552,7 @@ const seedLanguagesIfEmpty = async () => {
   }
 }
 
-app.get("/api/diss/languages", async (req, res) => {
+app.get("/api/diss/languages", verifyToken, async (req, res) => {
   try {
     await seedLanguagesIfEmpty()
     const list = await Languages.find().sort({ createdAt: 1 }).lean()
@@ -484,7 +562,7 @@ app.get("/api/diss/languages", async (req, res) => {
   }
 })
 
-app.post("/api/diss/languages", async (req, res) => {
+app.post("/api/diss/languages", checkPermissions(["manage_diss_languages"]), async (req, res) => {
   try {
     const { name, code, isActive = true, aliases } = req.body || {}
     if (!name || !code) {
@@ -506,7 +584,7 @@ app.post("/api/diss/languages", async (req, res) => {
   }
 })
 
-app.put("/api/diss/languages/:id", async (req, res) => {
+app.put("/api/diss/languages/:id", checkPermissions(["manage_diss_languages"]), async (req, res) => {
   try {
     const id = req.params.id
     const { name, code, isActive, aliases } = req.body || {}
@@ -523,7 +601,7 @@ app.put("/api/diss/languages/:id", async (req, res) => {
   }
 })
 
-app.delete("/api/diss/languages/:id", async (req, res) => {
+app.delete("/api/diss/languages/:id", checkPermissions(["manage_diss_languages"]), async (req, res) => {
   try {
     const doc = await Languages.findByIdAndDelete(req.params.id)
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
@@ -549,7 +627,7 @@ const seedFieldsIfEmpty = async () => {
   }
 }
 
-app.get("/api/diss/fields", async (req, res) => {
+app.get("/api/diss/fields", verifyToken, async (req, res) => {
   try {
     await seedFieldsIfEmpty()
     const list = await Fields.find().sort({ code: 1 }).lean()
@@ -559,7 +637,7 @@ app.get("/api/diss/fields", async (req, res) => {
   }
 })
 
-app.post("/api/diss/fields", async (req, res) => {
+app.post("/api/diss/fields", checkPermissions(["manage_diss_fields"]), async (req, res) => {
   try {
     const { code, name } = req.body || {}
     if (!code || !name) {
@@ -579,7 +657,7 @@ app.post("/api/diss/fields", async (req, res) => {
   }
 })
 
-app.put("/api/diss/fields/:id", async (req, res) => {
+app.put("/api/diss/fields/:id", checkPermissions(["manage_diss_fields"]), async (req, res) => {
   try {
     const id = req.params.id
     const { code, name } = req.body || {}
@@ -594,7 +672,7 @@ app.put("/api/diss/fields/:id", async (req, res) => {
   }
 })
 
-app.delete("/api/diss/fields/:id", async (req, res) => {
+app.delete("/api/diss/fields/:id", checkPermissions(["manage_diss_fields"]), async (req, res) => {
   try {
     const doc = await Fields.findByIdAndDelete(req.params.id)
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
@@ -604,7 +682,7 @@ app.delete("/api/diss/fields/:id", async (req, res) => {
   }
 })
 
-app.post("/api/diss/upload", upload.single("demo[]"), (req, res) => {
+app.post("/api/diss/upload", verifyToken, upload.single("demo[]"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded or invalid file format" })
   }
@@ -620,7 +698,7 @@ function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-app.get("/api/diss_list/:page?", async (req, res) => {
+app.get("/api/diss_list/:page?", checkPermissions(["view_dissertations"]), async (req, res) => {
   try {
     const page = Number.parseInt(req.params.page, 10) || 1
     const limit = Math.min(Number.parseInt(req.query.limit, 10) || 30, 100)
@@ -654,7 +732,7 @@ app.get("/api/diss_list/:page?", async (req, res) => {
   }
 })
 
-app.get("/api/diss_info/:uuid?", async (req, res) => {
+app.get("/api/diss_info/:uuid?", checkPermissions(["view_dissertations"]), async (req, res) => {
   try {
     const uuid = req.params.uuid
     const result = await Documents.findOne({ uuid: uuid })
@@ -668,7 +746,7 @@ const folderplace = process.env.DISS_STORAGE_PATH || path.resolve(__dirname, "go
 const backupFolder = path.resolve(__dirname, "backup")
 const uploadFolder = uploadsDir
 
-app.get("/api/diss_file/:uuid", (req, res) => {
+app.get("/api/diss_file/:uuid", checkPermissions(["download_dissertation"]), (req, res) => {
   const uuid = req.params.uuid
   const filePath = path.join(folderplace, `${uuid}.pdf`)
 
@@ -681,7 +759,7 @@ app.get("/api/diss_file/:uuid", (req, res) => {
   }
 })
 
-app.post("/api/diss_save/:uuid", async (req, res) => {
+app.post("/api/diss_save/:uuid", checkPermissions(["edit_dissertation"]), async (req, res) => {
   try {
     const requestData = req.body
     const uuid = req.params.uuid
@@ -760,7 +838,7 @@ app.post("/api/diss_save/:uuid", async (req, res) => {
   }
 })
 
-app.post("/api/diss_save", async (req, res) => {
+app.post("/api/diss_save", checkPermissions(["add_dissertation"]), async (req, res) => {
   try {
     const requestData = req.body
     const generatedUuid = uuidv4()

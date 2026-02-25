@@ -770,7 +770,7 @@ module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
     }
   })
 
-  // Login as expert (for superadmins only)
+  // Login as expert (for superadmins only) – returns token, user, and expert's permissions for menu
   router.post("/login-as-expert", checkUserLevel("rais"), async (req, res) => {
     try {
       const { expertId } = req.body
@@ -779,13 +779,14 @@ module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
         return res.status(400).json({ error: "Expert ID is required" })
       }
 
-      // Find the expert
       const expert = await User.findById(expertId)
+        .populate({ path: "permissionGroup", populate: { path: "permissions", select: "name isActive" } })
+        .lean()
+
       if (!expert) {
         return res.status(404).json({ error: "Expert not found" })
       }
 
-      // Generate token for the expert
       const token = jwt.sign(
         {
           id: expert._id,
@@ -793,11 +794,14 @@ module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
           level: expert.level,
           firstname: expert.firstname,
           lastname: expert.lastname,
-          impersonatedBy: req.user.id, // Add this to track who is impersonating
+          impersonatedBy: req.user.id,
         },
         JWT_SECRET,
         { expiresIn: "1h" },
       )
+
+      const groupPerms = expert.permissionGroup?.permissions || []
+      const permissions = groupPerms.filter((p) => p.isActive !== false).map((p) => p.name)
 
       res.status(200).json({
         token,
@@ -808,6 +812,7 @@ module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
           lastname: expert.lastname,
           level: expert.level,
         },
+        permissions,
       })
     } catch (error) {
       console.error("Error logging in as expert:", error)

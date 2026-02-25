@@ -135,27 +135,19 @@ class AuthService {
 
   hasPermission(permission) {
     if (this.getUserLevel() === "rais") {
-      console.log("👑 Superadmin - has all permissions")
       return true
     }
-    const hasIt = this.permissions.includes(permission)
-    console.log(`🔐 Permission check for '${permission}':`, hasIt)
-    return hasIt
+    const perms = this.getPermissions()
+    return perms.includes(permission)
   }
 
   hasPermissions(requiredPermissions) {
-    console.log("🔐 Checking permissions:", requiredPermissions)
-
+    if (!requiredPermissions || requiredPermissions.length === 0) return true
     if (this.getUserLevel() === "rais") {
-      console.log("👑 Superadmin - has all permissions")
       return true
     }
-
-    const result = requiredPermissions.every((permission) => this.permissions.includes(permission))
-    console.log("🔐 Permission check result:", result)
-    console.log("🔐 User permissions:", this.permissions)
-
-    return result
+    const perms = this.getPermissions()
+    return requiredPermissions.every((p) => perms.includes(p))
   }
 
   hasAccess(requiredLevel) {
@@ -244,11 +236,9 @@ class AuthService {
         this.setToken(data.token)
         this.setUser(data.user)
 
-        // Store permissions if available
-        if (data.permissions) {
-          this.permissions = data.permissions
-          localStorage.setItem("permissions", JSON.stringify(data.permissions))
-        }
+        // Always set permissions from server (array of permission names for menu/API)
+        this.permissions = Array.isArray(data.permissions) ? data.permissions : []
+        localStorage.setItem("permissions", JSON.stringify(this.permissions))
 
         console.log("✅ Auth data stored successfully")
         return { success: true, user: data.user }

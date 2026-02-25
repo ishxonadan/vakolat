@@ -36,15 +36,13 @@ const menuItems = [
             label: "Tashriflar",
             icon: 'pi pi-fw pi-chart-bar',
             to: '/tashriflar',
-            requiredLevel: 'admin',
             requiredPermissions: ['view_statistics']
           },
           {
             label: "A'zo bo'lganlar",
             icon: 'pi pi-fw pi-users',
             to: '/azo-bolganlar',
-            requiredLevel: 'admin',
-            requiredPermissions: ['view_statistics']
+            requiredPermissions: ['view_members']
           },
         ]
       },
@@ -62,25 +60,25 @@ const menuItems = [
             label: 'Tillar', 
             icon: 'pi pi-fw pi-language', 
             to: '/diss/languages',
-            requiredPermissions: ['view_dissertations']
+            requiredPermissions: ['manage_diss_languages']
           },
           { 
             label: 'Soha', 
             icon: 'pi pi-fw pi-list', 
             to: '/diss/soha',
-            requiredPermissions: ['view_dissertations']
+            requiredPermissions: ['manage_diss_fields']
           },
           { 
             label: 'Akademik daraja', 
             icon: 'pi pi-fw pi-book', 
             to: '/diss/akademik-daraja',
-            requiredPermissions: ['view_dissertations']
+            requiredPermissions: ['manage_diss_levels']
           },
           { 
             label: "To'liq matnga ruxsat", 
             icon: 'pi pi-fw pi-globe', 
             to: '/diss/ip-access',
-            requiredPermissions: ['view_statistics']
+            requiredPermissions: ['manage_ip_access']
           },
         ]
       },
@@ -92,15 +90,13 @@ const menuItems = [
             label: "Vakillar",
             icon: 'pi pi-fw pi-users',
             to: '/vakillar',
-            requiredLevel: 'admin',
-            requiredPermissions: ['manage_users'] // Specific permission
+            requiredPermissions: ['manage_users']
           },
           {
             label: "Huquqlar",
             icon: 'pi pi-fw pi-key',
             to: '/huquqlar',
-            requiredLevel: 'rais',
-            requiredPermissions: ['manage_permissions'] // Specific permission
+            requiredPermissions: ['manage_permissions']
           },
         ]
       },

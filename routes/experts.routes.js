@@ -11,11 +11,12 @@ module.exports = (vakolat, JWT_SECRET) => {
   // Get experts - protected with token verification
   router.get("/", verifyToken, async (req, res) => {
     try {
-      // Fetch experts with selected fields only (excluding password)
       const expertList = await User.find(
         { level: "expert" },
-        "nickname firstname lastname position language", // Only select these fields
+        "nickname firstname lastname position language isActive permissionGroup",
       )
+        .populate("permissionGroup", "name _id")
+        .lean()
       res.json(expertList)
     } catch (error) {
       res.status(500).json({ error: "Failed to retrieve experts." })
@@ -32,8 +33,10 @@ module.exports = (vakolat, JWT_SECRET) => {
         return res.status(400).json({ error: "Invalid expert ID format" })
       }
 
-      // Find the expert by ID
-      const expert = await User.findById(expertId, "-password") // Exclude password
+      // Find the expert by ID (populate permissionGroup for edit form)
+      const expert = await User.findById(expertId, "-password")
+        .populate("permissionGroup", "name _id")
+        .lean()
 
       if (!expert) {
         return res.status(404).json({ error: "Expert not found" })
@@ -55,7 +58,7 @@ module.exports = (vakolat, JWT_SECRET) => {
   router.put("/:id", checkUserLevel("admin"), async (req, res) => {
     try {
       const expertId = req.params.id
-      const { nickname, firstname, lastname, position, password, language } = req.body
+      const { nickname, firstname, lastname, position, password, language, permissionGroup, isActive } = req.body
 
       // Validate MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(expertId)) {
@@ -70,11 +73,13 @@ module.exports = (vakolat, JWT_SECRET) => {
       }
 
       // Update fields
-      expert.nickname = nickname
-      expert.firstname = firstname
-      expert.lastname = lastname
-      expert.position = position || ""
-      expert.language = language || "uz"
+      if (nickname !== undefined) expert.nickname = nickname
+      if (firstname !== undefined) expert.firstname = firstname
+      if (lastname !== undefined) expert.lastname = lastname
+      if (position !== undefined) expert.position = position || ""
+      if (language !== undefined) expert.language = language || "uz"
+      if (permissionGroup !== undefined) expert.permissionGroup = permissionGroup || null
+      if (isActive !== undefined) expert.isActive = isActive !== false
 
       // Update password if provided
       if (password) {

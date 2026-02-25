@@ -53,34 +53,23 @@ const logout = () => {
   router.push('/auth/login');
 };
 
-// Return to original admin account
+// Return to original (superuser) account and clear impersonation
 const returnToAdmin = () => {
-  if (originalUser.value) {
-    console.log('Returning to admin account:', originalUser.value);
-    
-    try {
-      // First, restore the original admin token
-      localStorage.setItem('token', originalUser.value.token);
-      
-      // If user object exists in originalUser, restore it
-      if (originalUser.value.user) {
-        localStorage.setItem('user', 
-          typeof originalUser.value.user === 'string' 
-            ? originalUser.value.user 
-            : JSON.stringify(originalUser.value.user)
-        );
-      }
-      
-      // Clear impersonation flags
-      localStorage.removeItem('isImpersonating');
-      localStorage.removeItem('originalUser');
-      
-      // Force a complete page reload and redirect to experts page
-      // This ensures the authentication state is fully refreshed before navigation
-      window.location.href = '/vakillar';
-    } catch (error) {
-      console.error('Error returning to admin account:', error);
+  const original = originalUser.value;
+  if (!original) return;
+  try {
+    localStorage.setItem('token', original.token);
+    if (original.user) {
+      localStorage.setItem('user', typeof original.user === 'string' ? original.user : JSON.stringify(original.user));
     }
+    if (Array.isArray(original.permissions)) {
+      localStorage.setItem('permissions', JSON.stringify(original.permissions));
+    }
+    localStorage.removeItem('isImpersonating');
+    localStorage.removeItem('originalUser');
+    window.location.href = '/vakillar';
+  } catch (error) {
+    console.error('Error returning to admin account:', error);
   }
 };
 </script>

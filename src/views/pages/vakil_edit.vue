@@ -3,6 +3,11 @@ import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useRoute, useRouter } from 'vue-router';
 import apiService from '@/service/api.service';
+import ProgressSpinner from 'primevue/progressspinner';
+import InputText from 'primevue/inputtext';
+import Dropdown from 'primevue/dropdown';
+import Checkbox from 'primevue/checkbox';
+import Button from 'primevue/button';
 
 const toast = useToast();
 const route = useRoute();
@@ -30,7 +35,7 @@ onMounted(async () => {
     
     // Load expert data
     console.log('Fetching expert with ID:', id);
-    const data = await apiService.get(`/api/experts/${id}`);
+    const data = await apiService.get(`/experts/${id}`);
     console.log('Expert data received:', data);
     
     nickname.value = data.nickname;
@@ -84,7 +89,7 @@ async function saveData() {
   
   try {
     console.log('Updating expert with ID:', id, 'Data:', data);
-    await apiService.put(`/api/experts/${id}`, data);
+    await apiService.put(`/experts/${id}`, data);
     
     toast.add({ 
       severity: 'success', 
@@ -98,11 +103,7 @@ async function saveData() {
     }, 2000);
   } catch (error) {
     console.error('Error updating expert:', error);
-    let errorMsg = "Serverdan xato javob keldi";
-    if (error && error.error) {
-      errorMsg = error.error;
-    }
-    
+    const errorMsg = error?.message || error?.error || "Serverdan xato javob keldi";
     toast.add({ 
       severity: 'warn', 
       summary: 'Xato', 

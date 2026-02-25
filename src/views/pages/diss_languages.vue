@@ -134,6 +134,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { apiFetch } from '@/utils/api'
 import Toast from 'primevue/toast'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -168,7 +169,7 @@ const fetchLanguages = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const res = await fetch('/api/diss/languages')
+    const res = await apiFetch('/api/diss/languages')
     if (!res.ok) throw new Error('Yuklashda xatolik')
     languages.value = await res.json()
   } catch (e) {
@@ -216,14 +217,8 @@ const saveLanguage = async () => {
   try {
     const url = isEdit.value ? `/api/diss/languages/${editingId.value}` : '/api/diss/languages'
     const method = isEdit.value ? 'PUT' : 'POST'
-    const body = isEdit.value
-      ? { name: name.trim(), code: code.trim(), aliases, isActive }
-      : { name: name.trim(), code: code.trim(), aliases, isActive }
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
+    const body = { name: name.trim(), code: code.trim(), aliases, isActive }
+    const res = await apiFetch(url, { method, body: JSON.stringify(body) })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       throw new Error(data.message || 'Saqlashda xatolik')
@@ -240,9 +235,8 @@ const saveLanguage = async () => {
 
 const toggleActive = async (row, value) => {
   try {
-    const res = await fetch(`/api/diss/languages/${row._id}`, {
+    const res = await apiFetch(`/api/diss/languages/${row._id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !!value })
     })
     if (!res.ok) throw new Error('Yangilashda xatolik')
@@ -265,7 +259,7 @@ const confirmDelete = (row) => {
     acceptClass: 'p-button-danger rounded-lg',
     accept: async () => {
       try {
-        const res = await fetch(`/api/diss/languages/${row._id}`, { method: 'DELETE' })
+        const res = await apiFetch(`/api/diss/languages/${row._id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error("O'chirishda xatolik")
         toast.add({ severity: 'success', summary: "Muvaffaqiyat", detail: "Til o'chirildi", life: 2000 })
         await fetchLanguages()

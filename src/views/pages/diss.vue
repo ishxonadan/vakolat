@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import authService from '@/service/auth.service';
 import ProgressSpinner from 'primevue/progressspinner';
 import Message from 'primevue/message';
 import DataTable from 'primevue/datatable';
@@ -16,6 +17,12 @@ import InputSwitch from 'primevue/inputswitch';
 
 const router = useRouter();
 const toast = useToast();
+
+const canView      = computed(() => authService.hasPermission('view_dissertations'))
+const canAdd       = computed(() => authService.hasPermission('add_dissertation'))
+const canEdit      = computed(() => authService.hasPermission('edit_dissertation'))
+const canDelete    = computed(() => authService.hasPermission('delete_dissertation'))
+const canDownload  = computed(() => authService.hasPermission('download_dissertation'))
 const documents = ref([]);
 const currentPage = ref(1);
 const first = ref(0);
@@ -26,13 +33,18 @@ const error = ref(null);
 const searchQuery = ref('');
 let searchDebounce = null;
 
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${authService.getToken()}`
+})
+
 const fetchData = async (page = 1) => {
   isLoading.value = true;
   error.value = null;
   try {
     const search = searchQuery.value.trim() || '';
     const url = `/api/diss_list/${page}${search ? `?search=${encodeURIComponent(search)}` : ''}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: authHeaders() });
     if (!response.ok) {
       throw new Error('Failed to fetch documents');
     }
@@ -92,9 +104,7 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
     const newStatus = newValue ? 0 : 1;
     const response = await fetch(`/api/diss_save/${uuid}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: authHeaders(),
       body: JSON.stringify({ is_deleted: newStatus })
     });
 
@@ -130,7 +140,7 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
   <div>
     <div class="flex justify-between items-center p-4 bg-white dark:bg-zinc-800 shadow-md rounded-lg" style="margin-bottom: 20px;">
       <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Dissertatsiyalar</h1>
-      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-all" @click="goToAddPage">
+      <button v-if="canAdd" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-all" @click="goToAddPage">
         Dissertatsiya qo'shish
       </button>
     </div>
@@ -178,7 +188,7 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
           />
         </template>
       </Column>
-      <Column field="is_deleted" header="Holat" style="width: 10%">
+      <Column v-if="canDelete" field="is_deleted" header="Holat" style="width: 10%">
         <template #body="slotProps">
           <InputSwitch
             :modelValue="slotProps.data.is_deleted === 0"
@@ -191,6 +201,15 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
         <template #body="slotProps">
           <div class="flex gap-1">
             <Button
+              v-if="canDownload && slotProps.data.filename"
+              icon="pi pi-download"
+              type="button"
+              class="p-button-text p-button-sm"
+              @click="viewFile(slotProps.data.uuid)"
+              v-tooltip="'Yuklab olish'"
+            />
+            <Button
+              v-if="canEdit"
               icon="pi pi-pencil"
               type="button"
               class="p-button-text p-button-sm"

@@ -14,7 +14,12 @@ module.exports = function(vakolat, JWT_SECRET) {
     }
   
     authenticate = async (nickname, pass) => {
-      const user = await this.UserModel.findOne({ nickname: nickname.toLowerCase() })
+      if (!nickname || typeof nickname !== "string") return false
+      // Case-insensitive lookup so "Vakil1" and "vakil1" both work
+      const escaped = String(nickname).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      const user = await this.UserModel.findOne({
+        nickname: new RegExp("^" + escaped + "$", "i"),
+      })
       if (user) {
         const match = await bcrypt.compare(pass, user.password)
         return match ? user : false
@@ -50,6 +55,17 @@ module.exports = function(vakolat, JWT_SECRET) {
     const user = await auth.authenticate(nickname, password)
     if (user) {
       const token = auth.generateAccessToken(user)
+
+      // Load permission names through permissionGroup
+      let permissions = []
+      try {
+        const fullUser = await User.findById(user._id)
+          .populate({ path: "permissionGroup", populate: { path: "permissions", select: "name isActive" } })
+          .lean()
+        const groupPerms = fullUser?.permissionGroup?.permissions || []
+        permissions = groupPerms.filter((p) => p.isActive !== false).map((p) => p.name)
+      } catch (_) {}
+
       res.status(200).send({
         token,
         user: {
@@ -59,11 +75,13 @@ module.exports = function(vakolat, JWT_SECRET) {
           lastname: user.lastname,
           level: user.level,
         },
+        permissions,
         status: "ok",
       })
     } else {
       res.status(403).send({
         status: "Noto'g'ri login yoki parol",
+        error: "Noto'g'ri login yoki parol",
       })
     }
   })

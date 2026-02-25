@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
 import apiService from '@/service/api.service';
 import authService from '@/service/auth.service';
 
 const router = useRouter();
+const toast = useToast();
 const products = ref([]);
 const currentPage = ref(1);
 const isLoading = ref(false);
@@ -47,64 +49,51 @@ const editButton = (itemId) => {
   router.push('/vakil_edit/' + itemId);
 };
 
-// Function to toggle user active status
+// Toggle account lock (activate / lock)
 const toggleUserStatus = async (user) => {
   try {
-    const newStatus = !user.isActive;
-    await apiService.put(`/experts/${user._id}/status`, { 
-      isActive: newStatus 
-    });
-    
-    // Update local data
+    const newStatus = user.isActive === false;
+    await apiService.put(`/experts/${user._id}`, { isActive: newStatus });
     user.isActive = newStatus;
-    
-    // Show success message
-    const statusText = newStatus ? 'faollashtirildi' : 'faolsizlashtirildi';
-    // You can add toast notification here if needed
-    console.log(`Foydalanuvchi ${statusText}`);
-    
-    // Refresh data
+    const statusText = newStatus ? 'Faollashtirildi' : 'Hisob qulflandi';
+    toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: statusText, life: 3000 });
     fetchData(currentPage.value);
-  } catch (error) {
-    console.error('Error toggling user status:', error);
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Xato', detail: err?.message || 'Holatni o\'zgartirishda xatolik', life: 3000 });
   }
 };
 
-// Function to login as expert
+// Function to login as expert (impersonate)
 const loginAsExpert = async (expert) => {
   try {
-    console.log('Logging in as expert:', expert);
-    
-    // Call API to get token for expert
-    const response = await apiService.post('/admin/login-as-expert', { 
-      expertId: expert._id 
-    });
-    
-    console.log('Login as expert response:', response);
-    
-    if (response && response.token) {
-      // Store current user info and set impersonation
-      localStorage.setItem('isImpersonating', 'true');
-      localStorage.setItem('originalUser', JSON.stringify({
-        id: authService.user?.id,
-        nickname: authService.user?.nickname,
-        firstname: authService.user?.firstname,
-        lastname: authService.user?.lastname,
-        level: authService.user?.level,
-        token: authService.getToken()
-      }));
-      
-      // Set the new token and user info
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Redirect to home page instead of reloading
-      window.location.href = '/';
+    const response = await apiService.post('/admin/login-as-expert', {
+      expertId: expert._id,
+    })
+
+    if (response && response.token && response.user) {
+      // Save current (superuser) session so we can restore on exit
+      localStorage.setItem('isImpersonating', 'true')
+      localStorage.setItem(
+        'originalUser',
+        JSON.stringify({
+          token: authService.getToken(),
+          user: authService.getUser(),
+          permissions: authService.getPermissions(),
+        })
+      )
+
+      // Switch to expert: token, user, and expert's permissions (for menu)
+      localStorage.setItem('token', response.token)
+      localStorage.setItem('user', JSON.stringify(response.user))
+      const perms = Array.isArray(response.permissions) ? response.permissions : []
+      localStorage.setItem('permissions', JSON.stringify(perms))
+
+      window.location.href = '/'
     }
   } catch (error) {
-    console.error('Error logging in as expert:', error);
+    console.error('Error logging in as expert:', error)
   }
-};
+}
 </script>
 
 <template>
@@ -157,11 +146,11 @@ const loginAsExpert = async (expert) => {
               v-tooltip="'Tahrirlash'"
             />
             <Button 
-              :icon="slotProps.data.isActive !== false ? 'pi pi-eye-slash' : 'pi pi-eye'" 
+              :icon="slotProps.data.isActive !== false ? 'pi pi-lock' : 'pi pi-lock-open'" 
               type="button" 
               :class="slotProps.data.isActive !== false ? 'p-button-text p-button-warning p-button-sm' : 'p-button-text p-button-success p-button-sm'" 
               @click="toggleUserStatus(slotProps.data)"
-              :title="slotProps.data.isActive !== false ? 'Faolsizlashtirish' : 'Faollashtirish'"
+              v-tooltip="slotProps.data.isActive !== false ? 'Hisobni qulflash' : 'Hisobni faollashtirish'"
             />
           </div>
         </template>

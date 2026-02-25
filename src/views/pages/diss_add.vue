@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import { apiFetch } from '@/utils/api';
+import authService from '@/service/auth.service';
 import { useRouter } from 'vue-router';
 
 const toast = useToast();
@@ -42,7 +44,7 @@ const sohaOptions = ref([]);
 
 const loadCategories = async () => {
   try {
-    const response = await fetch('/api/diss/cats');
+    const response = await apiFetch('/api/diss/cats');
     const data = await response.json();
     const list = Array.isArray(data) ? data : [];
     categories.value = list
@@ -62,7 +64,7 @@ const loadCategories = async () => {
 
 const loadAcademicDegrees = async () => {
   try {
-    const response = await fetch('/api/diss/levels');
+    const response = await apiFetch('/api/diss/levels');
     const data = await response.json();
     levelOptions.value = (data || [])
       .filter(level => level.isActive === true)
@@ -83,7 +85,7 @@ const loadAcademicDegrees = async () => {
 
 const loadLanguages = async () => {
   try {
-    const response = await fetch('/api/diss/languages');
+    const response = await apiFetch('/api/diss/languages');
     const data = await response.json();
     languageOptions.value = (data || [])
       .filter(lang => lang.isActive === true)
@@ -101,7 +103,7 @@ const loadLanguages = async () => {
 
 const loadSohaFields = async () => {
   try {
-    const response = await fetch('/api/diss/fields');
+    const response = await apiFetch('/api/diss/fields');
     const data = await response.json();
     const list = Array.isArray(data) ? data : [];
     sohaOptions.value = list.map(item => ({
@@ -141,6 +143,7 @@ const onFileSelect = async (event) => {
   try {
     const response = await fetch('/api/diss/upload', {
       method: 'POST',
+      headers: { 'Authorization': `Bearer ${authService.getToken()}` },
       body: formData
     });
 
@@ -210,11 +213,8 @@ async function saveData() {
   };
 
   try {
-    const response = await fetch('/api/diss_save', {
+    const response = await apiFetch('/api/diss_save', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify(data)
     });
 

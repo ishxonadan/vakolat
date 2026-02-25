@@ -41,7 +41,15 @@
                   :icon="slotProps.data.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'"
                   size="small" 
                   :severity="slotProps.data.isActive ? 'warning' : 'success'"
-                  :v-tooltip="slotProps.data.isActive ? 'Faolsizlashtirish' : 'Faollashtirish'"
+                  v-tooltip="slotProps.data.isActive ? 'Faolsizlashtirish' : 'Faollashtirish'"
+                />
+                <Button 
+                  @click="confirmDeletePermission(slotProps.data)" 
+                  icon="pi pi-trash" 
+                  size="small" 
+                  severity="danger"
+                  outlined
+                  v-tooltip="'O\'chirish'"
                 />
               </div>
             </template>
@@ -90,7 +98,15 @@
                   :icon="slotProps.data.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'"
                   size="small" 
                   :severity="slotProps.data.isActive ? 'warning' : 'success'"
-                  :v-tooltip="slotProps.data.isActive ? 'Faolsizlashtirish' : 'Faollashtirish'"
+                  v-tooltip="slotProps.data.isActive ? 'Faolsizlashtirish' : 'Faollashtirish'"
+                />
+                <Button 
+                  @click="confirmDeleteGroup(slotProps.data)" 
+                  icon="pi pi-trash" 
+                  size="small" 
+                  severity="danger"
+                  outlined
+                  v-tooltip="'O\'chirish'"
                 />
               </div>
             </template>
@@ -98,6 +114,8 @@
         </DataTable>
       </TabPanel>
     </TabView>
+
+    <ConfirmDialog />
 
     <!-- Permission Dialog -->
     <Dialog v-model:visible="showPermissionDialog" modal header="Huquq qo'shish/tahrirlash" :style="{ width: '500px' }">
@@ -205,9 +223,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
+import ConfirmDialog from 'primevue/confirmdialog';
 import apiService from '@/service/api.service';
 
 const toast = useToast();
+const confirm = useConfirm();
 const permissions = ref([]);
 const permissionGroups = ref([]);
 const loadingPermissions = ref(false);
@@ -422,6 +443,49 @@ const toggleGroupStatus = async (group) => {
       life: 3000 
     });
   }
+};
+
+const confirmDeletePermission = (permission) => {
+  confirm.require({
+    message: `"${permission.name}" huquqini o'chirmoqchimisiz? Agar bu huquq guruhlarda ishlatilsa, o'chirish mumkin emas.`,
+    header: "Huquqni o'chirish",
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: "Bekor qilish",
+    acceptLabel: "Ha, o'chirish",
+    rejectClass: 'p-button-secondary p-button-outlined rounded-lg',
+    acceptClass: 'p-button-danger rounded-lg',
+    accept: async () => {
+      try {
+        await apiService.delete(`/admin/permissions/${permission._id}`);
+        toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: 'Huquq o\'chirildi', life: 3000 });
+        loadPermissions();
+        loadPermissionGroups();
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'Xato', detail: error?.message || 'Huquqni o\'chirishda xatolik', life: 5000 });
+      }
+    }
+  });
+};
+
+const confirmDeleteGroup = (group) => {
+  confirm.require({
+    message: `"${group.name}" huquq guruhini o'chirmoqchimisiz? Agar bu guruh foydalanuvchilarga tayinlangan bo'lsa, o'chirish mumkin emas.`,
+    header: "Huquq guruhini o'chirish",
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: "Bekor qilish",
+    acceptLabel: "Ha, o'chirish",
+    rejectClass: 'p-button-secondary p-button-outlined rounded-lg',
+    acceptClass: 'p-button-danger rounded-lg',
+    accept: async () => {
+      try {
+        await apiService.delete(`/admin/permission-groups/${group._id}`);
+        toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: 'Huquq guruhi o\'chirildi', life: 3000 });
+        loadPermissionGroups();
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'Xato', detail: error?.message || 'Huquq guruhini o\'chirishda xatolik', life: 5000 });
+      }
+    }
+  });
 };
 
 onMounted(() => {
