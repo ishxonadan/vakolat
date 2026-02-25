@@ -26,10 +26,15 @@ const ashyo = ref('');
 const srn = ref('');
 const mtt = ref('');
 const volume = ref('');
+const level = ref('');
 const type = ref('');
 const category_id = ref(null);
 const categories = ref([]);
-const typeOptions = ref([]);
+const levelOptions = ref([]);
+const documentTypeOptions = ref([
+  { label: 'Dissertatisya', value: 'Dissertatisya' },
+  { label: 'Avtoreferat', value: 'Avtoreferat' }
+]);
 const loading = ref(true);
 const uploadedFile = ref(null);
 const uploadedFileName = ref('');
@@ -46,9 +51,9 @@ const loadLevels = async () => {
   try {
     const response = await fetch('/diss/levels');
     const data = await response.json();
-    typeOptions.value = data.map(level => ({
-      label: level.name,
-      value: level.mark
+    levelOptions.value = data.map(l => ({
+      label: l.name,
+      value: l.mark
     }));
   } catch (error) {
     console.error('Error loading levels:', error);
@@ -78,9 +83,9 @@ onMounted(async () => {
     }));
 
     const levelsData = await levelsResponse.json();
-    typeOptions.value = levelsData.map(level => ({
-      label: level.name,
-      value: level.mark
+    levelOptions.value = levelsData.map(l => ({
+      label: l.name,
+      value: l.mark
     }));
 
     // Load document data
@@ -108,6 +113,7 @@ onMounted(async () => {
     srn.value = data.srn || '';
     mtt.value = data.mtt || '';
     volume.value = data.volume || '';
+    level.value = data.level || '';
     type.value = data.type || '';
     category_id.value = data.category_id || null;
     currentFileName.value = data.filename || '';
@@ -178,7 +184,7 @@ const onFileSelect = async (event) => {
 
 async function saveData() {
   // Validate required fields
-  if (!title.value || !author.value || !code.value || !type.value || !category_id.value) {
+  if (!title.value || !author.value || !code.value || !level.value || !type.value || !category_id.value) {
     toast.add({
       severity: 'error',
       summary: 'Xato',
@@ -207,6 +213,7 @@ async function saveData() {
     srn: srn.value,
     mtt: mtt.value,
     volume: volume.value,
+    level: level.value,
     type: type.value,
     category_id: category_id.value
   };
@@ -322,17 +329,30 @@ function viewCurrentFile() {
           </div>
         </div>
 
-        <!-- Type -->
-        <div class="form-group">
-          <label for="type" class="form-label">Turi*</label>
-          <Dropdown
-            v-model="type"
-            :options="typeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Turini tanlang"
-            class="form-input"
-          />
+        <!-- Academic Degree and Document Type -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="form-group">
+            <label for="level" class="form-label">Akademik daraja*</label>
+            <Dropdown
+              v-model="level"
+              :options="levelOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Akademik darajani tanlang"
+              class="form-input"
+            />
+          </div>
+          <div class="form-group">
+            <label for="type" class="form-label">Turi*</label>
+            <Dropdown
+              v-model="type"
+              :options="documentTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Turini tanlang"
+              class="form-input"
+            />
+          </div>
         </div>
 
         <!-- Category and Language -->
@@ -373,13 +393,13 @@ function viewCurrentFile() {
             />
           </div>
           <div class="form-group">
-            <label for="collective" class="form-label">Kollektiv</label>
+            <label for="collective" class="form-label">Tashkilot</label>
             <InputText 
               v-model="collective" 
               id="collective" 
               type="text" 
               class="form-input" 
-              placeholder="Kollektivni kiriting"
+              placeholder="Tashkilotni kiriting"
             />
           </div>
           <div class="form-group">

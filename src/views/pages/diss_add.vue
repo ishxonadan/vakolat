@@ -337,13 +337,13 @@ onMounted(async () => {
             />
           </div>
           <div class="form-group">
-            <label for="collective" class="form-label">Kollektiv</label>
+            <label for="collective" class="form-label">Tashkilot</label>
             <InputText 
               v-model="collective" 
               id="collective" 
               type="text" 
               class="form-input" 
-              placeholder="Kollektivni kiriting"
+              placeholder="Tashkilotni kiriting"
             />
           </div>
           <div class="form-group">
