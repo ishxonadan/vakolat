@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, onUnmounted, ref } from "vue"
+import { useRoute } from "vue-router"
 import { useToast } from "primevue/usetoast"
 import authService from "@/service/auth.service"
 import apiService from "@/service/api.service"
 
 const toast = useToast()
+const route = useRoute()
 const loading = ref(false)
 const saving = ref(false)
 const cancellingId = ref(null)
@@ -15,6 +17,17 @@ const account = ref(null)
 const member = ref(null)
 
 const canCancel = authService.hasPermission("payment_cancel_provided_service")
+const isRais = authService.getUserLevel() === "rais"
+const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000
+const nowTs = ref(Date.now())
+let timerId = null
+
+const normalizeUserNoInput = (value) => {
+  const raw = String(value || "").trim().toUpperCase()
+  if (/^\d{9}$/.test(raw)) return `AAA${raw}`
+  if (/^AAA\d{9}$/.test(raw)) return raw
+  return raw
+}
 
 const form = ref({
   userNo: "",
@@ -38,6 +51,24 @@ const totalCost = computed(() => form.value.items.reduce((sum, item) => sum + it
 const currentBalance = computed(() => Number(account.value?.balance || 0))
 const remainingBalance = computed(() => currentBalance.value - totalCost.value)
 const hasEnoughBalance = computed(() => remainingBalance.value >= 0)
+const hasPositiveBalance = computed(() => currentBalance.value > 0)
+const getCancelDeadline = (row) => new Date(row.createdAt).getTime() + CANCEL_WINDOW_MS
+const canCancelRow = (row) => {
+  if (isRais) return true
+  return nowTs.value <= getCancelDeadline(row)
+}
+const formatCountdown = (row) => {
+  const diff = getCancelDeadline(row) - nowTs.value
+  if (diff <= 0) return "Muddat tugagan"
+  const totalSeconds = Math.floor(diff / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  return `${hours} soat ${minutes} daqiqa`
+}
+const cancelButtonLabel = (row) => {
+  if (isRais) return "Bekor qilish"
+  return `Bekor qilish (${formatCountdown(row)})`
+}
 
 const loadServices = async () => {
   services.value = await apiService.get("/members/payment/services")
@@ -65,7 +96,8 @@ const loadProvisions = async () => {
 const searchUser = async () => {
   try {
     loading.value = true
-    form.value.userNo = String(userNoSearch.value || "").trim().toUpperCase()
+    form.value.userNo = normalizeUserNoInput(userNoSearch.value)
+    userNoSearch.value = form.value.userNo
     await Promise.all([loadUser(), loadProvisions()])
   } catch (error) {
     toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
@@ -126,9 +158,21 @@ const cancelProvision = async (row) => {
 onMounted(async () => {
   try {
     await loadServices()
+    const presetUserNo = normalizeUserNoInput(route.query.userNo)
+    if (presetUserNo) {
+      userNoSearch.value = presetUserNo
+      await searchUser()
+    }
   } catch (error) {
     toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
   }
+  timerId = setInterval(() => {
+    nowTs.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (timerId) clearInterval(timerId)
 })
 </script>
 
@@ -137,7 +181,12 @@ onMounted(async () => {
     <h1 class="text-xl font-semibold mb-4">Xizmat ko'rsatish</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mb-4">
-      <InputText v-model="userNoSearch" placeholder="ID karta raqami" />
+      <InputText
+        v-model="userNoSearch"
+        placeholder="ID karta raqami"
+        @blur="userNoSearch = normalizeUserNoInput(userNoSearch)"
+        @keyup.enter="searchUser"
+      />
       <Button label="Foydalanuvchini tanlash" icon="pi pi-search" :loading="loading" @click="searchUser" />
     </div>
 
@@ -179,18 +228,30 @@ onMounted(async () => {
           optionValue="_id"
           placeholder="Xizmat tanlang"
           class="md:col-span-3"
+          :disabled="!hasPositiveBalance"
         />
-        <InputNumber v-model="item.quantity" :min="1" :useGrouping="false" placeholder="Soni" />
+        <InputNumber
+          v-model="item.quantity"
+          :min="1"
+          :useGrouping="false"
+          placeholder="Soni"
+          :disabled="!hasPositiveBalance"
+          @input="(event) => (item.quantity = Number(event.value || 0))"
+        />
         <div class="flex items-center text-sm text-700">
           {{ formatMoney(serviceById(item.serviceId)?.price || 0) }}
         </div>
         <div class="flex items-center gap-2">
           <span class="font-medium">{{ formatMoney(itemCost(item)) }}</span>
-          <Button icon="pi pi-times" severity="danger" text @click="removeItem(idx)" />
+          <Button icon="pi pi-times" severity="danger" text :disabled="!hasPositiveBalance" @click="removeItem(idx)" />
         </div>
       </div>
-      <Button label="Yana xizmat qo'shish" icon="pi pi-plus" text @click="addItem" />
+      <Button label="Yana xizmat qo'shish" icon="pi pi-plus" text :disabled="!hasPositiveBalance" @click="addItem" />
     </div>
+
+    <Message v-if="!hasPositiveBalance" severity="warn" :closable="false" class="mb-4">
+      Balans 0 so'm. Xizmat tanlash uchun avval foydalanuvchi balansini to'ldiring.
+    </Message>
 
     <div class="mb-4">
       <InputText v-model="form.comment" class="w-full" placeholder="Izoh" />
@@ -201,7 +262,7 @@ onMounted(async () => {
       <Button
         label="Xizmatni rasmiylashtirish"
         icon="pi pi-check"
-        :disabled="!form.userNo || !hasEnoughBalance || totalCost <= 0"
+        :disabled="!form.userNo || !hasPositiveBalance || !hasEnoughBalance || totalCost <= 0"
         :loading="saving"
         @click="submitProvision"
       />
@@ -236,14 +297,17 @@ onMounted(async () => {
       <Column header="Amallar">
         <template #body="slotProps">
           <Button
-            v-if="canCancel && slotProps.data.status !== 'cancelled'"
-            label="Bekor qilish"
+            v-if="canCancel && slotProps.data.status !== 'cancelled' && canCancelRow(slotProps.data)"
+            :label="cancelButtonLabel(slotProps.data)"
             icon="pi pi-undo"
-            severity="warning"
+            severity="danger"
             size="small"
             :loading="cancellingId === slotProps.data._id"
             @click="cancelProvision(slotProps.data)"
           />
+          <span v-else-if="canCancel && slotProps.data.status !== 'cancelled'" class="text-500 text-sm">
+            Bekor qilish muddati tugagan
+          </span>
         </template>
       </Column>
     </DataTable>

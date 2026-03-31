@@ -4,6 +4,7 @@ const { verifyToken, checkPermissions } = require("../src/middleware/auth.middle
 
 module.exports = (nazorat, vakolat) => {
   const router = express.Router()
+  const SERVICE_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000
 
   const PaymentAccount = vakolat.model("PaymentAccount")
   const PaymentTransaction = vakolat.model("PaymentTransaction")
@@ -109,6 +110,21 @@ module.exports = (nazorat, vakolat) => {
     }
 
     balanceCacheInitPromise = (async () => {
+      const [hasAnyAccount, hasAnyTx] = await Promise.all([
+        PaymentAccount.exists({}),
+        PaymentTransaction.exists({}),
+      ])
+
+      // Fast path for normal operation:
+      // - if accounts already exist, trust cached balances maintained by write endpoints
+      // - if no transactions exist, nothing to bootstrap
+      if (hasAnyAccount || !hasAnyTx) {
+        balanceCacheInitialized = true
+        balanceCacheInitPromise = null
+        return
+      }
+
+      // Bootstrap path (fresh DB with transactions but no account cache yet).
       const rows = await PaymentTransaction.aggregate(buildBalanceAggregate({}))
       for (const row of rows) {
         await PaymentAccount.updateOne(
@@ -156,10 +172,8 @@ module.exports = (nazorat, vakolat) => {
           .lean()
         userNoFilter = [...new Set(matchingMembers.map((m) => m.USER_NO).filter(Boolean))]
 
-        // When searching specific users, refresh their balance cache on-demand.
-        for (const userNo of userNoFilter) {
-          await recalculateUserBalance(userNo)
-        }
+        // Do not recalculate all matched users here (too slow for large results).
+        // We only recalculate missing account-cache entries after reading current cache below.
       }
 
       const accountFilter = userNoFilter ? { userNo: { $in: userNoFilter } } : {}
@@ -170,6 +184,18 @@ module.exports = (nazorat, vakolat) => {
 
       let normalizedAccounts = [...accounts]
       const existingSet = new Set(accounts.map((a) => a.userNo))
+      if (userNoFilter && userNoFilter.length > 0) {
+        const missingUserNos = userNoFilter.filter((userNo) => !existingSet.has(userNo))
+        // To preserve correctness, create exact cache rows only for missing users.
+        for (const userNo of missingUserNos) {
+          const recalculated = await recalculateUserBalance(userNo)
+          if (recalculated) {
+            const row = recalculated.toObject ? recalculated.toObject() : recalculated
+            normalizedAccounts.push(row)
+            existingSet.add(userNo)
+          }
+        }
+      }
       if (userNoFilter && userNoFilter.length > 0) {
         for (const userNo of userNoFilter) {
           if (!existingSet.has(userNo)) {
@@ -570,6 +596,13 @@ module.exports = (nazorat, vakolat) => {
           if (provision.status === "cancelled") {
             throw new Error("PROVISION_ALREADY_CANCELLED")
           }
+          if (req.user.level !== "rais") {
+            const createdAtMs = new Date(provision.createdAt).getTime()
+            const ageMs = Date.now() - createdAtMs
+            if (Number.isFinite(createdAtMs) && ageMs > SERVICE_CANCEL_WINDOW_MS) {
+              throw new Error("CANCEL_WINDOW_EXPIRED")
+            }
+          }
 
           account = await PaymentAccount.findOneAndUpdate(
             { userNo: provision.userNo },
@@ -607,6 +640,9 @@ module.exports = (nazorat, vakolat) => {
         }
         if (error.message === "PROVISION_ALREADY_CANCELLED") {
           return res.status(400).json({ error: "Bu xizmat oldin bekor qilingan" })
+        }
+        if (error.message === "CANCEL_WINDOW_EXPIRED") {
+          return res.status(403).json({ error: "Bekor qilish muddati tugagan (24 soat)" })
         }
         console.error("Error cancelling service provision:", error)
         res.status(500).json({ error: "Xizmatni bekor qilishda xatolik" })

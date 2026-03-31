@@ -74,7 +74,10 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
 **Payment routes / APIs** — Implemented in `[routes/members-payment.routes.js]` and mounted under `/api/members/payment`:
 
 - Accounts & balances:
-  - `GET /api/members/payment/accounts` — paginated list of `PaymentAccount` with optional search on Nazorat `cache` collection (`USER_NO` or `USER_NAME`). Default sort: `balance` desc. On **first call**, a one-time cache job recomputes balances from all `PaymentTransaction` rows and writes into `PaymentAccount`. When `search` is used, matching `userNo`s are *recalculated on demand* before listing to ensure fresh balances.
+  - `GET /api/members/payment/accounts` — paginated list of `PaymentAccount` with optional search on Nazorat `cache` collection (`USER_NO` or `USER_NAME`). Default sort: `balance` desc. Optimized cache strategy:
+    - On startup/first call, full rebuild is done only for bootstrap case (transactions exist but `PaymentAccount` is empty).
+    - If account cache already exists, endpoint uses cached balances directly for fast loads.
+    - For search, only users missing from cache are recalculated from `PaymentTransaction` (correctness preserved, avoids expensive full search recalculation).
   - `GET /api/members/payment/accounts/overview` — aggregate stats for balances page header:
     - `overallMoneyInBalances` (sum of all `PaymentAccount.balance`)
     - `overallSpending` (sum of all outgoing transactions)
@@ -105,6 +108,8 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
   - `POST /api/members/payment/service-provisions/:id/cancel` — guarded by `payment_cancel_provided_service`. Idempotent-ish:
     - If provision not found → 404.
     - If already cancelled → 400.
+    - Cancel window for non-`rais`: 24 hours from `createdAt`; after that returns 403 (`Bekor qilish muddati tugagan (24 soat)`).
+    - `rais` can cancel anytime (no time limit).
     - Otherwise credits back `totalAmount` to user balance via `PaymentAccount.updateOne(... $inc: { balance: totalAmount })` and a compensating `PaymentTransaction` (`type: 'adjustment'`, `direction: 'in'`, `source: 'service'`).
     - Marks provision `status: 'cancelled'`, sets `cancelledBy`, `cancelledReason`, `cancelledAt`.
 
@@ -124,6 +129,7 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
     - `Tarix` → `/payment/history` (requires `payment_topup_user`).
   - Under `Vakillar boshqaruvi`:
     - `Bo'limlar va tegishli foydalanuvchilar` → `/payment/departments` (requires `payment_manage_user_departments`).
+  - Left sidebar footer shows non-clickable project version label: `Talqin v<package.json version>` at very bottom (separate from menu items).
 
 Routes (`src/router/index.js`) map these to:
 
@@ -138,20 +144,27 @@ Key UI behaviors:
 - `payment_balances.vue` — shows only users that have a `PaymentAccount` row (i.e. real participants), sorted by `balance` desc by default. Search is via Nazorat `cache` (`USER_NO`/`USER_NAME`) and on first load triggers a one-time full balance cache build. When searching specific IDs, their balances are immediately recalculated from `PaymentTransaction`. Per-row actions:
   - Top summary cards (horizontal) show exactly: `Balanslarda pul`, `Umumiy xarajat`, `Shu oy xarajat`, `Yillik xarajat`.
   - Top cards render amounts as integer `so'm` (no tiyin/decimal display).
+  - `Amallar` first button is `Xizmat ko'rsatish` (if `payment_provide_service`), which opens `/payment/service-provision` with selected `userNo` prefilled.
   - `To'ldirish` / `Yechish` buttons use `/topup` and `/spend`.
   - `Tarix` button opens a dialog with that user's balance history (both top-ups and spendings from `PaymentTransaction`, latest first). The dialog includes `Tur` tag (`To'ldirish`/`Yechish`).
   - History comments are shown in Uzbek; legacy English migration comments are normalized on display (`Migrated ...` -> `(mig) ...`).
   - Quick top-up/withdraw panel at the top allows specifying ID card number directly even if no account row exists yet (account is created lazily).
 - `payment_history.vue` — global payment transaction history list with filters (user, type); mostly for admins.
-- `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active) with inline `InputSwitch` to quickly enable/disable a service; disabled services are hidden in `payment_service_provision.vue`.
+- `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active) with inline `InputSwitch` to quickly enable/disable a service; disabled services are hidden in `payment_service_provision.vue`. Price column is formatted with `so'm`.
 - `payment_departments.vue` — two-pane view:
   - Left: departments CRUD.
   - Right: vakil ↔ department assignments, selecting vakil from `/experts` and department from left-hand list.
 - `payment_service_provision.vue` — main **Xizmat ko'rsatish** screen:
-  - Top: user lookup by ID card number, showing current balance and predicted remaining balance given selected services.
-  - Middle: dynamic list of service lines (service dropdown, quantity, per-line cost) plus overall total.
+  - Top: user lookup by ID card number, with these UX rules:
+    - Enter key triggers user search.
+    - If user enters 9 digits (`#########`), input auto-normalizes to `AAA#########`.
+    - Page can receive `?userNo=AAA#########` and auto-load that user.
+  - Large balance cards: current balance and post-service balance (color-coded green/red), plus warning banner when insufficient.
+  - Middle: dynamic list of service lines with columns `Xizmat`, `Soni`, `Birlik narxi`, `Jami`; live recalculation while typing quantity.
+  - Currency is displayed as integer `so'm` in totals/prices.
+  - If current balance is `0`, service selection/add/remove and submit are blocked; warning message instructs to top up first.
   - Bottom: comment and “Xizmatni rasmiylashtirish” button (guarded by `payment_provide_service`, disabled when balance insufficient).
-  - Below: table with past provisions for that user, with status, items, amounts, and “Bekor qilish” button (if `payment_cancel_provided_service` is granted).
+  - Below: table with past provisions for that user, with status, items, amounts, and red `Bekor qilish` button (if `payment_cancel_provided_service` is granted). Non-`rais` users see a live 24h countdown inside button label; after deadline, cancel action is hidden/replaced with “muddati tugagan”.
 
 **Pullik migration script notes (`scripts/migrate-pullik.js`)**
 - Script flags:

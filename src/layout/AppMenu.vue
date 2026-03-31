@@ -3,9 +3,11 @@ import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import AppMenuItem from './AppMenuItem.vue';
 import authService from '@/service/auth.service';
+import packageJson from '../../package.json';
 
 const router = useRouter();
 const route = useRoute();
+const appVersion = packageJson.version;
 
 // Hardcoded variable to control manual correction menu visibility
 const SHOW_MANUAL_CORRECTION = false; // Set to false to hide the manual correction menu
@@ -229,12 +231,33 @@ const logout = () => {
 </script>
 
 <template>
-  <ul class="layout-menu">
-    <template v-for="(item, i) in model" :key="item">
-      <app-menu-item v-if="!item.separator" :item="item" :index="i"></app-menu-item>
-      <li v-if="item.separator" class="menu-separator"></li>
-    </template>
-  </ul>
+  <div class="layout-menu-wrap">
+    <ul class="layout-menu">
+      <template v-for="(item, i) in model" :key="item">
+        <app-menu-item v-if="!item.separator" :item="item" :index="i"></app-menu-item>
+        <li v-if="item.separator" class="menu-separator"></li>
+      </template>
+    </ul>
+    <div class="layout-menu-version">Talqin {{ appVersion }}</div>
+  </div>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.layout-menu-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.layout-menu {
+  flex: 1 1 auto;
+}
+
+.layout-menu-version {
+  margin-top: auto;
+  padding: 0.75rem 1rem 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  border-top: 1px solid var(--surface-border);
+}
+</style>

@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted } from "vue"
+import { useRouter } from "vue-router"
 import { useToast } from "primevue/usetoast"
 import authService from "@/service/auth.service"
 import apiService from "@/service/api.service"
 
 const toast = useToast()
+const router = useRouter()
 const loading = ref(false)
 const items = ref([])
 const total = ref(0)
@@ -33,6 +35,7 @@ const overview = ref({
 
 const canTopup = authService.hasPermission("payment_topup_user")
 const canSpend = authService.hasPermission("payment_withdraw_user")
+const canProvideService = authService.hasPermission("payment_provide_service")
 
 const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 const statCards = [
@@ -158,6 +161,15 @@ const openHistory = async (userNo) => {
   }
 }
 
+const openServiceProvision = async (userNo) => {
+  const normalized = String(userNo || "").trim().toUpperCase()
+  if (!normalized) {
+    toast.add({ severity: "warn", summary: "Ogohlantirish", detail: "ID karta raqami topilmadi", life: 2500 })
+    return
+  }
+  await router.push({ path: "/payment/service-provision", query: { userNo: normalized } })
+}
+
 onMounted(async () => {
   await Promise.all([loadOverview(), loadBalances()])
 })
@@ -219,6 +231,14 @@ onMounted(async () => {
       <Column header="Amallar">
         <template #body="slotProps">
           <div class="flex gap-2">
+            <Button
+              v-if="canProvideService"
+              icon="pi pi-send"
+              severity="contrast"
+              label="Xizmat ko'rsatish"
+              size="small"
+              @click="openServiceProvision(slotProps.data.userNo)"
+            />
             <Button
               v-if="canTopup"
               icon="pi pi-plus"
