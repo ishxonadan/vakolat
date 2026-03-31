@@ -47,3 +47,94 @@ Default groups seeded: "Admin" (all), "Dissertatsiya mutaxassisi" (view+add+edit
 **User password change (Settings)** — New `/settings` route and menu section "Sozlamalar → Parolni o'zgartirish" for any authenticated user. Backend endpoint `POST /api/auth/change-password` (with `verifyToken`) expects `{ currentPassword, newPassword }`, checks current password with bcrypt, enforces only a minimal rule (new password length ≥ 6), hashes and saves. Frontend form (`settings.vue`) is simple: three fields (current, new, confirm), light validations, success/error toasts; "password changer shouldn't be too strict" is captured by the minimal length rule and no complexity requirements.
 
 **Dissertation approved date (legacy format)** — `approved_date` field in `Documents` schema is `Date`, but older records may store `"dd.MM.yyyy"` strings (e.g. `"17.04.2003"`). `diss_edit.vue` normalizes on load: if `approved_date` is a string matching `dd.MM.yyyy`, it is parsed into a real `Date(year, monthIndex, day)` before passing to PrimeVue `Calendar` (`dateFormat="dd.mm.yy"`); otherwise falls back to `new Date(...)` with NaN guard. On save, `approved_date` is sent as the bound Date so Mongoose stores a real Date, and the UI always shows the correct approved date.
+
+**Pullik xizmatlar / Payment system** — New payment/accounting subsystem in current `vakolat` DB. Core models in `server.js` (connection `vakolat`):
+
+- `PaymentAccount` — `{ userNo: String, balance: Number, status: 'active'|..., meta: Mixed }`, unique by `userNo`. Represents cached balance for library users (ID karta raqami; aligns with `ReaderID` from old `/pullik` after normalization to `AAA#########`).
+- `PaymentTransaction` — per-movement log: `{ userNo, type: 'top_up'|'spend'|'adjustment'|'migration', direction: 'in'|'out', amount, serviceId?, departmentId?, source: 'manual'|'service'|'migration', comment, createdBy }` with index `{ userNo: 1, createdAt: -1 }`. **Authoritative source** for recomputing balances; `balance` can be fully recalculated from this table.
+- `PaymentService` — catalog of paid services: `{ name, code?, price, isActive }`.
+- `PaymentDepartment` — departments for grouping vakils: `{ name, code?, isActive }`.
+- `UserDepartment` — mapping vakil → department: `{ expertId: ObjectId(User), departmentId: ObjectId(PaymentDepartment), isActive }` with unique index on `{ expertId, departmentId }`.
+- `PaymentServiceProvision` — grouped “service provision” operation: `{ userNo, items[{ serviceId, serviceName, quantity, unitPrice, totalPrice }], totalAmount, comment, status: 'active'|'cancelled', providedBy, cancelledBy?, cancelledReason?, cancelledAt? }`. Used to withdraw money per service and optionally refund on cancellation.
+
+All models are registered on `vakolat` and exposed via `app.locals` (`PaymentAccount`, `PaymentTransaction`, `PaymentService`, `PaymentDepartment`, `UserDepartment`, `PaymentServiceProvision`) for reuse in routes and audit.
+
+**Payment permissions (Huquqlar)** — Added to `ALL_PERMISSIONS` seed (upsert-safe):
+
+- `payment_topup_user` — may top up a user's balance.
+- `payment_withdraw_user` — may manually withdraw from user balance (general spend).
+- `payment_manage_services` — CRUD on `PaymentService`.
+- `payment_manage_departments` — CRUD on `PaymentDepartment`.
+- `payment_manage_user_departments` — assign/remove vakil ↔ department.
+- `payment_provide_service` — perform service-based withdrawals (xizmat ko'rsatish).
+- `payment_cancel_provided_service` — cancel a service provision and refund the amount.
+
+These are available on the Huquqlar page (`huquqlar.vue`) and usable in permission groups like any other named permission.
+
+**Payment routes / APIs** — Implemented in `[routes/members-payment.routes.js]` and mounted under `/api/members/payment`:
+
+- Accounts & balances:
+  - `GET /api/members/payment/accounts` — paginated list of `PaymentAccount` with optional search on Nazorat `cache` collection (`USER_NO` or `USER_NAME`). Default sort: `balance` desc. On **first call**, a one-time cache job recomputes balances from all `PaymentTransaction` rows and writes into `PaymentAccount`. When `search` is used, matching `userNo`s are *recalculated on demand* before listing to ensure fresh balances.
+  - `GET /api/members/payment/accounts/:userNo` — recalculates that user's balance from `PaymentTransaction` and returns `{ account, member }`. Used by UI for live leverage and user header info.
+- Manual money movements:
+  - `POST /api/members/payment/topup` — guarded by `payment_topup_user`. Creates/updates `PaymentAccount` (create-if-missing, `status: 'active'`), increments `balance` by `amount`, and writes a `PaymentTransaction` (`type: 'top_up'`, `direction: 'in'`, `source: 'manual'`, `createdBy` = vakil). Used by Foydalanuvchi balansi “To'ldirish” button.
+  - `POST /api/members/payment/spend` — guarded by `payment_withdraw_user`. Ensures account exists (create with `balance = 0` if missing), enforces non-negative balance, decrements `balance`, and writes a `PaymentTransaction` (`type: 'spend'`, `direction: 'out'`, `source: 'manual'`).
+- Transactions listing:
+  - `GET /api/members/payment/transactions` — list/filter `PaymentTransaction` with `userNo`, `type`, `serviceId`, `departmentId`, and `from`/`to` date range. Used by history views and per-user “Tarix” dialog.
+- Services & departments:
+  - `GET /api/members/payment/services` — list of all services (front-end filters only active ones).
+  - `POST/PUT/DELETE /api/members/payment/services` — guarded by `payment_manage_services`. CRUD on `PaymentService`.
+  - `GET /api/members/payment/departments` — list of departments.
+  - `POST/PUT/DELETE /api/members/payment/departments` — guarded by `payment_manage_departments`. Deletion also removes corresponding `UserDepartment` mappings.
+- Vakil departments:
+  - `GET /api/members/payment/experts` — list vakils (`User` with `level: 'expert'`) with basic fields; supports department assignment UI.
+  - `GET /api/members/payment/user-departments` — list mappings; can filter by `expertId`. Returns objects populated with `expertId` and `departmentId`.
+  - `POST /api/members/payment/user-departments` — guarded by `payment_manage_user_departments`. Upsert mapping `{ expertId, departmentId }`.
+  - `DELETE /api/members/payment/user-departments` — guarded by same permission. Removes mapping `{ expertId, departmentId }`.
+- Service provisions (xizmat ko'rsatish):
+  - `GET /api/members/payment/service-provisions` — list grouped service provisions, filterable by `userNo` and `status`. Populates `providedBy`, `cancelledBy`, and linked services.
+  - `POST /api/members/payment/service-provisions` — guarded by `payment_provide_service`. Body `{ userNo, items[{ serviceId, quantity }], comment }`. Workflow:
+    - Validates each service is active and quantity > 0.
+    - Computes per-item `unitPrice` from `PaymentService.price`, `totalPrice = unitPrice * quantity`, and aggregated `totalAmount`.
+    - Recomputes/ensures `PaymentAccount` for `userNo` (create if missing), checks balance >= `totalAmount`, debits account, writes one `PaymentServiceProvision` with expanded `items`, and writes one or more `PaymentTransaction` rows (`type: 'spend'`, `direction: 'out'`, `source: 'service'`) — one per service line.
+  - `POST /api/members/payment/service-provisions/:id/cancel` — guarded by `payment_cancel_provided_service`. Idempotent-ish:
+    - If provision not found → 404.
+    - If already cancelled → 400.
+    - Otherwise credits back `totalAmount` to user balance via `PaymentAccount.updateOne(... $inc: { balance: totalAmount })` and a compensating `PaymentTransaction` (`type: 'adjustment'`, `direction: 'in'`, `source: 'service'`).
+    - Marks provision `status: 'cancelled'`, sets `cancelledBy`, `cancelledReason`, `cancelledAt`.
+
+**Payment UI / menu** — All UI lives under `Foydalanuvchilarni boshqarish → Pullik xizmatlar` and `Vakillar boshqaruvi`:
+
+- Menu (`AppMenu.vue`):
+  - Under Foydalanuvchilarni boshqarish:
+    - `Tarix` → `/payment/history` (requires `payment_topup_user`).
+    - `Foydalanuvchi balansi` → `/payment/balances` (requires `payment_topup_user`).
+    - `Xizmatlar` → `/payment/services` (requires `payment_manage_services`).
+    - `Xizmat ko'rsatish` → `/payment/service-provision` (requires `payment_provide_service`).
+  - Under Vakillar boshqaruvi:
+    - `Bo'limlar va tegishli foydalanuvchilar` → `/payment/departments` (requires `payment_manage_user_departments`).
+
+Routes (`src/router/index.js`) map these to:
+
+- `/payment/history` → `payment_history.vue`.
+- `/payment/balances` → `payment_balances.vue`.
+- `/payment/services` → `payment_services.vue`.
+- `/payment/departments` → `payment_departments.vue`.
+- `/payment/service-provision` → `payment_service_provision.vue`.
+
+Key UI behaviors:
+
+- `payment_balances.vue` — shows only users that have a `PaymentAccount` row (i.e. real participants), sorted by `balance` desc by default. Search is via Nazorat `cache` (`USER_NO`/`USER_NAME`) and on first load triggers a one-time full balance cache build. When searching specific IDs, their balances are immediately recalculated from `PaymentTransaction`. Per-row actions:
+  - `To'ldirish` / `Yechish` buttons use `/topup` and `/spend`.
+  - `Tarix` button opens a dialog with that user's top-up history (type `top_up` only).
+  - Quick top-up/withdraw panel at the top allows specifying ID card number directly even if no account row exists yet (account is created lazily).
+- `payment_history.vue` — global payment transaction history list with filters (user, type); mostly for admins.
+- `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active).
+- `payment_departments.vue` — two-pane view:
+  - Left: departments CRUD.
+  - Right: vakil ↔ department assignments, selecting vakil from `/experts` and department from left-hand list.
+- `payment_service_provision.vue` — main **Xizmat ko'rsatish** screen:
+  - Top: user lookup by ID card number, showing current balance and predicted remaining balance given selected services.
+  - Middle: dynamic list of service lines (service dropdown, quantity, per-line cost) plus overall total.
+  - Bottom: comment and “Xizmatni rasmiylashtirish” button (guarded by `payment_provide_service`, disabled when balance insufficient).
+  - Below: table with past provisions for that user, with status, items, amounts, and “Bekor qilish” button (if `payment_cancel_provided_service` is granted).
