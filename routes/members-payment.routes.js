@@ -29,6 +29,31 @@ module.exports = (nazorat, vakolat) => {
     if (!Number.isFinite(parsed) || parsed <= 0) return null
     return parsed
   }
+  const isTransactionUnsupportedError = (error) => {
+    const message = String(error?.message || "")
+    return (
+      error?.code === 20 ||
+      error?.errorResponse?.code === 20 ||
+      message.includes("Transaction numbers are only allowed on a replica set member or mongos")
+    )
+  }
+  const runWithOptionalTransaction = async (handler) => {
+    const session = await vakolat.startSession()
+    try {
+      try {
+        let result
+        await session.withTransaction(async () => {
+          result = await handler(session)
+        })
+        return result
+      } catch (error) {
+        if (!isTransactionUnsupportedError(error)) throw error
+        return await handler(null)
+      }
+    } finally {
+      session.endSession()
+    }
+  }
 
   let balanceCacheInitialized = false
   let balanceCacheInitPromise = null
@@ -179,6 +204,40 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
+  router.get("/accounts/overview", verifyToken, async (req, res) => {
+    try {
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const yearStart = new Date(now.getFullYear(), 0, 1)
+
+      const [balancesRows, spendingRows, spendingMonthRows, spendingYearRows] = await Promise.all([
+        PaymentAccount.aggregate([{ $group: { _id: null, total: { $sum: "$balance" } } }]),
+        PaymentTransaction.aggregate([
+          { $match: { direction: "out" } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+        PaymentTransaction.aggregate([
+          { $match: { direction: "out", createdAt: { $gte: monthStart } } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+        PaymentTransaction.aggregate([
+          { $match: { direction: "out", createdAt: { $gte: yearStart } } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+      ])
+
+      res.json({
+        overallMoneyInBalances: Number(balancesRows[0]?.total || 0),
+        overallSpending: Number(spendingRows[0]?.total || 0),
+        spendingThisMonth: Number(spendingMonthRows[0]?.total || 0),
+        spendingThisYear: Number(spendingYearRows[0]?.total || 0),
+      })
+    } catch (error) {
+      console.error("Error loading payment overview:", error)
+      res.status(500).json({ error: "Umumiy statistika yuklanmadi" })
+    }
+  })
+
   router.get("/accounts/:userNo", verifyToken, async (req, res) => {
     try {
       const userNo = String(req.params.userNo || "").trim()
@@ -202,7 +261,6 @@ module.exports = (nazorat, vakolat) => {
   })
 
   router.post("/topup", verifyToken, checkPermissions(["payment_topup_user"]), async (req, res) => {
-    const session = await vakolat.startSession()
     try {
       const userNo = String(req.body.userNo || "").trim()
       const amount = parsePositiveAmount(req.body.amount)
@@ -216,11 +274,11 @@ module.exports = (nazorat, vakolat) => {
 
       let account
       let transaction
-      await session.withTransaction(async () => {
+      await runWithOptionalTransaction(async (session) => {
         account = await PaymentAccount.findOneAndUpdate(
           { userNo },
           { $inc: { balance: amount }, $setOnInsert: { status: "active", meta: {} } },
-          { new: true, upsert: true, session },
+          { new: true, upsert: true, ...(session ? { session } : {}) },
         )
 
         const [created] = await PaymentTransaction.create(
@@ -237,7 +295,7 @@ module.exports = (nazorat, vakolat) => {
               createdBy: req.user.id,
             },
           ],
-          { session },
+          session ? { session } : {},
         )
         transaction = created
       })
@@ -246,13 +304,10 @@ module.exports = (nazorat, vakolat) => {
     } catch (error) {
       console.error("Error topping up balance:", error)
       res.status(500).json({ error: "Balansni to'ldirishda xatolik" })
-    } finally {
-      session.endSession()
     }
   })
 
   router.post("/spend", verifyToken, checkPermissions(["payment_withdraw_user"]), async (req, res) => {
-    const session = await vakolat.startSession()
     try {
       const userNo = String(req.body.userNo || "").trim()
       const amount = parsePositiveAmount(req.body.amount)
@@ -266,12 +321,15 @@ module.exports = (nazorat, vakolat) => {
 
       let account
       let transaction
-      await session.withTransaction(async () => {
-        account = await PaymentAccount.findOne({ userNo }).session(session)
+      await runWithOptionalTransaction(async (session) => {
+        let accountQuery = PaymentAccount.findOne({ userNo })
+        if (session) accountQuery = accountQuery.session(session)
+        account = await accountQuery
         if (!account) {
-          account = await PaymentAccount.create([{ userNo, balance: 0, status: "active", meta: {} }], { session }).then(
-            (list) => list[0],
-          )
+          account = await PaymentAccount.create(
+            [{ userNo, balance: 0, status: "active", meta: {} }],
+            session ? { session } : {},
+          ).then((list) => list[0])
         }
 
         if ((account.balance || 0) < amount) {
@@ -279,7 +337,7 @@ module.exports = (nazorat, vakolat) => {
         }
 
         account.balance = Number(account.balance || 0) - amount
-        await account.save({ session })
+        await account.save(session ? { session } : {})
 
         const [created] = await PaymentTransaction.create(
           [
@@ -295,7 +353,7 @@ module.exports = (nazorat, vakolat) => {
               createdBy: req.user.id,
             },
           ],
-          { session },
+          session ? { session } : {},
         )
         transaction = created
       })
@@ -307,8 +365,6 @@ module.exports = (nazorat, vakolat) => {
       }
       console.error("Error spending balance:", error)
       res.status(500).json({ error: "Balansdan yechishda xatolik" })
-    } finally {
-      session.endSession()
     }
   })
 
@@ -380,7 +436,6 @@ module.exports = (nazorat, vakolat) => {
     verifyToken,
     checkPermissions(["payment_provide_service"]),
     async (req, res) => {
-      const session = await vakolat.startSession()
       try {
         const userNo = String(req.body.userNo || "").trim()
         const rawItems = Array.isArray(req.body.items) ? req.body.items : []
@@ -428,12 +483,15 @@ module.exports = (nazorat, vakolat) => {
 
         let account
         let provision
-        await session.withTransaction(async () => {
-          account = await PaymentAccount.findOne({ userNo }).session(session)
+        await runWithOptionalTransaction(async (session) => {
+          let accountQuery = PaymentAccount.findOne({ userNo })
+          if (session) accountQuery = accountQuery.session(session)
+          account = await accountQuery
           if (!account) {
-            account = await PaymentAccount.create([{ userNo, balance: 0, status: "active", meta: {} }], { session }).then(
-              (list) => list[0],
-            )
+            account = await PaymentAccount.create(
+              [{ userNo, balance: 0, status: "active", meta: {} }],
+              session ? { session } : {},
+            ).then((list) => list[0])
           }
 
           const balance = Number(account.balance || 0)
@@ -442,7 +500,7 @@ module.exports = (nazorat, vakolat) => {
           }
 
           account.balance = balance - totalAmount
-          await account.save({ session })
+          await account.save(session ? { session } : {})
 
           const [createdProvision] = await PaymentServiceProvision.create(
             [
@@ -455,7 +513,7 @@ module.exports = (nazorat, vakolat) => {
                 providedBy: req.user.id,
               },
             ],
-            { session },
+            session ? { session } : {},
           )
           provision = createdProvision
 
@@ -469,7 +527,7 @@ module.exports = (nazorat, vakolat) => {
             comment: `${comment || ""} [xizmat:${item.serviceName}; soni:${item.quantity}]`.trim(),
             createdBy: req.user.id,
           }))
-          await PaymentTransaction.create(txDocs, { session })
+          await PaymentTransaction.create(txDocs, session ? { session } : {})
         })
 
         res.status(201).json({ provision, balance: account.balance, debited: totalAmount })
@@ -484,8 +542,6 @@ module.exports = (nazorat, vakolat) => {
         }
         console.error("Error creating service provision:", error)
         res.status(500).json({ error: "Xizmat ko'rsatishda xatolik" })
-      } finally {
-        session.endSession()
       }
     },
   )
@@ -495,7 +551,6 @@ module.exports = (nazorat, vakolat) => {
     verifyToken,
     checkPermissions(["payment_cancel_provided_service"]),
     async (req, res) => {
-      const session = await vakolat.startSession()
       try {
         const reason = String(req.body.reason || "").trim()
         const provisionId = String(req.params.id || "").trim()
@@ -505,8 +560,10 @@ module.exports = (nazorat, vakolat) => {
 
         let updatedProvision
         let account
-        await session.withTransaction(async () => {
-          const provision = await PaymentServiceProvision.findById(provisionId).session(session)
+        await runWithOptionalTransaction(async (session) => {
+          let provisionQuery = PaymentServiceProvision.findById(provisionId)
+          if (session) provisionQuery = provisionQuery.session(session)
+          const provision = await provisionQuery
           if (!provision) {
             throw new Error("PROVISION_NOT_FOUND")
           }
@@ -517,7 +574,7 @@ module.exports = (nazorat, vakolat) => {
           account = await PaymentAccount.findOneAndUpdate(
             { userNo: provision.userNo },
             { $inc: { balance: Number(provision.totalAmount || 0) }, $setOnInsert: { status: "active", meta: {} } },
-            { new: true, upsert: true, session },
+            { new: true, upsert: true, ...(session ? { session } : {}) },
           )
 
           const [refundTx] = await PaymentTransaction.create(
@@ -532,14 +589,14 @@ module.exports = (nazorat, vakolat) => {
                 createdBy: req.user.id,
               },
             ],
-            { session },
+            session ? { session } : {},
           )
 
           provision.status = "cancelled"
           provision.cancelledBy = req.user.id
           provision.cancelledReason = reason
           provision.cancelledAt = new Date()
-          await provision.save({ session })
+          await provision.save(session ? { session } : {})
           updatedProvision = { ...provision.toObject(), refundTx }
         })
 
@@ -553,8 +610,6 @@ module.exports = (nazorat, vakolat) => {
         }
         console.error("Error cancelling service provision:", error)
         res.status(500).json({ error: "Xizmatni bekor qilishda xatolik" })
-      } finally {
-        session.endSession()
       }
     },
   )

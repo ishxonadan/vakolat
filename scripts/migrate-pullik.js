@@ -5,6 +5,9 @@ const CURRENT_DB = process.env.DB_CURRENT
 const OLD_PULLIK_DB = process.env.DB_PULLIK || "mongodb://localhost/pullik"
 const WRITE_MODE = process.argv.includes("--write")
 const SHOW_COLLECTIONS = process.argv.includes("--show-collections")
+const RESET_MIGRATION = process.argv.includes("--reset-migration")
+const BATCH_SIZE = Math.max(Number(process.env.PULLIK_MIGRATE_BATCH_SIZE) || 2000, 100)
+const CURSOR_BATCH_SIZE = Math.max(Number(process.env.PULLIK_MIGRATE_CURSOR_BATCH_SIZE) || 5000, 500)
 
 const normalizeReaderId = (value) => {
   const raw = String(value || "").trim()
@@ -27,6 +30,36 @@ const toNumber = (value, fallback = 0) => {
   }
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const classifyMovementDirection = (doc, rawAmount) => {
+  const directionRaw = getFirst(doc, ["Direction", "direction"], null)
+  if (directionRaw != null && directionRaw !== "") {
+    const numericDirection = Number(directionRaw)
+    if (Number.isFinite(numericDirection)) {
+      if (numericDirection > 0) return true
+      if (numericDirection < 0) return false
+      // In this legacy DB, 0 is used for outgoing/spend rows.
+      if (numericDirection === 0) return false
+    }
+  }
+
+  const directionText = String(
+    getFirst(doc, ["Direction", "direction", "Type", "type", "ActionType", "actionType"], ""),
+  ).toLowerCase()
+
+  const outHints = ["out", "spend", "withdraw", "debit", "minus", "chiq", "expense"]
+  const inHints = ["in", "top", "up", "credit", "plus", "kirim", "income"]
+
+  if (outHints.some((hint) => directionText.includes(hint))) return false
+  if (inHints.some((hint) => directionText.includes(hint))) return true
+
+  // Fallback for legacy rows that do not have a reliable direction field:
+  // signed amount often encodes in/out.
+  if (rawAmount < 0) return false
+  if (rawAmount > 0) return true
+
+  return false
 }
 
 async function run() {
@@ -66,6 +99,88 @@ async function run() {
   const PaymentTransaction = current.model("PaymentTransaction", paymentTransactionSchema)
   const PaymentService = current.model("PaymentService", paymentServiceSchema)
   const PaymentDepartment = current.model("PaymentDepartment", paymentDepartmentSchema)
+  const buildBalanceAggregate = (match = {}) => [
+    { $match: match },
+    {
+      $group: {
+        _id: "$userNo",
+        totalIn: {
+          $sum: {
+            $cond: [{ $eq: ["$direction", "in"] }, "$amount", 0],
+          },
+        },
+        totalOut: {
+          $sum: {
+            $cond: [{ $eq: ["$direction", "out"] }, "$amount", 0],
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        userNo: "$_id",
+        balance: { $subtract: ["$totalIn", "$totalOut"] },
+      },
+    },
+  ]
+  const flushBulk = async (Model, ops) => {
+    if (!ops.length) return null
+    const result = await Model.bulkWrite(ops, { ordered: false })
+    ops.length = 0
+    return result
+  }
+  const flushBalanceDeltas = async (deltaMap, sourceLabel) => {
+    if (!WRITE_MODE || deltaMap.size === 0) return
+    const ops = []
+    for (const [userNo, delta] of deltaMap.entries()) {
+      if (!Number.isFinite(delta) || delta === 0) continue
+      ops.push({
+        updateOne: {
+          filter: { userNo },
+          update: {
+            $setOnInsert: { status: "active", meta: { migratedFrom: sourceLabel } },
+            $inc: { balance: delta },
+          },
+          upsert: true,
+        },
+      })
+      if (ops.length >= BATCH_SIZE) {
+        await flushBulk(PaymentAccount, ops)
+      }
+    }
+    if (ops.length) {
+      await flushBulk(PaymentAccount, ops)
+    }
+    deltaMap.clear()
+  }
+  const rebuildAllAccountBalancesFromTransactions = async () => {
+    const now = new Date()
+    await PaymentAccount.updateMany({}, { $set: { balance: 0, status: "active", "meta.balanceCalculatedAt": now } })
+    const rows = await PaymentTransaction.aggregate(buildBalanceAggregate({}))
+    const ops = []
+    for (const row of rows) {
+      ops.push({
+        updateOne: {
+          filter: { userNo: row.userNo },
+          update: {
+            $set: {
+              balance: Number(row.balance || 0),
+              status: "active",
+              "meta.balanceCalculatedAt": now,
+            },
+          },
+          upsert: true,
+        },
+      })
+      if (ops.length >= BATCH_SIZE) {
+        await flushBulk(PaymentAccount, ops)
+      }
+    }
+    if (ops.length) {
+      await flushBulk(PaymentAccount, ops)
+    }
+  }
 
   const collections = await oldDb.db.listCollections().toArray()
   const names = new Set(collections.map((c) => c.name))
@@ -87,9 +202,41 @@ async function run() {
         .filter(([, normalized]) => !!normalized),
     )
   }
+  let legacyServiceMap = new Map()
+  if (colServices) {
+    const serviceDocs = await oldDb.db.collection(colServices).find({}, { projection: { ID: 1, Name: 1, ServiceName: 1, Code: 1 } }).toArray()
+    legacyServiceMap = new Map(
+      serviceDocs.map((s) => [
+        String(s.ID),
+        {
+          name: String(getFirst(s, ["Name", "name", "ServiceName"], "")).trim(),
+          code: String(getFirst(s, ["Code", "code", "ServiceCode"], "")).trim(),
+        },
+      ]),
+    )
+  }
+  let legacyDepartmentMap = new Map()
+  if (colDepartments) {
+    const departmentDocs = await oldDb.db
+      .collection(colDepartments)
+      .find({}, { projection: { ID: 1, Name: 1, DepartmentName: 1, Code: 1, DepartmentCode: 1 } })
+      .toArray()
+    legacyDepartmentMap = new Map(
+      departmentDocs.map((d) => [
+        String(d.ID),
+        {
+          name: String(getFirst(d, ["Name", "name", "DepartmentName"], "")).trim(),
+          code: String(getFirst(d, ["Code", "code", "DepartmentCode"], "")).trim(),
+        },
+      ]),
+    )
+  }
 
   console.log("Mode:", WRITE_MODE ? "WRITE" : "DRY-RUN")
   console.log("Tip: run with --write to persist changes")
+  if (RESET_MIGRATION) {
+    console.log("Reset mode: enabled (--reset-migration)")
+  }
   console.log("Collections:", { colReaders, colTopups, colServices, colMovements, colDepartments })
   if (SHOW_COLLECTIONS) {
     console.log("Available collections in /pullik:", Array.from(names).sort())
@@ -100,13 +247,20 @@ async function run() {
     services: { scanned: 0, valid: 0, upserted: 0, modified: 0 },
     readers: { scanned: 0, matchedAAA: 0, upserted: 0, modified: 0 },
     topups: { scanned: 0, matchedAAA: 0, moved: 0 },
-    movements: { scanned: 0, matchedAAA: 0, moved: 0 },
+    movements: { scanned: 0, matchedAAA: 0, moved: 0, skippedInboundAsDuplicateTopup: 0 },
     normalization: { accountsUpdated: 0, transactionsUpdated: 0 },
   }
 
   // Normalize previously imported lowercase IDs in target DB.
   // This makes reruns idempotent and keeps all IDs canonical as AAA#########.
   if (WRITE_MODE) {
+    if (RESET_MIGRATION) {
+      const removed = await PaymentTransaction.deleteMany({ source: "migration" })
+      console.log(`Removed existing migration transactions: ${removed.deletedCount || 0}`)
+      // Rebuild once after cleanup so any stale account cache is cleared before re-import.
+      await rebuildAllAccountBalancesFromTransactions()
+    }
+
     const lowerAccounts = await PaymentAccount.find({ userNo: /^aaa\d{9}$/ }).lean()
     for (const account of lowerAccounts) {
       const normalized = normalizeReaderId(account.userNo)
@@ -192,8 +346,10 @@ async function run() {
   }
 
   if (colTopups) {
-    const docs = await oldDb.db.collection(colTopups).find({}).toArray()
-    for (const doc of docs) {
+    const txOps = []
+    const balanceDeltaMap = new Map()
+    const cursor = oldDb.db.collection(colTopups).find({}).batchSize(CURSOR_BATCH_SIZE)
+    for await (const doc of cursor) {
       stats.topups.scanned++
       const linkedReaderKey = getFirst(doc, ["Account", "Reader", "ReaderAccount", "ReaderID", "readerId", "USER_NO"], "")
       const userNoFromLink = readerIdMap.get(String(linkedReaderKey))
@@ -202,65 +358,116 @@ async function run() {
       stats.topups.matchedAAA++
       const amount = toNumber(getFirst(doc, ["InSum", "Amount", "amount", "Sum", "sum"], 0), 0)
       if (amount <= 0) continue
-      const createdAt = new Date(getFirst(doc, ["CreatedAt", "createdAt", "Date", "date"], Date.now()))
+      const createdAt = new Date(getFirst(doc, ["CreatedAt", "createdAt", "Date", "date", "Moment", "moment"], Date.now()))
       if (WRITE_MODE) {
-        await PaymentTransaction.create({
-          userNo,
-          type: "top_up",
-          amount,
-          direction: "in",
-          source: "migration",
-          comment: "Migrated topup",
-          createdAt,
-          updatedAt: createdAt,
+        txOps.push({
+          insertOne: {
+            document: {
+              userNo,
+              type: "top_up",
+              amount,
+              direction: "in",
+              source: "migration",
+              comment: "(mig) Hisob to'ldirildi",
+              legacyAccountId: getFirst(doc, ["Account", "Reader", "ReaderAccount"], null),
+              legacyDepartmentId: getFirst(doc, ["Department"], null),
+              legacyCouponNumber: getFirst(doc, ["CouponNumber"], null),
+              createdAt,
+              updatedAt: createdAt,
+            },
+          },
         })
-        await PaymentAccount.updateOne(
-          { userNo },
-          { $setOnInsert: { status: "active", meta: { migratedFrom: colTopups } }, $inc: { balance: amount } },
-          { upsert: true },
-        )
+        balanceDeltaMap.set(userNo, (balanceDeltaMap.get(userNo) || 0) + amount)
+        if (txOps.length >= BATCH_SIZE) {
+          await flushBulk(PaymentTransaction, txOps)
+        }
+        if (balanceDeltaMap.size >= BATCH_SIZE) {
+          await flushBalanceDeltas(balanceDeltaMap, colTopups)
+        }
       }
       stats.topups.moved++
+    }
+    if (WRITE_MODE) {
+      await flushBulk(PaymentTransaction, txOps)
+      await flushBalanceDeltas(balanceDeltaMap, colTopups)
     }
   }
 
   if (colMovements) {
-    const docs = await oldDb.db.collection(colMovements).find({}).toArray()
-    for (const doc of docs) {
+    const txOps = []
+    const balanceDeltaMap = new Map()
+    const cursor = oldDb.db.collection(colMovements).find({}).batchSize(CURSOR_BATCH_SIZE)
+    for await (const doc of cursor) {
       stats.movements.scanned++
       const linkedReaderKey = getFirst(doc, ["Reader", "Account", "ReaderID", "readerId", "USER_NO"], "")
       const userNoFromLink = readerIdMap.get(String(linkedReaderKey))
       const userNo = userNoFromLink || normalizeReaderId(linkedReaderKey)
       if (!userNo) continue
       stats.movements.matchedAAA++
-      const amount = Math.abs(toNumber(getFirst(doc, ["Amount", "amount", "Sum", "sum"], 0), 0))
+      const rawAmount = toNumber(getFirst(doc, ["Amount", "amount", "Sum", "sum"], 0), 0)
+      const amount = Math.abs(rawAmount)
       if (amount <= 0) continue
-      const direction = String(
-        getFirst(doc, ["Direction", "direction", "Type", "type", "ActionType", "actionType"], "out"),
-      ).toLowerCase()
-      const isIn = direction.includes("in") || direction.includes("top")
-      const createdAt = new Date(getFirst(doc, ["CreatedAt", "createdAt", "Date", "date"], Date.now()))
+      const isIn = classifyMovementDirection(doc, rawAmount)
+      // In many legacy schemas, inbound rows in movements are top-ups that are
+      // already present in a dedicated topups collection. Importing both would
+      // double-count user balances.
+      if (isIn && colTopups) {
+        stats.movements.skippedInboundAsDuplicateTopup++
+        continue
+      }
+      const createdAt = new Date(getFirst(doc, ["CreatedAt", "createdAt", "Date", "date", "Moment", "moment"], Date.now()))
       if (WRITE_MODE) {
-        await PaymentTransaction.create({
-          userNo,
-          type: isIn ? "top_up" : "spend",
-          amount,
-          direction: isIn ? "in" : "out",
-          source: "migration",
-          comment: "Migrated movement",
-          createdAt,
-          updatedAt: createdAt,
-        })
-        await PaymentAccount.updateOne(
-          { userNo },
-          {
-            $setOnInsert: { status: "active", meta: { migratedFrom: colMovements } },
-            $inc: { balance: isIn ? amount : -amount },
+        const legacyServiceId = getFirst(doc, ["Service"], null)
+        const legacyDepartmentId = getFirst(doc, ["Department"], null)
+        const legacyRegistrator = getFirst(doc, ["Registrator"], null)
+        const legacyRegistratorType = getFirst(doc, ["Registrator_Type"], null)
+        const legacyServiceMeta = legacyServiceMap.get(String(legacyServiceId || ""))
+        const legacyDepartmentMeta = legacyDepartmentMap.get(String(legacyDepartmentId || ""))
+        const serviceLabel = legacyServiceMeta?.name
+          ? `${legacyServiceMeta.name}${legacyServiceMeta.code ? ` (${legacyServiceMeta.code})` : ""}`
+          : null
+        const departmentLabel = legacyDepartmentMeta?.name
+          ? `${legacyDepartmentMeta.name}${legacyDepartmentMeta.code ? ` (${legacyDepartmentMeta.code})` : ""}`
+          : null
+        const contextBits = []
+        if (serviceLabel) contextBits.push(`xizmat: ${serviceLabel}`)
+        if (departmentLabel) contextBits.push(`bo'lim: ${departmentLabel}`)
+        const movementComment = isIn
+          ? "(mig) Kirim operatsiyasi"
+          : contextBits.length
+            ? `(mig) Xizmat uchun yechish (${contextBits.join(", ")})`
+            : "(mig) Xarajat/yechish operatsiyasi"
+        txOps.push({
+          insertOne: {
+            document: {
+              userNo,
+              type: isIn ? "top_up" : "spend",
+              amount,
+              direction: isIn ? "in" : "out",
+              source: "migration",
+              comment: movementComment,
+              legacyServiceId,
+              legacyDepartmentId,
+              legacyRegistrator,
+              legacyRegistratorType,
+              createdAt,
+              updatedAt: createdAt,
+            },
           },
-          { upsert: true },
-        )
+        })
+        balanceDeltaMap.set(userNo, (balanceDeltaMap.get(userNo) || 0) + (isIn ? amount : -amount))
+        if (txOps.length >= BATCH_SIZE) {
+          await flushBulk(PaymentTransaction, txOps)
+        }
+        if (balanceDeltaMap.size >= BATCH_SIZE) {
+          await flushBalanceDeltas(balanceDeltaMap, colMovements)
+        }
       }
       stats.movements.moved++
+    }
+    if (WRITE_MODE) {
+      await flushBulk(PaymentTransaction, txOps)
+      await flushBalanceDeltas(balanceDeltaMap, colMovements)
     }
   }
 
@@ -275,6 +482,11 @@ async function run() {
   })
   if (!WRITE_MODE) {
     console.log("No rows were written (dry-run). Re-run with --write to move data.")
+  } else {
+    // Always recompute from transaction ledger so account cache is consistent and
+    // unaffected by partial runs or retries.
+    await rebuildAllAccountBalancesFromTransactions()
+    console.log("Rebuilt account balances from transactions")
   }
   await current.close()
   await oldDb.close()

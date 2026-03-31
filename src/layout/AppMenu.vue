@@ -43,35 +43,35 @@ const menuItems = [
             to: '/azo-bolganlar',
             requiredPermissions: ['view_members']
           },
+        ]
+      },
+      {
+        label: "Pullik xizmatlar",
+        icon: 'pi pi-fw pi-wallet',
+        items: [
           {
-            label: "Pullik xizmatlar",
-            icon: 'pi pi-fw pi-wallet',
-            items: [
-              {
-                label: "Tarix",
-                icon: 'pi pi-fw pi-history',
-                to: '/payment/history',
-                requiredPermissions: ['payment_topup_user']
-              },
-              {
-                label: "Foydalanuvchi balansi",
-                icon: 'pi pi-fw pi-credit-card',
-                to: '/payment/balances',
-                requiredPermissions: ['payment_topup_user']
-              },
-              {
-                label: "Xizmatlar",
-                icon: 'pi pi-fw pi-briefcase',
-                to: '/payment/services',
-                requiredPermissions: ['payment_manage_services']
-              },
-              {
-                label: "Xizmat ko'rsatish",
-                icon: 'pi pi-fw pi-shopping-bag',
-                to: '/payment/service-provision',
-                requiredPermissions: ['payment_provide_service']
-              },
-            ]
+            label: "Tarix",
+            icon: 'pi pi-fw pi-history',
+            to: '/payment/history',
+            requiredPermissions: ['payment_topup_user']
+          },
+          {
+            label: "Foydalanuvchi balansi",
+            icon: 'pi pi-fw pi-credit-card',
+            to: '/payment/balances',
+            requiredPermissions: ['payment_topup_user']
+          },
+          {
+            label: "Xizmatlar",
+            icon: 'pi pi-fw pi-briefcase',
+            to: '/payment/services',
+            requiredPermissions: ['payment_manage_services']
+          },
+          {
+            label: "Xizmat ko'rsatish",
+            icon: 'pi pi-fw pi-shopping-bag',
+            to: '/payment/service-provision',
+            requiredPermissions: ['payment_provide_service']
           },
         ]
       },

@@ -75,6 +75,11 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
 
 - Accounts & balances:
   - `GET /api/members/payment/accounts` — paginated list of `PaymentAccount` with optional search on Nazorat `cache` collection (`USER_NO` or `USER_NAME`). Default sort: `balance` desc. On **first call**, a one-time cache job recomputes balances from all `PaymentTransaction` rows and writes into `PaymentAccount`. When `search` is used, matching `userNo`s are *recalculated on demand* before listing to ensure fresh balances.
+  - `GET /api/members/payment/accounts/overview` — aggregate stats for balances page header:
+    - `overallMoneyInBalances` (sum of all `PaymentAccount.balance`)
+    - `overallSpending` (sum of all outgoing transactions)
+    - `spendingThisMonth` (outgoing since month start)
+    - `spendingThisYear` (outgoing since Jan 1)
   - `GET /api/members/payment/accounts/:userNo` — recalculates that user's balance from `PaymentTransaction` and returns `{ account, member }`. Used by UI for live leverage and user header info.
 - Manual money movements:
   - `POST /api/members/payment/topup` — guarded by `payment_topup_user`. Creates/updates `PaymentAccount` (create-if-missing, `status: 'active'`), increments `balance` by `amount`, and writes a `PaymentTransaction` (`type: 'top_up'`, `direction: 'in'`, `source: 'manual'`, `createdBy` = vakil). Used by Foydalanuvchi balansi “To'ldirish” button.
@@ -103,15 +108,21 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
     - Otherwise credits back `totalAmount` to user balance via `PaymentAccount.updateOne(... $inc: { balance: totalAmount })` and a compensating `PaymentTransaction` (`type: 'adjustment'`, `direction: 'in'`, `source: 'service'`).
     - Marks provision `status: 'cancelled'`, sets `cancelledBy`, `cancelledReason`, `cancelledAt`.
 
-**Payment UI / menu** — All UI lives under `Foydalanuvchilarni boshqarish → Pullik xizmatlar` and `Vakillar boshqaruvi`:
+**Mongo standalone compatibility (important)** — Payment write endpoints now support both replica set and standalone MongoDB. Route logic first attempts transaction flow, and if Mongo returns `IllegalOperation` code `20` (`Transaction numbers are only allowed on a replica set member or mongos`), it automatically falls back to non-transaction writes. Applied to:
+- `POST /api/members/payment/topup`
+- `POST /api/members/payment/spend`
+- `POST /api/members/payment/service-provisions`
+- `POST /api/members/payment/service-provisions/:id/cancel`
+
+**Payment UI / menu** — Payment UI lives in its own top-level `Pullik xizmatlar` menu plus `Vakillar boshqaruvi` for department assignment:
 
 - Menu (`AppMenu.vue`):
-  - Under Foydalanuvchilarni boshqarish:
+  - Top-level `Pullik xizmatlar`:
     - `Tarix` → `/payment/history` (requires `payment_topup_user`).
     - `Foydalanuvchi balansi` → `/payment/balances` (requires `payment_topup_user`).
     - `Xizmatlar` → `/payment/services` (requires `payment_manage_services`).
     - `Xizmat ko'rsatish` → `/payment/service-provision` (requires `payment_provide_service`).
-  - Under Vakillar boshqaruvi:
+  - Under `Vakillar boshqaruvi`:
     - `Bo'limlar va tegishli foydalanuvchilar` → `/payment/departments` (requires `payment_manage_user_departments`).
 
 Routes (`src/router/index.js`) map these to:
@@ -125,8 +136,11 @@ Routes (`src/router/index.js`) map these to:
 Key UI behaviors:
 
 - `payment_balances.vue` — shows only users that have a `PaymentAccount` row (i.e. real participants), sorted by `balance` desc by default. Search is via Nazorat `cache` (`USER_NO`/`USER_NAME`) and on first load triggers a one-time full balance cache build. When searching specific IDs, their balances are immediately recalculated from `PaymentTransaction`. Per-row actions:
+  - Top summary cards (horizontal) show exactly: `Balanslarda pul`, `Umumiy xarajat`, `Shu oy xarajat`, `Yillik xarajat`.
+  - Top cards render amounts as integer `so'm` (no tiyin/decimal display).
   - `To'ldirish` / `Yechish` buttons use `/topup` and `/spend`.
-  - `Tarix` button opens a dialog with that user's top-up history (type `top_up` only).
+  - `Tarix` button opens a dialog with that user's balance history (both top-ups and spendings from `PaymentTransaction`, latest first). The dialog includes `Tur` tag (`To'ldirish`/`Yechish`).
+  - History comments are shown in Uzbek; legacy English migration comments are normalized on display (`Migrated ...` -> `(mig) ...`).
   - Quick top-up/withdraw panel at the top allows specifying ID card number directly even if no account row exists yet (account is created lazily).
 - `payment_history.vue` — global payment transaction history list with filters (user, type); mostly for admins.
 - `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active).
@@ -138,3 +152,23 @@ Key UI behaviors:
   - Middle: dynamic list of service lines (service dropdown, quantity, per-line cost) plus overall total.
   - Bottom: comment and “Xizmatni rasmiylashtirish” button (guarded by `payment_provide_service`, disabled when balance insufficient).
   - Below: table with past provisions for that user, with status, items, amounts, and “Bekor qilish” button (if `payment_cancel_provided_service` is granted).
+
+**Pullik migration script notes (`scripts/migrate-pullik.js`)**
+- Script flags:
+  - default run = dry-run
+  - `--write` = persist
+  - `--show-collections` = print source collection names
+  - `--reset-migration` = delete existing `source: 'migration'` transactions before import, then rebuild account balances
+- Performance:
+  - Uses cursor streaming (`batchSize`) instead of loading full collections into memory.
+  - Uses batched `bulkWrite` for transaction inserts and aggregated per-user balance deltas.
+  - Tunables: `PULLIK_MIGRATE_BATCH_SIZE`, `PULLIK_MIGRATE_CURSOR_BATCH_SIZE`.
+- Correctness:
+  - Reader IDs normalized to `AAA#########` (uppercase canonical form).
+  - Prevents duplicate top-up counting: when top-up collection exists, inbound movement rows are skipped.
+  - Legacy movement direction classification supports numeric `Direction` (`>0` in, `0/<0` out) plus text/sign fallbacks.
+  - Movement timestamp mapping includes legacy `Moment` field (not only `Date/CreatedAt`) so month/year stats are accurate.
+  - After write runs, account balances are always rebuilt from `PaymentTransaction` ledger.
+- Migration comment style:
+  - Uses Uzbek `(mig)` prefix (e.g. `(mig) Hisob to'ldirildi`, `(mig) Xizmat uchun yechish (...)`).
+  - For migrated spend rows, comments include human-readable service and department context when available.

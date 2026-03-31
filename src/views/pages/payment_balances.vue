@@ -23,9 +23,41 @@ const comment = ref("")
 const quickUserNo = ref("")
 const historyLoading = ref(false)
 const historyItems = ref([])
+const overviewLoading = ref(false)
+const overview = ref({
+  overallMoneyInBalances: 0,
+  overallSpending: 0,
+  spendingThisMonth: 0,
+  spendingThisYear: 0,
+})
 
 const canTopup = authService.hasPermission("payment_topup_user")
 const canSpend = authService.hasPermission("payment_withdraw_user")
+
+const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
+const statCards = [
+  { key: "overallMoneyInBalances", title: "Balanslarda pul", subtitle: "Hozirgi qoldiq", icon: "pi pi-credit-card", color: "text-green-500" },
+  { key: "overallSpending", title: "Umumiy xarajat", subtitle: "Barcha davr", icon: "pi pi-wallet", color: "text-primary" },
+  { key: "spendingThisMonth", title: "Shu oy xarajat", subtitle: "Oy boshidan", icon: "pi pi-calendar", color: "text-orange-500" },
+  { key: "spendingThisYear", title: "Yillik xarajat", subtitle: "1-yanvardan", icon: "pi pi-chart-line", color: "text-red-500" },
+]
+
+const formatHistoryComment = (tx) => {
+  const comment = String(tx?.comment || "").trim()
+  if (!comment) {
+    if (tx?.direction === "out") return "Yechish amaliyoti"
+    if (tx?.direction === "in") return "To'ldirish amaliyoti"
+    return "-"
+  }
+
+  const lower = comment.toLowerCase()
+  if (lower.includes("migrated topup")) return "(mig) Hisob to'ldirildi"
+  if (lower.includes("migrated movement")) {
+    if (tx?.direction === "out") return "(mig) Xarajat/yechish operatsiyasi"
+    return "(mig) Kirim operatsiyasi"
+  }
+  return comment.replace(/^Migratsiya:/i, "(mig)")
+}
 
 const loadBalances = async () => {
   try {
@@ -45,6 +77,23 @@ const loadBalances = async () => {
     toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
   } finally {
     loading.value = false
+  }
+}
+
+const loadOverview = async () => {
+  try {
+    overviewLoading.value = true
+    const data = await apiService.get("/members/payment/accounts/overview")
+    overview.value = {
+      overallMoneyInBalances: Number(data?.overallMoneyInBalances || 0),
+      overallSpending: Number(data?.overallSpending || 0),
+      spendingThisMonth: Number(data?.spendingThisMonth || 0),
+      spendingThisYear: Number(data?.spendingThisYear || 0),
+    }
+  } catch (error) {
+    toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
+  } finally {
+    overviewLoading.value = false
   }
 }
 
@@ -98,7 +147,6 @@ const openHistory = async (userNo) => {
     const data = await apiService.get("/members/payment/transactions", {
       params: {
         userNo,
-        type: "top_up",
         limit: 100,
       },
     })
@@ -110,11 +158,30 @@ const openHistory = async (userNo) => {
   }
 }
 
-onMounted(loadBalances)
+onMounted(async () => {
+  await Promise.all([loadOverview(), loadBalances()])
+})
 </script>
 
 <template>
   <div class="card">
+    <div class="flex gap-3 mb-4 overflow-x-auto pb-1">
+      <div v-for="card in statCards" :key="card.key" class="min-w-15rem flex-1">
+        <div class="surface-card border-1 surface-border border-round p-3 h-full">
+          <div class="flex align-items-start justify-content-between mb-2">
+            <div>
+              <div class="text-900 font-semibold">{{ card.title }}</div>
+              <div class="text-500 text-sm">{{ card.subtitle }}</div>
+            </div>
+            <i :class="[card.icon, card.color]" class="text-xl"></i>
+          </div>
+          <div class="text-2xl font-bold">
+            <span v-if="overviewLoading">...</span>
+            <span v-else>{{ formatMoney(overview[card.key]) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-xl font-semibold">Foydalanuvchi balanslari</h1>
       <div class="flex gap-2">
@@ -180,15 +247,27 @@ onMounted(loadBalances)
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="showHistoryDialog" modal :header="`To'ldirish tarixi: ${selectedUserNo}`" :style="{ width: '650px' }">
+    <Dialog v-model:visible="showHistoryDialog" modal :header="`Balans tarixi: ${selectedUserNo}`" :style="{ width: '760px' }">
       <DataTable :value="historyItems" :loading="historyLoading" responsiveLayout="scroll">
         <Column field="createdAt" header="Sana">
           <template #body="slotProps">
             {{ new Date(slotProps.data.createdAt).toLocaleString() }}
           </template>
         </Column>
+        <Column field="type" header="Tur">
+          <template #body="slotProps">
+            <Tag
+              :severity="slotProps.data.direction === 'out' ? 'danger' : 'success'"
+              :value="slotProps.data.direction === 'out' ? 'Yechish' : `To'ldirish`"
+            />
+          </template>
+        </Column>
         <Column field="amount" header="Miqdor" />
-        <Column field="comment" header="Izoh" />
+        <Column field="comment" header="Izoh">
+          <template #body="slotProps">
+            {{ formatHistoryComment(slotProps.data) }}
+          </template>
+        </Column>
         <Column header="Vakil">
           <template #body="slotProps">
             <span v-if="slotProps.data.createdBy">
