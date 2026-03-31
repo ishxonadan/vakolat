@@ -217,6 +217,88 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
+const paymentAccountSchema = new mongoose.Schema(
+  {
+    userNo: { type: String, required: true, unique: true, index: true },
+    balance: { type: Number, default: 0 },
+    status: { type: String, default: "active" },
+    meta: { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { timestamps: true },
+)
+
+const paymentTransactionSchema = new mongoose.Schema(
+  {
+    userNo: { type: String, required: true, index: true },
+    type: {
+      type: String,
+      enum: ["top_up", "spend", "adjustment", "migration"],
+      required: true,
+    },
+    amount: { type: Number, required: true, min: 0 },
+    direction: { type: String, enum: ["in", "out"], required: true },
+    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", default: null },
+    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", default: null },
+    source: { type: String, enum: ["manual", "migration", "service"], default: "manual" },
+    comment: { type: String, default: "" },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  },
+  { timestamps: true },
+)
+paymentTransactionSchema.index({ userNo: 1, createdAt: -1 })
+
+const paymentServiceSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    code: { type: String, default: "" },
+    price: { type: Number, required: true, min: 0, default: 0 },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+)
+
+const paymentDepartmentSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    code: { type: String, default: "" },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+)
+
+const userDepartmentSchema = new mongoose.Schema(
+  {
+    expertId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", required: true },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+)
+userDepartmentSchema.index({ expertId: 1, departmentId: 1 }, { unique: true })
+
+const paymentServiceProvisionSchema = new mongoose.Schema(
+  {
+    userNo: { type: String, required: true, index: true },
+    items: [
+      {
+        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", required: true },
+        serviceName: { type: String, required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        unitPrice: { type: Number, required: true, min: 0 },
+        totalPrice: { type: Number, required: true, min: 0 },
+      },
+    ],
+    totalAmount: { type: Number, required: true, min: 0 },
+    comment: { type: String, default: "" },
+    status: { type: String, enum: ["active", "cancelled"], default: "active" },
+    providedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    cancelledReason: { type: String, default: "" },
+    cancelledAt: { type: Date, default: null },
+  },
+  { timestamps: true },
+)
+
 const Documents = yoqlama.model("Document", documentSchema)
 const Categories = yoqlama.model("Razdel", razdelSchema)
 const Razdels = yoqlama.model("Razdels", razdelsSchema)
@@ -225,6 +307,12 @@ const Languages = yoqlama.model("Language", languageSchema)
 const Fields = yoqlama.model("Field", fieldSchema)
 const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
 const Tickets = nazorat.model("Ticket", ticketSchema)
+const PaymentAccount = vakolat.model("PaymentAccount", paymentAccountSchema)
+const PaymentTransaction = vakolat.model("PaymentTransaction", paymentTransactionSchema)
+const PaymentService = vakolat.model("PaymentService", paymentServiceSchema)
+const PaymentDepartment = vakolat.model("PaymentDepartment", paymentDepartmentSchema)
+const UserDepartment = vakolat.model("UserDepartment", userDepartmentSchema)
+const PaymentServiceProvision = vakolat.model("PaymentServiceProvision", paymentServiceProvisionSchema)
 
 const ratingModel = require("./src/model/rating.model")
 const userRatingModel = require("./src/model/user-rating.model")
@@ -249,6 +337,12 @@ app.locals.User = User
 app.locals.Permission = Permission
 app.locals.PermissionGroup = PermissionGroup
 app.locals.AuditLog = AuditLog
+app.locals.PaymentAccount = PaymentAccount
+app.locals.PaymentTransaction = PaymentTransaction
+app.locals.PaymentService = PaymentService
+app.locals.PaymentDepartment = PaymentDepartment
+app.locals.UserDepartment = UserDepartment
+app.locals.PaymentServiceProvision = PaymentServiceProvision
 
 const uploadsDir = path.resolve(process.cwd(), "uploads")
 const storage = multer.diskStorage({
@@ -344,6 +438,13 @@ const ALL_PERMISSIONS = [
   { name: "manage_users",          description: "Foydalanuvchilar (vakillar) boshqaruvi" },
   { name: "view_tickets",          description: "Bir martalik chiptalar ro'yxatini ko'rish" },
   { name: "create_tickets",        description: "Bir martalik chiptalar yaratish" },
+  { name: "payment_topup_user",    description: "Foydalanuvchi balansini to'ldirish" },
+  { name: "payment_withdraw_user", description: "Foydalanuvchi balansidan mablag' yechish" },
+  { name: "payment_manage_services", description: "Pullik xizmatlarni boshqarish" },
+  { name: "payment_manage_departments", description: "Bo'limlarni boshqarish" },
+  { name: "payment_manage_user_departments", description: "Foydalanuvchi bo'lim birikmalarini boshqarish" },
+  { name: "payment_provide_service", description: "Foydalanuvchiga xizmat ko'rsatib mablag' yechish" },
+  { name: "payment_cancel_provided_service", description: "Ko'rsatilgan xizmatni bekor qilish (refund)" },
   // Huquqlar
   { name: "manage_permissions",    description: "Huquqlar va huquq guruhlarini boshqarish" },
 ]
@@ -1219,6 +1320,7 @@ const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
 const membersRoutes = require("./routes/members.routes")(nazorat)
+const membersPaymentRoutes = require("./routes/members-payment.routes")(nazorat, vakolat)
 const ipAccessRoutes = require("./routes/ip-access.routes")(yoqlama)
 
 app.use("/", authRoutes)
@@ -1234,6 +1336,7 @@ app.use("/api/videos", videoRoutes)
 app.use("/api/tickets", createTicketsRoutes())
 app.use("/api/visits", visitsRoutes)
 app.use("/api/members", membersRoutes)
+app.use("/api/members/payment", membersPaymentRoutes)
 app.use("/api/ip-access", ipAccessRoutes)
 
 app.use(

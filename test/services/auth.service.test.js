@@ -318,13 +318,13 @@ describe('Auth Service', () => {
   })
 
   describe('logout', () => {
-    it('should clear all auth data on logout', () => {
+    it('should clear all auth data on logout', async () => {
       AuthService.token = 'test-token'
       AuthService.user = { id: '123' }
       AuthService.permissions = ['perm1']
       global.localStorage.setItem('token', 'test-token')
       
-      AuthService.logout()
+      await AuthService.logout()
       
       expect(AuthService.token).to.be.null
       expect(AuthService.user).to.be.null

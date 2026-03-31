@@ -99,7 +99,7 @@ const ApiService = {
     return await response.json()
   },
 
-  async delete(endpoint) {
+  async delete(endpoint, data) {
     const token = localStorage.getItem("token")
     const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
       method: "DELETE",
@@ -107,6 +107,7 @@ const ApiService = {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
       },
+      body: data ? JSON.stringify(data) : undefined,
     })
 
     if (response.status === 401) {

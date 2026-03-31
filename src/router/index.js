@@ -145,6 +145,51 @@ const router = createRouter({
             permission: "view_statistics",
           },
         },
+        {
+          path: "/payment/history",
+          name: "payment_history",
+          component: () => import("@/views/pages/payment_history.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "payment_topup_user",
+          },
+        },
+        {
+          path: "/payment/balances",
+          name: "payment_balances",
+          component: () => import("@/views/pages/payment_balances.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "payment_topup_user",
+          },
+        },
+        {
+          path: "/payment/services",
+          name: "payment_services",
+          component: () => import("@/views/pages/payment_services.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "payment_manage_services",
+          },
+        },
+        {
+          path: "/payment/departments",
+          name: "payment_departments",
+          component: () => import("@/views/pages/payment_departments.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "payment_manage_user_departments",
+          },
+        },
+        {
+          path: "/payment/service-provision",
+          name: "payment_service_provision",
+          component: () => import("@/views/pages/payment_service_provision.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "payment_provide_service",
+          },
+        },
       ],
     },
     {

@@ -81,6 +81,9 @@ const ticketUsers = computed(() =>
 const registrationUsers = computed(() =>
   stats.value.filter((s) => s.totalUserActions > 0)
 );
+const paymentUsers = computed(() =>
+  stats.value.filter((s) => s.totalPaymentActions > 0)
+);
 
 const selectUserForLogs = (entry) => {
   if (!entry) return;
@@ -114,6 +117,34 @@ const actionLabel = (action) => {
       return "Bir martalik chipta yaratdi";
     case 'view_tickets':
       return "Bir martalik chiptalar ro'yxatini ko'rdi";
+    case 'payment_topup':
+      return "Foydalanuvchi balansini to'ldirdi";
+    case 'payment_spend':
+      return "Foydalanuvchi balansidan mablag' yechdi";
+    case 'payment_service_create':
+      return "Pullik xizmat qo'shdi";
+    case 'payment_service_update':
+      return "Pullik xizmatni tahrirladi";
+    case 'payment_service_delete':
+      return "Pullik xizmatni o'chirdi";
+    case 'payment_service_provide':
+      return "Xizmat ko'rsatib mablag' yechdi";
+    case 'payment_service_cancel':
+      return "Ko'rsatilgan xizmatni bekor qildi (refund)";
+    case 'payment_department_create':
+      return "Bo'lim qo'shdi";
+    case 'payment_department_update':
+      return "Bo'limni tahrirladi";
+    case 'payment_department_delete':
+      return "Bo'limni o'chirdi";
+    case 'payment_user_department_add':
+      return "Foydalanuvchiga bo'lim biriktirdi";
+    case 'payment_user_department_remove':
+      return "Foydalanuvchidan bo'lim biriktirmasini olib tashladi";
+    case 'payment_view_transactions':
+      return "To'lov tranzaksiyalarini ko'rdi";
+    case 'payment_view_balances':
+      return "Foydalanuvchi balanslarini ko'rdi";
     default:
       return action || '';
   }
@@ -248,6 +279,34 @@ onMounted(() => {
 
         <!-- Dissertatsiya -->
         <div>
+          <h2 class="text-lg font-semibold mb-2">Pullik xizmatlar</h2>
+          <DataTable
+            :value="paymentUsers"
+            :loading="loadingStats"
+            responsiveLayout="scroll"
+            class="mb-6"
+          >
+            <Column field="user" header="Foydalanuvchi" style="width: 36%">
+              <template #body="slotProps">
+                <div v-if="slotProps.data.user">
+                  <div class="font-semibold cursor-pointer" @click="selectUserForLogs(slotProps.data)">
+                    {{ slotProps.data.user.nickname }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ slotProps.data.user.firstname }} {{ slotProps.data.user.lastname }}
+                  </div>
+                </div>
+                <span v-else class="text-gray-400 text-sm">Noma'lum</span>
+              </template>
+            </Column>
+            <Column field="paymentTopupCount" header="To'ldirish" style="width: 12%"></Column>
+            <Column field="paymentSpendCount" header="Yechish" style="width: 12%"></Column>
+            <Column field="paymentServiceCount" header="Xizmat" style="width: 12%"></Column>
+            <Column field="paymentDepartmentCount" header="Bo'lim" style="width: 12%"></Column>
+            <Column field="paymentUserDepartmentCount" header="Biriktirish" style="width: 12%"></Column>
+            <Column field="totalPaymentActions" header="Jami" style="width: 12%"></Column>
+          </DataTable>
+
           <h2 class="text-lg font-semibold mb-2">Dissertatsiya</h2>
           <DataTable
             :value="dissertationUsers"

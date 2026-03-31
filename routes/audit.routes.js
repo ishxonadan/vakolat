@@ -76,6 +76,13 @@ module.exports = (vakolat) => {
             addTicketCount: 0,
             viewTicketCount: 0,
             totalTicketActions: 0,
+            // Payment
+            paymentTopupCount: 0,
+            paymentSpendCount: 0,
+            paymentServiceCount: 0,
+            paymentDepartmentCount: 0,
+            paymentUserDepartmentCount: 0,
+            totalPaymentActions: 0,
           })
         }
         const entry = byUser.get(uid)
@@ -111,6 +118,33 @@ module.exports = (vakolat) => {
           case "view_tickets":
             entry.viewTicketCount++
             entry.totalTicketActions++
+            break
+          case "payment_topup":
+            entry.paymentTopupCount++
+            entry.totalPaymentActions++
+            break
+          case "payment_spend":
+            entry.paymentSpendCount++
+            entry.totalPaymentActions++
+            break
+          case "payment_service_create":
+          case "payment_service_update":
+          case "payment_service_delete":
+          case "payment_service_provide":
+          case "payment_service_cancel":
+            entry.paymentServiceCount++
+            entry.totalPaymentActions++
+            break
+          case "payment_department_create":
+          case "payment_department_update":
+          case "payment_department_delete":
+            entry.paymentDepartmentCount++
+            entry.totalPaymentActions++
+            break
+          case "payment_user_department_add":
+          case "payment_user_department_remove":
+            entry.paymentUserDepartmentCount++
+            entry.totalPaymentActions++
             break
           default:
             break

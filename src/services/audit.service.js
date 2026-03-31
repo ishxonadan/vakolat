@@ -122,6 +122,40 @@ const attachApiAudit = (req, res, next) => {
         } else if (req.method === "GET") {
           action = "view_tickets"
         }
+      } else if (req.path.startsWith("/api/members/payment")) {
+        entityType = "payment"
+        if (req.method === "POST" && req.path === "/api/members/payment/topup") {
+          action = "payment_topup"
+        } else if (req.method === "POST" && req.path === "/api/members/payment/spend") {
+          action = "payment_spend"
+        } else if (req.method === "POST" && req.path === "/api/members/payment/services") {
+          action = "payment_service_create"
+        } else if (req.method === "PUT" && req.path.startsWith("/api/members/payment/services/")) {
+          action = "payment_service_update"
+        } else if (req.method === "DELETE" && req.path.startsWith("/api/members/payment/services/")) {
+          action = "payment_service_delete"
+        } else if (req.method === "POST" && req.path === "/api/members/payment/departments") {
+          action = "payment_department_create"
+        } else if (req.method === "PUT" && req.path.startsWith("/api/members/payment/departments/")) {
+          action = "payment_department_update"
+        } else if (req.method === "DELETE" && req.path.startsWith("/api/members/payment/departments/")) {
+          action = "payment_department_delete"
+        } else if (req.method === "POST" && req.path === "/api/members/payment/user-departments") {
+          action = "payment_user_department_add"
+        } else if (req.method === "DELETE" && req.path === "/api/members/payment/user-departments") {
+          action = "payment_user_department_remove"
+        } else if (req.method === "POST" && req.path === "/api/members/payment/service-provisions") {
+          action = "payment_service_provide"
+        } else if (
+          req.method === "POST" &&
+          /^\/api\/members\/payment\/service-provisions\/[^/]+\/cancel$/.test(req.path)
+        ) {
+          action = "payment_service_cancel"
+        } else if (req.method === "GET" && req.path === "/api/members/payment/transactions") {
+          action = "payment_view_transactions"
+        } else if (req.method === "GET" && req.path === "/api/members/payment/accounts") {
+          action = "payment_view_balances"
+        }
       }
 
       const payload = {
