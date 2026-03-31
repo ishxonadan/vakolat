@@ -30,6 +30,11 @@ module.exports = (nazorat, vakolat) => {
     if (!Number.isFinite(parsed) || parsed <= 0) return null
     return parsed
   }
+  const normalizeReaderId = (value) => {
+    const raw = String(value || "").trim().toUpperCase()
+    if (/^\d{9}$/.test(raw)) return `AAA${raw}`
+    return raw
+  }
   const isTransactionUnsupportedError = (error) => {
     const message = String(error?.message || "")
     return (
@@ -164,12 +169,25 @@ module.exports = (nazorat, vakolat) => {
       let userNoFilter = null
       if (search) {
         const searchRegex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
-        const matchingMembers = await CacheUser.find({
+        const normalizedSearch = normalizeReaderId(search)
+        const normalizedRegex = new RegExp(normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+        let matchingMembers = await CacheUser.find({
           $or: [{ USER_NO: searchRegex }, { USER_NAME: searchRegex }],
         })
           .select("USER_NO")
           .limit(5000)
           .lean()
+
+        // Fallback to a'zo bo'lganlar source shape (same cache collection) using
+        // normalized user number when generic search yields nothing.
+        if (!matchingMembers.length && normalizedSearch) {
+          matchingMembers = await CacheUser.find({
+            $or: [{ USER_NO: normalizedRegex }, { USER_ID: normalizedRegex }, { CARD_NO: normalizedRegex }],
+          })
+            .select("USER_NO")
+            .limit(5000)
+            .lean()
+        }
         userNoFilter = [...new Set(matchingMembers.map((m) => m.USER_NO).filter(Boolean))]
 
         // Do not recalculate all matched users here (too slow for large results).

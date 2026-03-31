@@ -38,11 +38,16 @@ const canSpend = authService.hasPermission("payment_withdraw_user")
 const canProvideService = authService.hasPermission("payment_provide_service")
 
 const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
+const normalizeUserNoInput = (value) => {
+  const raw = String(value || "").trim().toUpperCase()
+  if (/^\d{9}$/.test(raw)) return `AAA${raw}`
+  return raw
+}
 const statCards = [
-  { key: "overallMoneyInBalances", title: "Balanslarda pul", subtitle: "Hozirgi qoldiq", icon: "pi pi-credit-card", color: "text-green-500" },
-  { key: "overallSpending", title: "Umumiy xarajat", subtitle: "Barcha davr", icon: "pi pi-wallet", color: "text-primary" },
+  { key: "overallMoneyInBalances", title: "Balanslarda pul", subtitle: "Hozirgi qoldiq", icon: "pi pi-wallet", color: "text-green-500" },
+  { key: "overallSpending", title: "Umumiy xarajat", subtitle: "Barcha davr", icon: "pi pi-arrow-down", color: "text-primary" },
   { key: "spendingThisMonth", title: "Shu oy xarajat", subtitle: "Oy boshidan", icon: "pi pi-calendar", color: "text-orange-500" },
-  { key: "spendingThisYear", title: "Yillik xarajat", subtitle: "1-yanvardan", icon: "pi pi-chart-line", color: "text-red-500" },
+  { key: "spendingThisYear", title: "Yillik xarajat", subtitle: "1-yanvardan", icon: "pi pi-chart-bar", color: "text-red-500" },
 ]
 
 const formatHistoryComment = (tx) => {
@@ -170,6 +175,13 @@ const openServiceProvision = async (userNo) => {
   await router.push({ path: "/payment/service-provision", query: { userNo: normalized } })
 }
 
+const searchFromQuickInput = async () => {
+  search.value = normalizeUserNoInput(quickUserNo.value)
+  quickUserNo.value = search.value
+  page.value = 1
+  await loadBalances()
+}
+
 onMounted(async () => {
   await Promise.all([loadOverview(), loadBalances()])
 })
@@ -196,13 +208,10 @@ onMounted(async () => {
     </div>
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-xl font-semibold">Foydalanuvchi balanslari</h1>
-      <div class="flex gap-2">
-        <InputText v-model="search" placeholder="ID karta raqami yoki ism" />
-        <Button label="Qidirish" icon="pi pi-search" @click="() => { page = 1; loadBalances() }" />
-      </div>
     </div>
     <div class="flex gap-2 mb-4" v-if="canTopup || canSpend">
       <InputText v-model="quickUserNo" placeholder="ID karta raqami kiriting (balans bo'lmasa ham)" />
+      <Button label="Qidirish" icon="pi pi-search" severity="secondary" @click="searchFromQuickInput" />
       <Button v-if="canTopup" label="To'ldirish" icon="pi pi-plus" severity="success" @click="openAction('topup', quickUserNo)" />
       <Button v-if="canSpend" label="Yechish" icon="pi pi-minus" severity="danger" @click="openAction('spend', quickUserNo)" />
     </div>
