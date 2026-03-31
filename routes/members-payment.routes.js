@@ -70,7 +70,6 @@ module.exports = (nazorat, vakolat) => {
           status: "active",
           "meta.balanceCalculatedAt": new Date(),
         },
-        $setOnInsert: { meta: {} },
       },
       { upsert: true, new: true, session: session || undefined },
     )
@@ -95,7 +94,6 @@ module.exports = (nazorat, vakolat) => {
               status: "active",
               "meta.balanceCalculatedAt": new Date(),
             },
-            $setOnInsert: { meta: {} },
           },
           { upsert: true },
         )

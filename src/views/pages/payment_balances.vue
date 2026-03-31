@@ -16,10 +16,13 @@ const sortOrder = ref(-1)
 
 const showTopupDialog = ref(false)
 const showSpendDialog = ref(false)
+const showHistoryDialog = ref(false)
 const selectedUserNo = ref("")
 const amount = ref(null)
 const comment = ref("")
 const quickUserNo = ref("")
+const historyLoading = ref(false)
+const historyItems = ref([])
 
 const canTopup = authService.hasPermission("payment_topup_user")
 const canSpend = authService.hasPermission("payment_withdraw_user")
@@ -86,6 +89,27 @@ const submitAction = async (endpoint) => {
   }
 }
 
+const openHistory = async (userNo) => {
+  try {
+    selectedUserNo.value = userNo
+    showHistoryDialog.value = true
+    historyLoading.value = true
+    historyItems.value = []
+    const data = await apiService.get("/members/payment/transactions", {
+      params: {
+        userNo,
+        type: "top_up",
+        limit: 100,
+      },
+    })
+    historyItems.value = data.items || []
+  } catch (error) {
+    toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
+  } finally {
+    historyLoading.value = false
+  }
+}
+
 onMounted(loadBalances)
 </script>
 
@@ -144,10 +168,37 @@ onMounted(loadBalances)
               size="small"
               @click="openAction('spend', slotProps.data.userNo)"
             />
+            <Button
+              icon="pi pi-clock"
+              severity="info"
+              label="Tarix"
+              size="small"
+              @click="openHistory(slotProps.data.userNo)"
+            />
           </div>
         </template>
       </Column>
     </DataTable>
+
+    <Dialog v-model:visible="showHistoryDialog" modal :header="`To'ldirish tarixi: ${selectedUserNo}`" :style="{ width: '650px' }">
+      <DataTable :value="historyItems" :loading="historyLoading" responsiveLayout="scroll">
+        <Column field="createdAt" header="Sana">
+          <template #body="slotProps">
+            {{ new Date(slotProps.data.createdAt).toLocaleString() }}
+          </template>
+        </Column>
+        <Column field="amount" header="Miqdor" />
+        <Column field="comment" header="Izoh" />
+        <Column header="Vakil">
+          <template #body="slotProps">
+            <span v-if="slotProps.data.createdBy">
+              {{ slotProps.data.createdBy.nickname }}
+            </span>
+            <span v-else>-</span>
+          </template>
+        </Column>
+      </DataTable>
+    </Dialog>
 
     <Dialog v-model:visible="showTopupDialog" modal header="Balansni to'ldirish" :style="{ width: '420px' }">
       <div class="flex flex-col gap-3">
