@@ -50,10 +50,10 @@ const menuItems = [
         icon: 'pi pi-fw pi-wallet',
         items: [
           {
-            label: "Tarix",
-            icon: 'pi pi-fw pi-history',
-            to: '/payment/history',
-            requiredPermissions: ['payment_topup_user']
+            label: "Xizmat ko'rsatish",
+            icon: 'pi pi-fw pi-send',
+            to: '/payment/service-provision',
+            requiredPermissions: ['payment_provide_service']
           },
           {
             label: "Foydalanuvchi balansi",
@@ -68,10 +68,10 @@ const menuItems = [
             requiredPermissions: ['payment_manage_services']
           },
           {
-            label: "Xizmat ko'rsatish",
-            icon: 'pi pi-fw pi-shopping-bag',
-            to: '/payment/service-provision',
-            requiredPermissions: ['payment_provide_service']
+            label: "Tarix",
+            icon: 'pi pi-fw pi-history',
+            to: '/payment/history',
+            requiredPermissions: ['payment_topup_user']
           },
         ]
       },

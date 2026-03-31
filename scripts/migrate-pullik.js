@@ -189,6 +189,8 @@ async function run() {
   const colReaders = pickCollection(["dbo_ent_ReaderAccount", "ReaderAccount", "readers"])
   const colTopups = pickCollection(["topups", "TopUps", "dbo_ent_TopUp", "dbo_doc_UpAccount"])
   const colServices = pickCollection(["services", "Services", "dbo_ent_Service"])
+  const colServiceHistory = pickCollection(["dbo_info_ServiceHistory", "ServiceHistory", "service_history"])
+  const colGiveServiceTab = pickCollection(["dbo_doc_GiveServiceTab", "GiveServiceTab", "give_service_tab"])
   const colMovements = pickCollection(["movements", "Movements", "dbo_ent_Movement", "dbo_acm_AccountMovement"])
   const colDepartments = pickCollection(["departments", "Departments", "dbo_ent_Department"])
 
@@ -215,6 +217,37 @@ async function run() {
       ]),
     )
   }
+  const legacyServicePriceMap = new Map()
+  if (colServiceHistory) {
+    // Price is not stored in dbo_ent_Service in this legacy DB; use latest price history.
+    const historyDocs = await oldDb.db
+      .collection(colServiceHistory)
+      .find({}, { projection: { ServiceName: 1, Price: 1, Moment: 1 } })
+      .sort({ Moment: -1 })
+      .toArray()
+    for (const doc of historyDocs) {
+      const serviceKey = String(getFirst(doc, ["ServiceName", "Service", "serviceId"], "")).trim()
+      if (!serviceKey || legacyServicePriceMap.has(serviceKey)) continue
+      const price = toNumber(getFirst(doc, ["Price", "price", "Amount"], 0), 0)
+      if (price > 0) legacyServicePriceMap.set(serviceKey, price)
+    }
+  }
+  if (colGiveServiceTab) {
+    // Fallback: infer unit price from historical service rows (Total / ServiceCount).
+    const tabDocs = await oldDb.db
+      .collection(colGiveServiceTab)
+      .find({}, { projection: { Service: 1, ServiceCount: 1, Total: 1 } })
+      .toArray()
+    for (const doc of tabDocs) {
+      const serviceKey = String(getFirst(doc, ["Service", "serviceId"], "")).trim()
+      if (!serviceKey || legacyServicePriceMap.has(serviceKey)) continue
+      const count = toNumber(getFirst(doc, ["ServiceCount", "Count", "Quantity"], 0), 0)
+      const total = toNumber(getFirst(doc, ["Total", "Sum", "Amount"], 0), 0)
+      if (count > 0 && total > 0) {
+        legacyServicePriceMap.set(serviceKey, total / count)
+      }
+    }
+  }
   let legacyDepartmentMap = new Map()
   if (colDepartments) {
     const departmentDocs = await oldDb.db
@@ -237,7 +270,15 @@ async function run() {
   if (RESET_MIGRATION) {
     console.log("Reset mode: enabled (--reset-migration)")
   }
-  console.log("Collections:", { colReaders, colTopups, colServices, colMovements, colDepartments })
+  console.log("Collections:", {
+    colReaders,
+    colTopups,
+    colServices,
+    colServiceHistory,
+    colGiveServiceTab,
+    colMovements,
+    colDepartments,
+  })
   if (SHOW_COLLECTIONS) {
     console.log("Available collections in /pullik:", Array.from(names).sort())
   }
@@ -314,7 +355,10 @@ async function run() {
       const payload = {
         name,
         code: String(getFirst(doc, ["code", "Code", "ServiceCode"], "") || ""),
-        price: toNumber(getFirst(doc, ["price", "Price", "Amount"], 0), 0),
+        price:
+          toNumber(getFirst(doc, ["price", "Price", "Amount"], NaN), NaN) ||
+          legacyServicePriceMap.get(String(getFirst(doc, ["ID", "id", "_id"], ""))) ||
+          0,
         isActive: getFirst(doc, ["isActive", "IsActive", "active"], true) !== false,
       }
       if (WRITE_MODE) {

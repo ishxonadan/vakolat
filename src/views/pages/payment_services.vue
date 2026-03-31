@@ -8,6 +8,8 @@ const loading = ref(false)
 const services = ref([])
 const showDialog = ref(false)
 const form = ref({ _id: null, name: "", code: "", price: 0, isActive: true })
+const togglingId = ref(null)
+const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 
 const loadServices = async () => {
   try {
@@ -53,6 +55,25 @@ const removeItem = async (row) => {
   }
 }
 
+const toggleActive = async (row) => {
+  try {
+    togglingId.value = row._id
+    const nextValue = !row.isActive
+    await apiService.put(`/members/payment/services/${row._id}`, { isActive: nextValue })
+    row.isActive = nextValue
+    toast.add({
+      severity: "success",
+      summary: "Muvaffaqiyat",
+      detail: nextValue ? "Xizmat faollashtirildi" : "Xizmat o'chirildi",
+      life: 2000,
+    })
+  } catch (error) {
+    toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
+  } finally {
+    togglingId.value = null
+  }
+}
+
 onMounted(loadServices)
 </script>
 
@@ -66,10 +87,21 @@ onMounted(loadServices)
     <DataTable :value="services" :loading="loading" responsiveLayout="scroll">
       <Column field="name" header="Nomi" />
       <Column field="code" header="Kodi" />
-      <Column field="price" header="Narxi" />
+      <Column field="price" header="Narxi">
+        <template #body="slotProps">
+          {{ formatMoney(slotProps.data.price) }}
+        </template>
+      </Column>
       <Column field="isActive" header="Holat">
         <template #body="slotProps">
-          <Tag :value="slotProps.data.isActive ? 'Faol' : 'Nofaol'" :severity="slotProps.data.isActive ? 'success' : 'danger'" />
+          <div class="flex align-items-center gap-2">
+            <InputSwitch
+              :modelValue="slotProps.data.isActive"
+              :disabled="togglingId === slotProps.data._id"
+              @update:modelValue="() => toggleActive(slotProps.data)"
+            />
+            <Tag :value="slotProps.data.isActive ? 'Faol' : 'Nofaol'" :severity="slotProps.data.isActive ? 'success' : 'danger'" />
+          </div>
         </template>
       </Column>
       <Column header="Amallar">

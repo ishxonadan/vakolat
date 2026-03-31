@@ -29,6 +29,7 @@ const removeItem = (idx) => {
 }
 
 const serviceById = (id) => services.value.find((s) => s._id === id)
+const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 const itemCost = (item) => {
   const svc = serviceById(item.serviceId)
   return (Number(svc?.price || 0) || 0) * (Number(item.quantity || 0) || 0)
@@ -64,7 +65,7 @@ const loadProvisions = async () => {
 const searchUser = async () => {
   try {
     loading.value = true
-    form.value.userNo = String(userNoSearch.value || "").trim()
+    form.value.userNo = String(userNoSearch.value || "").trim().toUpperCase()
     await Promise.all([loadUser(), loadProvisions()])
   } catch (error) {
     toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3000 })
@@ -135,15 +136,9 @@ onMounted(async () => {
   <div class="card">
     <h1 class="text-xl font-semibold mb-4">Xizmat ko'rsatish</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mb-4">
       <InputText v-model="userNoSearch" placeholder="ID karta raqami" />
       <Button label="Foydalanuvchini tanlash" icon="pi pi-search" :loading="loading" @click="searchUser" />
-      <div class="md:col-span-2 text-sm">
-        <div><b>Balans:</b> {{ currentBalance }}</div>
-        <div :class="hasEnoughBalance ? 'text-green-600' : 'text-red-600'">
-          <b>Qoladigan balans:</b> {{ remainingBalance }}
-        </div>
-      </div>
     </div>
 
     <div v-if="form.userNo" class="mb-4 text-sm">
@@ -151,9 +146,32 @@ onMounted(async () => {
       <div><b>Foydalanuvchi:</b> {{ member?.USER_NAME || "-" }}</div>
     </div>
 
-    <div class="mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+      <div class="border-round border-1 surface-border p-3">
+        <div class="text-600 text-sm mb-1">Joriy balans</div>
+        <div class="text-3xl font-bold text-900">{{ formatMoney(currentBalance) }}</div>
+      </div>
+      <div class="border-round border-1 p-3" :class="hasEnoughBalance ? 'border-green-300 surface-50' : 'border-red-300 surface-50'">
+        <div class="text-600 text-sm mb-1">Xizmatdan keyingi balans</div>
+        <div class="text-3xl font-bold" :class="hasEnoughBalance ? 'text-green-700' : 'text-red-700'">
+          {{ formatMoney(remainingBalance) }}
+        </div>
+      </div>
+    </div>
+
+    <Message v-if="!hasEnoughBalance && totalCost > 0" severity="error" :closable="false" class="mb-4">
+      Balans yetarli emas. Xizmatni rasmiylashtirish uchun qo'shimcha mablag' kerak.
+    </Message>
+
+    <div class="mb-4 surface-50 border-round p-3">
       <h2 class="text-lg font-semibold mb-2">Xizmatlar</h2>
-      <div v-for="(item, idx) in form.items" :key="idx" class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2">
+      <div class="hidden md:grid grid-cols-6 gap-2 text-600 text-sm font-medium mb-2 px-1">
+        <div class="col-span-3">Xizmat</div>
+        <div>Soni</div>
+        <div>Birlik narxi</div>
+        <div>Jami</div>
+      </div>
+      <div v-for="(item, idx) in form.items" :key="idx" class="grid grid-cols-1 md:grid-cols-6 gap-2 mb-2">
         <Dropdown
           v-model="item.serviceId"
           :options="services"
@@ -163,8 +181,11 @@ onMounted(async () => {
           class="md:col-span-3"
         />
         <InputNumber v-model="item.quantity" :min="1" :useGrouping="false" placeholder="Soni" />
+        <div class="flex items-center text-sm text-700">
+          {{ formatMoney(serviceById(item.serviceId)?.price || 0) }}
+        </div>
         <div class="flex items-center gap-2">
-          <span>{{ itemCost(item) }}</span>
+          <span class="font-medium">{{ formatMoney(itemCost(item)) }}</span>
           <Button icon="pi pi-times" severity="danger" text @click="removeItem(idx)" />
         </div>
       </div>
@@ -176,7 +197,7 @@ onMounted(async () => {
     </div>
 
     <div class="flex justify-between items-center mb-6">
-      <div class="text-lg"><b>Jami:</b> {{ totalCost }}</div>
+      <div class="text-lg"><b>Jami:</b> {{ formatMoney(totalCost) }}</div>
       <Button
         label="Xizmatni rasmiylashtirish"
         icon="pi pi-check"
@@ -191,7 +212,11 @@ onMounted(async () => {
       <Column field="createdAt" header="Sana">
         <template #body="slotProps">{{ new Date(slotProps.data.createdAt).toLocaleString() }}</template>
       </Column>
-      <Column field="totalAmount" header="Jami summa" />
+      <Column field="totalAmount" header="Jami summa">
+        <template #body="slotProps">
+          {{ formatMoney(slotProps.data.totalAmount) }}
+        </template>
+      </Column>
       <Column field="status" header="Holat">
         <template #body="slotProps">
           <Tag
@@ -203,7 +228,7 @@ onMounted(async () => {
       <Column header="Xizmatlar">
         <template #body="slotProps">
           <div v-for="item in slotProps.data.items" :key="item._id || item.serviceId" class="text-sm">
-            {{ item.serviceName }} x {{ item.quantity }} = {{ item.totalPrice }}
+            {{ item.serviceName }} x {{ item.quantity }} = {{ formatMoney(item.totalPrice) }}
           </div>
         </template>
       </Column>

@@ -118,10 +118,10 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
 
 - Menu (`AppMenu.vue`):
   - Top-level `Pullik xizmatlar`:
-    - `Tarix` → `/payment/history` (requires `payment_topup_user`).
+    - `Xizmat ko'rsatish` → `/payment/service-provision` (requires `payment_provide_service`, icon updated).
     - `Foydalanuvchi balansi` → `/payment/balances` (requires `payment_topup_user`).
     - `Xizmatlar` → `/payment/services` (requires `payment_manage_services`).
-    - `Xizmat ko'rsatish` → `/payment/service-provision` (requires `payment_provide_service`).
+    - `Tarix` → `/payment/history` (requires `payment_topup_user`).
   - Under `Vakillar boshqaruvi`:
     - `Bo'limlar va tegishli foydalanuvchilar` → `/payment/departments` (requires `payment_manage_user_departments`).
 
@@ -143,7 +143,7 @@ Key UI behaviors:
   - History comments are shown in Uzbek; legacy English migration comments are normalized on display (`Migrated ...` -> `(mig) ...`).
   - Quick top-up/withdraw panel at the top allows specifying ID card number directly even if no account row exists yet (account is created lazily).
 - `payment_history.vue` — global payment transaction history list with filters (user, type); mostly for admins.
-- `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active).
+- `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active) with inline `InputSwitch` to quickly enable/disable a service; disabled services are hidden in `payment_service_provision.vue`.
 - `payment_departments.vue` — two-pane view:
   - Left: departments CRUD.
   - Right: vakil ↔ department assignments, selecting vakil from `/experts` and department from left-hand list.
@@ -172,3 +172,6 @@ Key UI behaviors:
 - Migration comment style:
   - Uses Uzbek `(mig)` prefix (e.g. `(mig) Hisob to'ldirildi`, `(mig) Xizmat uchun yechish (...)`).
   - For migrated spend rows, comments include human-readable service and department context when available.
+  - Service prices are recovered from legacy price sources when `dbo_ent_Service` has no direct price field:
+    - primary: `dbo_info_ServiceHistory.Price` (latest per service)
+    - fallback: inferred from `dbo_doc_GiveServiceTab` (`Total / ServiceCount`)
