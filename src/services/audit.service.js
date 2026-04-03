@@ -30,7 +30,7 @@ const attachApiAudit = (req, res, next) => {
         return
       }
 
-      // Skip noisy technical endpoints that are not useful in vakillar logs
+      // Skip noisy technical endpoints that are not useful in xodimlar logs
       const noisyPaths = new Set([
         "/api/me",
         "/api/admin/audit-logs",
@@ -108,7 +108,7 @@ const attachApiAudit = (req, res, next) => {
         entityType = "user"
         action = "register_user"
       } else if (req.path.startsWith("/api/experts") && req.method === "PUT") {
-        // Vakillarni tahrirlash
+        // Xodimlarni tahrirlash
         entityType = "user"
         const parts = req.path.split("/")
         const expertId = parts.length > 3 ? parts[3] : null

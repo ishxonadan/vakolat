@@ -68,7 +68,7 @@ module.exports = (vakolat) => {
             disableCount: 0,
             enableCount: 0,
             totalDissertationActions: 0,
-            // Users (registration / vakillar)
+            // Users (registration / xodimlar)
             registerUserCount: 0,
             editExpertCount: 0,
             totalUserActions: 0,

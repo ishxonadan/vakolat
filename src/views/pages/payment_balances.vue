@@ -4,6 +4,7 @@ import { useRouter } from "vue-router"
 import { useToast } from "primevue/usetoast"
 import authService from "@/service/auth.service"
 import apiService from "@/service/api.service"
+import { paymentTransactionTypeLabel } from "@/utils/paymentLabels"
 
 const toast = useToast()
 const router = useRouter()
@@ -283,11 +284,11 @@ onMounted(async () => {
             {{ new Date(slotProps.data.createdAt).toLocaleString() }}
           </template>
         </Column>
-        <Column field="type" header="Tur">
+        <Column field="type" header="Amal turi">
           <template #body="slotProps">
             <Tag
               :severity="slotProps.data.direction === 'out' ? 'danger' : 'success'"
-              :value="slotProps.data.direction === 'out' ? 'Yechish' : `To'ldirish`"
+              :value="paymentTransactionTypeLabel(slotProps.data.type)"
             />
           </template>
         </Column>
@@ -297,7 +298,7 @@ onMounted(async () => {
             {{ formatHistoryComment(slotProps.data) }}
           </template>
         </Column>
-        <Column header="Vakil">
+        <Column header="Xodim">
           <template #body="slotProps">
             <span v-if="slotProps.data.createdBy">
               {{ slotProps.data.createdBy.nickname }}

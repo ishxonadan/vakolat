@@ -112,7 +112,7 @@ const actionLabel = (action) => {
     case 'register_user':
       return "Foydalanuvchini ro'yxatga oldi";
     case 'edit_expert':
-      return "Vakil ma'lumotlarini tahrirladi";
+      return "Xodim ma'lumotlarini tahrirladi";
     case 'add_ticket':
       return "Bir martalik chipta yaratdi";
     case 'view_tickets':
@@ -159,7 +159,7 @@ onMounted(() => {
 <template>
   <div class="card">
     <div class="flex justify-between items-center mb-4">
-      <h1 class="text-xl font-semibold">Vakillar faoliyati</h1>
+      <h1 class="text-xl font-semibold">Xodimlar faoliyati</h1>
       <span v-if="selectedUserId" class="text-sm text-gray-500">
         Foydalanuvchi ID: {{ selectedUserId }}
       </span>

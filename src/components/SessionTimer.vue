@@ -23,16 +23,20 @@ const timeLeft = ref(0);
 const checkInterval = ref(null);
 const isAuthenticated = ref(false);
 
-// Format time left in MM:SS
+// Format time left as HH:MM:SS (e.g. 11:59:59)
 const formatTimeLeft = computed(() => {
-  const minutes = Math.floor(timeLeft.value / 60);
-  const seconds = timeLeft.value % 60;
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const total = Number(timeLeft.value || 0);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
+    .toString()
+    .padStart(2, '0')}`;
 });
 
 // Calculate time left until token expires
 const calculateTimeLeft = () => {
-  const token = authService.getToken();
+  const token = authService.getToken() || localStorage.getItem('token');
   
   if (!token) {
     isAuthenticated.value = false;

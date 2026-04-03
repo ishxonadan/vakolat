@@ -62,7 +62,7 @@ async function saveData() {
     });
     
     setTimeout(() => {
-      router.push('/vakillar');
+      router.push('/xodimlar');
     }, 2000);
   } catch (error) {
     let errorMsg = "Serverdan xato javob keldi";
@@ -82,7 +82,7 @@ async function saveData() {
 
 <template>
   <div class="p-6 bg-white rounded-lg shadow-md mx-auto">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Vakil qo'shish</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Xodim qo'shish</h2>
     
     <div class="card">
       <!-- Nickname row -->

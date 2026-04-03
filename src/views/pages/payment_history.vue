@@ -2,6 +2,10 @@
 import { ref, onMounted } from "vue"
 import { useToast } from "primevue/usetoast"
 import apiService from "@/service/api.service"
+import {
+  paymentTransactionTypeLabel,
+  paymentTransactionDirectionLabel,
+} from "@/utils/paymentLabels"
 
 const toast = useToast()
 const loading = ref(false)
@@ -56,8 +60,9 @@ onMounted(loadTransactions)
         :options="[
           { label: 'Barchasi', value: '' },
           { label: `To'ldirish`, value: 'top_up' },
-          { label: 'Yechish', value: 'spend' },
-          { label: 'Migratsiya', value: 'migration' }
+          { label: 'Harajat', value: 'spend' },
+          { label: 'Sozlash', value: 'adjustment' },
+          { label: 'Migratsiya', value: 'migration' },
         ]"
         optionLabel="label"
         optionValue="value"
@@ -83,8 +88,16 @@ onMounted(loadTransactions)
         </template>
       </Column>
       <Column field="userNo" header="ID karta raqami" />
-      <Column field="type" header="Amal turi" />
-      <Column field="direction" header="Yo'nalish" />
+      <Column field="type" header="Amal turi">
+        <template #body="slotProps">
+          {{ paymentTransactionTypeLabel(slotProps.data.type) }}
+        </template>
+      </Column>
+      <Column field="direction" header="Yo'nalish">
+        <template #body="slotProps">
+          {{ paymentTransactionDirectionLabel(slotProps.data.direction) }}
+        </template>
+      </Column>
       <Column field="amount" header="Miqdor" />
       <Column header="Xizmat">
         <template #body="slotProps">

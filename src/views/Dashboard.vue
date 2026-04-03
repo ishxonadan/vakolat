@@ -1,108 +1,155 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from "vue"
 
-const dropdownItems = ref([
-    { name: 'Option 1', code: 'Option 1' },
-    { name: 'Option 2', code: 'Option 2' },
-    { name: 'Option 3', code: 'Option 3' }
-]);
+const stats = ref({
+  todayVisitors: 0,
+  currentUsers: 0,
+  todayRegistrations: "-",
+  oneTimeTickets: 0,
+})
 
-const dropdownItem = ref(null);
-const personnelList = ref([]);
-const currentPage = ref(1);
-const itemsPerPage = 10;
-const totalPages = ref(0);
+const loading = ref(false)
 
-const fetchPersonnel = async () => {
-    try {
-        const response = await fetch('/users');
-        const data = await response.json();
-        personnelList.value = data;
-        totalPages.value = Math.ceil(data.length / itemsPerPage);
-    } catch (error) {
-        console.error('Error fetching personnel:', error);
+const fetchTvStats = async () => {
+  try {
+    loading.value = true
+    const response = await fetch("/api/tv/stats")
+    if (!response.ok) return
+    const data = await response.json()
+    stats.value = {
+      todayVisitors: data.todayVisitors ?? 0,
+      currentUsers: data.currentUsers ?? 0,
+      todayRegistrations: data.todayRegistrations ?? "-",
+      oneTimeTickets: data.oneTimeTickets ?? 0,
     }
-};
-
-const paginatedData = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return personnelList.value.slice(start, start + itemsPerPage);
-});
-
-const nextPage = () => {
-    if (currentPage.value < totalPages.value) {
-        currentPage.value++;
-    }
-};
-
-const prevPage = () => {
-    if (currentPage.value > 1) {
-        currentPage.value--;
-    }
-};
-
-const editItem = (item) => {
-    console.log('Edit item:', item);
-};
-
-const downloadItem = async (item) => {
-    // const response = await fetch('/download/'+item);
-    //     const data = await response.json();
-    // console.log('Download item:', item);
-    window.location.href = '/download/dogovor/' + item;
-    console.log('Redirecting to download item:', item);
-};
-const downloadItem2 = async (item) => {
-    // const response = await fetch('/download/'+item);
-    //     const data = await response.json();
-    // console.log('Download item:', item);
-    window.location.href = '/download/material/' + item;
-    console.log('Redirecting to download item:', item);
-};
-
-const deleteItem = async (id) => {
-    try {
-        const response = await fetch(`/delete/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-            personnelList.value = personnelList.value.filter(item => item._id !== id);
-            totalPages.value = Math.ceil(personnelList.value.length / itemsPerPage);
-        } else {
-            console.error('Failed to delete item');
-        }
-    } catch (error) {
-        console.error('Error deleting item:', error);
-    }
-};
-
-onMounted(fetchPersonnel);
-</script>
-
-<script>
-export default {
-    methods: {
-        goToAddPage() {
-            this.$router.push('/add');
-        }
-    }
+  } catch (error) {
+    console.error("Error fetching home stats:", error)
+  } finally {
+    loading.value = false
+  }
 }
+
+onMounted(fetchTvStats)
 </script>
 
 <template>
-    <div class="flex flex-col p-6 bg-gray-50 dark:bg-zinc-900 min-h-screen">
-        <div class="flex justify-between items-center p-4 bg-white dark:bg-zinc-800 shadow-md rounded-lg">
-            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">"Vakolat" dasturiga xush kelibsiz</h1>
-            <!-- <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-all" @click="goToAddPage">Добавить</button> -->
-        </div>
-
-   
-
-
+  <div class="dashboard-page">
+    <div class="welcome-card">
+      <h1 class="welcome-title">"Vakolat" dasturiga xush kelibsiz</h1>
     </div>
+
+    <div class="stats-grid">
+      <div class="stat-card visitors-card">
+        <h3 class="stat-title">Ro'yxatdan o'tgan foydalanuvchilardan bugun tashrif buyurganlar</h3>
+        <p class="stat-subtitle">Visitors today among registered users</p>
+        <div class="stat-number visitors-number">{{ loading ? "..." : stats.todayVisitors }}</div>
+      </div>
+
+      <div class="stat-card users-card">
+        <h3 class="stat-title">Kutubxonada joriy foydalanuvchilar (A'zo bo'lganlardan)</h3>
+        <p class="stat-subtitle">Current users in the library among registered users</p>
+        <div class="stat-number users-number">{{ loading ? "..." : stats.currentUsers }}</div>
+      </div>
+
+      <div class="stat-card registrations-card">
+        <h3 class="stat-title">Bugun a'zo bo'lganlar</h3>
+        <p class="stat-subtitle">Registers today</p>
+        <div class="stat-number registrations-number">{{ loading ? "..." : stats.todayRegistrations }}</div>
+      </div>
+
+      <div class="stat-card tickets-card">
+        <h3 class="stat-title">Bugun bir martalik chipta berildi</h3>
+        <p class="stat-subtitle">One-time tickets given today</p>
+        <div class="stat-number tickets-number">{{ loading ? "..." : stats.oneTimeTickets }}</div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.layout-menu {
-    list-style-type: none;
-    padding: 0;
+.dashboard-page {
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: var(--surface-ground);
+}
+
+.welcome-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--surface-card);
+  box-shadow: var(--card-shadow);
+  margin-bottom: 1rem;
+}
+
+.welcome-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 3px 0;
+  line-height: 1.2;
+}
+
+.stat-subtitle {
+  font-size: 12px;
+  color: #666;
+  margin: 0 0 10px 0;
+}
+
+.stat-number {
+  font-size: 40px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1;
+}
+
+.visitors-number {
+  color: #ef4444;
+}
+
+.users-number {
+  color: #eab308;
+}
+
+.registrations-number {
+  color: #10b981;
+}
+
+.tickets-number {
+  color: #3b82f6;
+}
+
+@media (max-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

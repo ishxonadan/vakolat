@@ -15,7 +15,7 @@ module.exports = function(vakolat, JWT_SECRET) {
   
     authenticate = async (nickname, pass) => {
       if (!nickname || typeof nickname !== "string") return false
-      // Case-insensitive lookup so "Vakil1" and "vakil1" both work
+      // Case-insensitive lookup so "Xodim1" and "xodim1" both work
       const escaped = String(nickname).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
       const user = await this.UserModel.findOne({
         nickname: new RegExp("^" + escaped + "$", "i"),
@@ -27,7 +27,7 @@ module.exports = function(vakolat, JWT_SECRET) {
       return false
     }
   
-    generateAccessToken = (user) => {
+    generateAccessToken = (user, rememberMe = false) => {
       return jwt.sign(
         {
           id: user._id,
@@ -37,7 +37,7 @@ module.exports = function(vakolat, JWT_SECRET) {
           lastname: user.lastname,
         },
         JWT_SECRET,
-        { expiresIn: "1h" },
+        { expiresIn: rememberMe ? "12h" : "1h" },
       )
     }
   }
@@ -47,7 +47,7 @@ module.exports = function(vakolat, JWT_SECRET) {
   
   // Authentication endpoint
   router.post(["/auth", "/api/auth"], async (req, res) => {
-    const { nickname, password } = req.body
+    const { nickname, password, rememberMe } = req.body
     if (!nickname || !password) {
       res.status(401).send("Login yoki parol ko'rsatilmadi")
       return
@@ -55,7 +55,10 @@ module.exports = function(vakolat, JWT_SECRET) {
   
     const user = await auth.authenticate(nickname, password)
     if (user) {
-      const token = auth.generateAccessToken(user)
+      // Accept boolean true, string "true" (some clients), or 1
+      const wantsRemember =
+        rememberMe === true || rememberMe === "true" || rememberMe === 1 || rememberMe === "1"
+      const token = auth.generateAccessToken(user, wantsRemember)
 
       // Load permission names through permissionGroup
       let permissions = []
@@ -67,7 +70,7 @@ module.exports = function(vakolat, JWT_SECRET) {
         permissions = groupPerms.filter((p) => p.isActive !== false).map((p) => p.name)
       } catch (_) {}
 
-      // Explicit audit log for vakil login (skip superuser inside helper)
+      // Explicit audit log for xodim login (skip superuser inside helper)
       logExplicitAction(req, user, {
         action: "login",
         entityType: "auth",
@@ -95,7 +98,7 @@ module.exports = function(vakolat, JWT_SECRET) {
     }
   })
 
-  // Logout endpoint – logs vakil logout (token still valid, just clearing client)
+  // Logout endpoint – logs xodim logout (token still valid, just clearing client)
   router.post("/api/auth/logout", verifyToken, async (req, res) => {
     try {
       await logExplicitAction(req, req.user, {

@@ -484,6 +484,7 @@ module.exports = (nazorat, vakolat) => {
         const userNo = String(req.body.userNo || "").trim()
         const rawItems = Array.isArray(req.body.items) ? req.body.items : []
         const comment = String(req.body.comment || "")
+        const departmentId = req.body.departmentId || null
         if (!userNo || rawItems.length === 0) {
           return res.status(400).json({ error: "ID karta raqami va xizmatlar ro'yxati talab qilinadi" })
         }
@@ -550,6 +551,7 @@ module.exports = (nazorat, vakolat) => {
             [
               {
                 userNo,
+                departmentId,
                 items: provisionItems,
                 totalAmount,
                 comment,
@@ -766,7 +768,7 @@ module.exports = (nazorat, vakolat) => {
 
       res.json(items)
     } catch (error) {
-      res.status(500).json({ error: "Vakil bo'limlarini yuklashda xatolik" })
+      res.status(500).json({ error: "Xodim bo'limlarini yuklashda xatolik" })
     }
   })
 
@@ -780,7 +782,7 @@ module.exports = (nazorat, vakolat) => {
         .lean()
       res.json(experts)
     } catch (error) {
-      res.status(500).json({ error: "Vakillarni yuklashda xatolik" })
+      res.status(500).json({ error: "Xodimlarni yuklashda xatolik" })
     }
   })
 

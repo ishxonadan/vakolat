@@ -67,7 +67,7 @@ const returnToAdmin = () => {
     }
     localStorage.removeItem('isImpersonating');
     localStorage.removeItem('originalUser');
-    window.location.href = '/vakillar';
+    window.location.href = '/xodimlar';
   } catch (error) {
     console.error('Error returning to admin account:', error);
   }

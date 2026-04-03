@@ -12,6 +12,7 @@ const saving = ref(false)
 const cancellingId = ref(null)
 const userNoSearch = ref("")
 const services = ref([])
+const departments = ref([])
 const provisions = ref([])
 const account = ref(null)
 const member = ref(null)
@@ -48,10 +49,12 @@ const itemCost = (item) => {
   return (Number(svc?.price || 0) || 0) * (Number(item.quantity || 0) || 0)
 }
 const totalCost = computed(() => form.value.items.reduce((sum, item) => sum + itemCost(item), 0))
+const hasSelectedUser = computed(() => String(form.value.userNo || "").trim().length > 0)
 const currentBalance = computed(() => Number(account.value?.balance || 0))
 const remainingBalance = computed(() => currentBalance.value - totalCost.value)
 const hasEnoughBalance = computed(() => remainingBalance.value >= 0)
-const hasPositiveBalance = computed(() => currentBalance.value > 0)
+/** Only after a user is chosen and loaded; avoids treating "no user" as balance 0 */
+const hasPositiveBalance = computed(() => hasSelectedUser.value && currentBalance.value > 0)
 const getCancelDeadline = (row) => new Date(row.createdAt).getTime() + CANCEL_WINDOW_MS
 const canCancelRow = (row) => {
   if (isRais) return true
@@ -75,9 +78,17 @@ const loadServices = async () => {
   services.value = services.value.filter((s) => s.isActive !== false)
 }
 
+const loadDepartments = async () => {
+  departments.value = await apiService.get("/members/payment/departments")
+}
+
 const loadUser = async () => {
   const userNo = String(form.value.userNo || "").trim()
-  if (!userNo) return
+  if (!userNo) {
+    account.value = null
+    member.value = null
+    return
+  }
   const data = await apiService.get(`/members/payment/accounts/${encodeURIComponent(userNo)}`)
   account.value = data.account || { userNo, balance: 0 }
   member.value = data.member || null
@@ -127,6 +138,7 @@ const submitProvision = async () => {
       userNo,
       comment: form.value.comment,
       items,
+      departmentId: form.value.departmentId || null,
     })
     toast.add({ severity: "success", summary: "Muvaffaqiyat", detail: "Xizmat ko'rsatildi", life: 2500 })
     form.value.comment = ""
@@ -144,7 +156,7 @@ const cancelProvision = async (row) => {
   try {
     cancellingId.value = row._id
     await apiService.post(`/members/payment/service-provisions/${row._id}/cancel`, {
-      reason: "Vakil tomonidan bekor qilindi",
+      reason: "Xodim tomonidan bekor qilindi",
     })
     toast.add({ severity: "success", summary: "Muvaffaqiyat", detail: "Xizmat bekor qilindi", life: 2500 })
     await Promise.all([loadUser(), loadProvisions()])
@@ -157,7 +169,7 @@ const cancelProvision = async (row) => {
 
 onMounted(async () => {
   try {
-    await loadServices()
+    await Promise.all([loadServices(), loadDepartments()])
     const presetUserNo = normalizeUserNoInput(route.query.userNo)
     if (presetUserNo) {
       userNoSearch.value = presetUserNo
@@ -195,7 +207,7 @@ onUnmounted(() => {
       <div><b>Foydalanuvchi:</b> {{ member?.USER_NAME || "-" }}</div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+    <div v-if="hasSelectedUser" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
       <div class="border-round border-1 surface-border p-3">
         <div class="text-600 text-sm mb-1">Joriy balans</div>
         <div class="text-3xl font-bold text-900">{{ formatMoney(currentBalance) }}</div>
@@ -208,7 +220,12 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <Message v-if="!hasEnoughBalance && totalCost > 0" severity="error" :closable="false" class="mb-4">
+    <Message
+      v-if="hasSelectedUser && !hasEnoughBalance && totalCost > 0"
+      severity="error"
+      :closable="false"
+      class="mb-4"
+    >
       Balans yetarli emas. Xizmatni rasmiylashtirish uchun qo'shimcha mablag' kerak.
     </Message>
 
@@ -249,7 +266,19 @@ onUnmounted(() => {
       <Button label="Yana xizmat qo'shish" icon="pi pi-plus" text :disabled="!hasPositiveBalance" @click="addItem" />
     </div>
 
-    <Message v-if="!hasPositiveBalance" severity="warn" :closable="false" class="mb-4">
+    <div class="mb-4">
+      <h2 class="text-lg font-semibold mb-2">Zal</h2>
+      <Dropdown
+        v-model="form.departmentId"
+        :options="departments"
+        optionLabel="name"
+        optionValue="_id"
+        placeholder="Zalni tanlang (ixtiyoriy)"
+        class="w-full md:w-20rem"
+      />
+    </div>
+
+    <Message v-if="hasSelectedUser && !hasPositiveBalance" severity="warn" :closable="false" class="mb-4">
       Balans 0 so'm. Xizmat tanlash uchun avval foydalanuvchi balansini to'ldiring.
     </Message>
 

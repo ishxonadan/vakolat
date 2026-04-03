@@ -58,8 +58,8 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
-          path: "/vakillar",
-          name: "vakillar",
+          path: "/xodimlar",
+          name: "xodimlar",
           component: () => import("@/views/pages/vakillar.vue"),
           meta: {
             requiresAuth: true,
@@ -67,8 +67,8 @@ const router = createRouter({
           },
         },
         {
-          path: "/vakillar/logs",
-          name: "vakil_logs",
+          path: "/xodimlar/logs",
+          name: "xodim_logs",
           component: () => import("@/views/pages/vakil_logs.vue"),
           meta: {
             requiresAuth: true,
@@ -83,8 +83,8 @@ const router = createRouter({
           },
         },
         {
-          path: "/vakil_add",
-          name: "vakil_add",
+          path: "/xodim_add",
+          name: "xodim_add",
           component: () => import("@/views/pages/vakil_add.vue"),
           meta: {
             requiresAuth: true,
@@ -92,8 +92,8 @@ const router = createRouter({
           },
         },
         {
-          path: "/vakil_edit/:id",
-          name: "vakil_edit",
+          path: "/xodim_edit/:id",
+          name: "xodim_edit",
           component: () => import("@/views/pages/vakil_edit.vue"),
           meta: {
             requiresAuth: true,

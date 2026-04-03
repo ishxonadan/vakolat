@@ -34,13 +34,17 @@ const email = ref('');
 const password = ref('');
 const checked = ref(false);
 
-
+onMounted(() => {
+  const savedRememberMe = localStorage.getItem("rememberMe")
+  checked.value = savedRememberMe === "true"
+})
 
 const login = async () => {
   try {
-    const result = await authService.login(email.value, password.value);
+    const result = await authService.login(email.value, password.value, checked.value);
 
     if (result.success) {
+      localStorage.setItem("rememberMe", String(checked.value))
       // Show success toast
       toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: 'Login successful', life: 3000 });
 

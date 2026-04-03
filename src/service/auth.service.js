@@ -212,7 +212,7 @@ class AuthService {
     return false
   }
 
-  async login(email, password) {
+  async login(email, password, rememberMe = false) {
     console.log("🔐 Attempting login for:", email)
 
     try {
@@ -221,7 +221,7 @@ class AuthService {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ nickname: email, password }),
+        body: JSON.stringify({ nickname: email, password, rememberMe: !!rememberMe }),
       })
 
       const data = await response.json()

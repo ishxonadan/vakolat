@@ -41,11 +41,11 @@ const onPageChange = (event) => {
 };
 
 const goToAddPage = () => {
-  router.push('/vakil_add');
+  router.push('/xodim_add');
 };
 
 const editButton = (itemId) => {
-  router.push('/vakil_edit/' + itemId);
+  router.push('/xodim_edit/' + itemId);
 };
 
 // Toggle account lock (activate / lock)
@@ -94,10 +94,10 @@ const loginAsExpert = async (expert) => {
   }
 }
 
-// View audit logs for a specific vakil (superuser only)
+// View audit logs for a specific xodim (superuser only)
 const viewLogs = (expert) => {
   router.push({
-    path: '/vakillar/logs',
+    path: '/xodimlar/logs',
     query: { userId: expert._id }
   })
 }
@@ -106,9 +106,9 @@ const viewLogs = (expert) => {
 <template>
   <div>
     <div class="flex justify-between items-center p-4 bg-white dark:bg-zinc-800 shadow-md rounded-lg" style="margin-bottom: 20px;">
-      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Vakillar (Admin va Moderatorlar)</h1>
+      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Xodimlar (Admin va Moderatorlar)</h1>
       <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-all" @click="goToAddPage">
-        Vakil qo'shish
+        Xodim qo'shish
       </button>
     </div>
     <div v-if="isLoading" class="flex justify-center items-center p-4">
@@ -144,7 +144,7 @@ const viewLogs = (expert) => {
           <Button 
             :icon="slotProps.data.isActive !== false ? 'pi pi-lock-open' : 'pi pi-lock'" 
             type="button" 
-            class="vakil-status-lock p-button-rounded p-button-text"
+            class="xodim-status-lock p-button-rounded p-button-text"
             :class="slotProps.data.isActive !== false ? 'p-button-success' : 'p-button-danger'"
             @click="toggleUserStatus(slotProps.data)"
             v-tooltip="slotProps.data.isActive !== false ? 'Hisobni qulflash' : 'Hisobni faollashtirish'"
@@ -153,11 +153,11 @@ const viewLogs = (expert) => {
       </Column>
       <Column style="width: 20%" header="Amallar">
         <template #body="slotProps">
-          <div class="vakil-actions">
+          <div class="xodim-actions">
             <Button
               icon="pi pi-pencil"
               type="button"
-              class="vakil-action-btn p-button-text p-button-rounded p-button-info"
+              class="xodim-action-btn p-button-text p-button-rounded p-button-info"
               @click="editButton(slotProps.data._id)"
               v-tooltip="'Tahrirlash'"
             />
@@ -165,7 +165,7 @@ const viewLogs = (expert) => {
               v-if="isSuperAdmin"
               icon="pi pi-history"
               type="button"
-              class="vakil-action-btn p-button-text p-button-rounded p-button-warning"
+              class="xodim-action-btn p-button-text p-button-rounded p-button-warning"
               @click="viewLogs(slotProps.data)"
               v-tooltip="'Faoliyat loglarini ko\'rish'"
             />
@@ -173,9 +173,9 @@ const viewLogs = (expert) => {
               v-if="isSuperAdmin"
               icon="pi pi-user"
               type="button"
-              class="vakil-action-btn vakil-action-btn--right p-button-text p-button-rounded p-button-success"
+              class="xodim-action-btn xodim-action-btn--right p-button-text p-button-rounded p-button-success"
               @click="loginAsExpert(slotProps.data)"
-              v-tooltip="'Vakil sifatida kirish'"
+              v-tooltip="'Xodim sifatida kirish'"
               :disabled="slotProps.data.isActive === false"
             />
           </div>
@@ -186,7 +186,7 @@ const viewLogs = (expert) => {
 </template>
 
 <style scoped>
-.vakil-status-lock :deep(.pi) {
+.xodim-status-lock :deep(.pi) {
   font-size: 1.35rem;
 }
 
@@ -198,7 +198,7 @@ const viewLogs = (expert) => {
   padding-left: 0.25rem !important;
 }
 
-.vakil-actions {
+.xodim-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -206,16 +206,16 @@ const viewLogs = (expert) => {
   width: 100%;
 }
 
-.vakil-action-btn {
+.xodim-action-btn {
   min-width: 2.5rem;
   min-height: 2.5rem;
 }
 
-.vakil-action-btn :deep(.pi) {
+.xodim-action-btn :deep(.pi) {
   font-size: 1.2rem;
 }
 
-.vakil-action-btn--right {
+.xodim-action-btn--right {
   margin-left: 0.5rem;
 }
 </style>

@@ -279,6 +279,7 @@ userDepartmentSchema.index({ expertId: 1, departmentId: 1 }, { unique: true })
 const paymentServiceProvisionSchema = new mongoose.Schema(
   {
     userNo: { type: String, required: true, index: true },
+    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", default: null },
     items: [
       {
         serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", required: true },
@@ -435,7 +436,7 @@ const ALL_PERMISSIONS = [
   { name: "view_statistics",       description: "Statistika va tashriflarni ko'rish" },
   { name: "view_members",          description: "A'zo bo'lganlar ro'yxatini ko'rish" },
   // Foydalanuvchilar
-  { name: "manage_users",          description: "Foydalanuvchilar (vakillar) boshqaruvi" },
+  { name: "manage_users",          description: "Foydalanuvchilar (xodimlar) boshqaruvi" },
   { name: "view_tickets",          description: "Bir martalik chiptalar ro'yxatini ko'rish" },
   { name: "create_tickets",        description: "Bir martalik chiptalar yaratish" },
   { name: "payment_topup_user",    description: "Foydalanuvchi balansini to'ldirish" },

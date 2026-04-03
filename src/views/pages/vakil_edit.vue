@@ -99,7 +99,7 @@ async function saveData() {
     });
     
     setTimeout(() => {
-      router.push('/vakillar');
+      router.push('/xodimlar');
     }, 2000);
   } catch (error) {
     console.error('Error updating expert:', error);
@@ -114,13 +114,13 @@ async function saveData() {
 }
 
 function cancelEdit() {
-  router.push('/vakillar');
+  router.push('/xodimlar');
 }
 </script>
 
 <template>
   <div class="p-6 bg-white rounded-lg shadow-md mx-auto">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Vakilni tahrirlash</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Xodimni tahrirlash</h2>
     
     <div v-if="loading" class="flex justify-center items-center py-8">
       <ProgressSpinner />

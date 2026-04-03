@@ -114,13 +114,13 @@ const menuItems = [
         ]
       },
       {
-        label: "Vakillar boshqaruvi",
+        label: "Xodimlar boshqaruvi",
         icon: 'pi pi-fw pi-briefcase',
         items: [
           {
-            label: "Vakillar",
+            label: "Xodimlar",
             icon: 'pi pi-fw pi-users',
-            to: '/vakillar',
+            to: '/xodimlar',
             requiredPermissions: ['manage_users']
           },
           {
@@ -130,16 +130,16 @@ const menuItems = [
             requiredPermissions: ['manage_permissions']
           },
           {
-            label: "Vakil loglari",
+            label: "Xodim loglari",
             icon: 'pi pi-fw pi-history',
-            to: '/vakillar/logs',
+            to: '/xodimlar/logs',
             requiredLevel: 'rais'
           },
           {
-            label: "Bo'limlar va tegishli foydalanuvchilar",
+            label: "Zallar",
             icon: 'pi pi-fw pi-sitemap',
             to: '/payment/departments',
-            requiredPermissions: ['payment_manage_user_departments']
+            requiredPermissions: ['payment_manage_departments']
           },
         ]
       },
