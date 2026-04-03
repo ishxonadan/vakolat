@@ -3,6 +3,7 @@ const router = express.Router()
 const { checkUserLevel } = require("../src/middleware/auth.middleware")
 const jwt = require("jsonwebtoken")
 const PlausibleService = require("../src/services/plausible.service")
+const { collectPermissionNamesFromPopulatedUser } = require("../src/utils/userPermissionNames")
 
 module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
   const RatingAssignment = vakolat.model("RatingAssignment")
@@ -780,7 +781,14 @@ module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
       }
 
       const expert = await User.findById(expertId)
-        .populate({ path: "permissionGroup", populate: { path: "permissions", select: "name isActive" } })
+        .populate({
+          path: "permissionGroups",
+          populate: { path: "permissions", select: "name isActive" },
+        })
+        .populate({
+          path: "permissionGroup",
+          populate: { path: "permissions", select: "name isActive" },
+        })
         .lean()
 
       if (!expert) {
@@ -800,8 +808,7 @@ module.exports = (vakolat, JWT_SECRET, PlausibleCache) => {
         { expiresIn: "1h" },
       )
 
-      const groupPerms = expert.permissionGroup?.permissions || []
-      const permissions = groupPerms.filter((p) => p.isActive !== false).map((p) => p.name)
+      const permissions = collectPermissionNamesFromPopulatedUser(expert)
 
       res.status(200).json({
         token,

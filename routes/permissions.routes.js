@@ -292,7 +292,10 @@ module.exports = (vakolat, JWT_SECRET) => {
     try {
       // Check if group is assigned to any users
       const User = vakolat.model("User")
-      const usersWithGroup = await User.find({ permissionGroup: req.params.id })
+      const gid = req.params.id
+      const usersWithGroup = await User.find({
+        $or: [{ permissionGroup: gid }, { permissionGroups: gid }],
+      })
 
       if (usersWithGroup.length > 0) {
         return res.status(400).json({

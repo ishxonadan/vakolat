@@ -6,6 +6,7 @@ import apiService from '@/service/api.service';
 import ProgressSpinner from 'primevue/progressspinner';
 import InputText from 'primevue/inputtext';
 import Dropdown from 'primevue/dropdown';
+import MultiSelect from 'primevue/multiselect';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
 
@@ -15,13 +16,17 @@ const router = useRouter();
 const nickname = ref('');
 const firstname = ref('');
 const lastname = ref('');
-const position = ref('');
+const staffPositions = ref([]);
+const selectedStaffPosition = ref(null);
 const password = ref('');
 const confirmPassword = ref('');
-const selectedPermissionGroup = ref(null);
-const permissionGroups = ref([]);
+const selectedPermissionGroupIds = ref([]);
+const permissionGroupCatalog = ref([]);
+const staffDepartments = ref([]);
+const selectedStaffDepartment = ref(null);
 const isActive = ref(true);
 const loading = ref(true);
+const legacyPositionHint = ref('');
 const id = route.params.id;
 
 // Fetch expert data and permission groups on mount
@@ -29,20 +34,49 @@ onMounted(async () => {
   try {
     loading.value = true;
     
-    // Load permission groups
-    const groupsData = await apiService.get('/admin/permission-groups');
-    permissionGroups.value = groupsData.filter(group => group.isActive);
-    
+    // Load permission groups + tashkiliy bo'limlar
+    const [groupsData, deptData, posData] = await Promise.all([
+      apiService.get('/admin/permission-groups'),
+      apiService.get('/staff-departments'),
+      apiService.get('/staff-positions'),
+    ]);
+    permissionGroupCatalog.value = Array.isArray(groupsData) ? [...groupsData] : [];
+    staffDepartments.value = Array.isArray(deptData) ? deptData : [];
+    staffPositions.value = Array.isArray(posData) ? posData : [];
+
     // Load expert data
     console.log('Fetching expert with ID:', id);
     const data = await apiService.get(`/experts/${id}`);
     console.log('Expert data received:', data);
-    
+
+    const byCatId = new Map(permissionGroupCatalog.value.map((g) => [String(g._id), g]));
+    const ensureInCatalog = (g) => {
+      if (!g || !g._id) return;
+      const sid = String(g._id);
+      if (!byCatId.has(sid)) {
+        byCatId.set(sid, g);
+        permissionGroupCatalog.value.push(g);
+      }
+    };
+    (data.permissionGroups || []).forEach(ensureInCatalog);
+    ensureInCatalog(data.permissionGroup);
+
     nickname.value = data.nickname;
     firstname.value = data.firstname;
     lastname.value = data.lastname;
-    position.value = data.position || '';
-    selectedPermissionGroup.value = data.permissionGroup?._id || data.permissionGroup || null;
+    const pgIds = [];
+    if (Array.isArray(data.permissionGroups) && data.permissionGroups.length) {
+      for (const g of data.permissionGroups) {
+        if (g && g._id) pgIds.push(g._id);
+      }
+    } else if (data.permissionGroup?._id || data.permissionGroup) {
+      pgIds.push(data.permissionGroup._id || data.permissionGroup);
+    }
+    selectedPermissionGroupIds.value = pgIds;
+    selectedStaffDepartment.value = data.staffDepartment?._id || data.staffDepartment || null;
+    selectedStaffPosition.value = data.staffPosition?._id || data.staffPosition || null;
+    legacyPositionHint.value =
+      !selectedStaffPosition.value && data.position ? String(data.position) : '';
     isActive.value = data.isActive !== false; // Default to true if not set
     
   } catch (error) {
@@ -75,10 +109,11 @@ async function saveData() {
     nickname: nickname.value,
     firstname: firstname.value,
     lastname: lastname.value,
-    position: position.value,
     level: 'expert',
     language: 'uz',
-    permissionGroup: selectedPermissionGroup.value,
+    permissionGroups: selectedPermissionGroupIds.value || [],
+    staffDepartment: selectedStaffDepartment.value || null,
+    staffPosition: selectedStaffPosition.value || null,
     isActive: isActive.value
   };
   
@@ -165,32 +200,60 @@ function cancelEdit() {
         </div>
       </div>
       
-      <!-- Position row -->
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="w-full">
-          <label for="position" class="block text-sm font-medium text-gray-700 mb-1">Lavozimi</label>
-          <InputText 
-            v-model="position" 
-            id="position" 
-            type="text" 
-            autocomplete="off"
-            class="w-full p-3" 
+          <label for="staffPosition" class="block text-sm font-medium text-gray-700 mb-1">Lavozimi</label>
+          <Dropdown
+            id="staffPosition"
+            v-model="selectedStaffPosition"
+            :options="staffPositions"
+            option-label="name"
+            option-value="_id"
+            placeholder="Tanlash (ixtiyoriy)"
+            show-clear
+            filter
+            class="w-full"
           />
+          <p v-if="!selectedStaffPosition && legacyPositionHint" class="text-xs text-amber-600 mt-1">
+            Eski yozuv: {{ legacyPositionHint }} — yangi lavozim tanlansa, matn yangilanadi.
+          </p>
         </div>
       </div>
 
-      <!-- Permission Group row -->
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="w-full">
-          <label for="permissionGroup" class="block text-sm font-medium text-gray-700 mb-1">Huquq guruhi</label>
-          <Dropdown 
-            v-model="selectedPermissionGroup" 
-            :options="permissionGroups"
-            optionLabel="name"
-            optionValue="_id"
-            placeholder="Huquq guruhini tanlang"
+          <label for="staffDepartment" class="block text-sm font-medium text-gray-700 mb-1">Tashkiliy bo‘lim</label>
+          <Dropdown
+            id="staffDepartment"
+            v-model="selectedStaffDepartment"
+            :options="staffDepartments"
+            option-label="name"
+            option-value="_id"
+            placeholder="Tanlash (ixtiyoriy)"
+            show-clear
+            filter
             class="w-full"
           />
+          <p class="text-xs text-gray-500 mt-1">Pullik zali yoki huquq guruhi bilan aloqador emas.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="w-full">
+          <label for="permissionGroups" class="block text-sm font-medium text-gray-700 mb-1">Huquq guruhi</label>
+          <MultiSelect
+            id="permissionGroups"
+            v-model="selectedPermissionGroupIds"
+            :options="permissionGroupCatalog"
+            option-label="name"
+            option-value="_id"
+            placeholder="Bir yoki bir nechta guruh"
+            filter
+            display="chip"
+            class="w-full"
+            :max-selected-labels="3"
+          />
+          <p class="text-xs text-gray-500 mt-1">Bir nechta guruh — huquqlar birlashadi.</p>
         </div>
       </div>
 

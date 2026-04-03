@@ -2,27 +2,76 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import Dropdown from 'primevue/dropdown';
+import Tag from 'primevue/tag';
+import Button from 'primevue/button';
 import apiService from '@/service/api.service';
 import authService from '@/service/auth.service';
 
 const router = useRouter();
 const toast = useToast();
 const products = ref([]);
-const currentPage = ref(1);
 const isLoading = ref(false);
 const error = ref(null);
 
-// Check if current user is superadmin (rais)
-const isSuperAdmin = computed(() => {
-  return authService.getUserLevel() === 'rais';
+/** Tashkiliy bo‘lim (StaffDepartment) — Zallar yoki huquq guruhi emas */
+const selectedDepartmentFilter = ref('__all__');
+
+const sortByName = (a, b) => {
+  const ln = String(a.lastname || '').localeCompare(String(b.lastname || ''), 'uz', { sensitivity: 'base' });
+  if (ln !== 0) return ln;
+  return String(a.firstname || '').localeCompare(String(b.firstname || ''), 'uz', { sensitivity: 'base' });
+};
+
+const departmentFilterOptions = computed(() => {
+  const list = products.value || [];
+  const opts = [{ label: `Barchasi (${list.length})`, value: '__all__' }];
+  const unassigned = list.filter((p) => !p.staffDepartment?._id).length;
+  if (unassigned > 0) {
+    opts.push({ label: `Bo'lim tanlanmagan (${unassigned})`, value: '__unassigned__' });
+  }
+  const byId = new Map();
+  for (const p of list) {
+    const d = p.staffDepartment;
+    if (!d?._id) continue;
+    const id = String(d._id);
+    if (!byId.has(id)) {
+      byId.set(id, { name: d.name || '—', count: 0 });
+    }
+    byId.get(id).count++;
+  }
+  const sorted = [...byId.entries()].sort((a, b) =>
+    a[1].name.localeCompare(b[1].name, 'uz', { sensitivity: 'base' }),
+  );
+  for (const [id, { name, count }] of sorted) {
+    opts.push({ label: `${name} (${count})`, value: id });
+  }
+  return opts;
 });
 
-const fetchData = async (page = 1) => {
+const filteredProducts = computed(() => {
+  const list = products.value || [];
+  const v = selectedDepartmentFilter.value;
+  let out = list;
+  if (v === '__all__') {
+    out = list;
+  } else if (v === '__unassigned__') {
+    out = list.filter((p) => !p.staffDepartment?._id);
+  } else {
+    out = list.filter((p) => p.staffDepartment && String(p.staffDepartment._id) === v);
+  }
+  return [...out].sort(sortByName);
+});
+
+const isSuperAdmin = computed(() => authService.getUserLevel() === 'rais');
+
+const fetchData = async () => {
   isLoading.value = true;
   error.value = null;
   try {
     const data = await apiService.get('/experts');
     products.value = data;
+    selectedDepartmentFilter.value = '__all__';
   } catch (err) {
     console.error('Error fetching data:', err);
     error.value = 'Error fetching data. Please try again later.';
@@ -32,13 +81,8 @@ const fetchData = async (page = 1) => {
 };
 
 onMounted(() => {
-  fetchData(currentPage.value);
+  fetchData();
 });
-
-const onPageChange = (event) => {
-  currentPage.value = event.page + 1;  // Convert from 0-based to 1-based index
-  fetchData(currentPage.value);
-};
 
 const goToAddPage = () => {
   router.push('/xodim_add');
@@ -48,7 +92,6 @@ const editButton = (itemId) => {
   router.push('/xodim_edit/' + itemId);
 };
 
-// Toggle account lock (activate / lock)
 const toggleUserStatus = async (user) => {
   try {
     const newStatus = user.isActive === false;
@@ -56,13 +99,12 @@ const toggleUserStatus = async (user) => {
     user.isActive = newStatus;
     const statusText = newStatus ? 'Faollashtirildi' : 'Hisob qulflandi';
     toast.add({ severity: 'success', summary: 'Muvaffaqiyat', detail: statusText, life: 3000 });
-    fetchData(currentPage.value);
+    fetchData();
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Xato', detail: err?.message || 'Holatni o\'zgartirishda xatolik', life: 3000 });
   }
 };
 
-// Function to login as expert (impersonate)
 const loginAsExpert = async (expert) => {
   try {
     const response = await apiService.post('/admin/login-as-expert', {
@@ -70,7 +112,6 @@ const loginAsExpert = async (expert) => {
     })
 
     if (response && response.token && response.user) {
-      // Save current (superuser) session so we can restore on exit
       localStorage.setItem('isImpersonating', 'true')
       localStorage.setItem(
         'originalUser',
@@ -81,7 +122,6 @@ const loginAsExpert = async (expert) => {
         })
       )
 
-      // Switch to expert: token, user, and expert's permissions (for menu)
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
       const perms = Array.isArray(response.permissions) ? response.permissions : []
@@ -94,7 +134,6 @@ const loginAsExpert = async (expert) => {
   }
 }
 
-// View audit logs for a specific xodim (superuser only)
 const viewLogs = (expert) => {
   router.push({
     path: '/xodimlar/logs',
@@ -105,11 +144,42 @@ const viewLogs = (expert) => {
 
 <template>
   <div>
-    <div class="flex justify-between items-center p-4 bg-white dark:bg-zinc-800 shadow-md rounded-lg" style="margin-bottom: 20px;">
-      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Xodimlar (Admin va Moderatorlar)</h1>
-      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-all" @click="goToAddPage">
-        Xodim qo'shish
-      </button>
+    <div
+      class="flex flex-col gap-4 p-4 bg-white dark:bg-zinc-800 shadow-md rounded-lg mb-5"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Xodimlar</h1>
+        <button
+          type="button"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition-all shrink-0"
+          @click="goToAddPage"
+        >
+          Xodim qo'shish
+        </button>
+      </div>
+      <div
+        v-if="products.length > 0"
+        class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3 pt-1 border-t border-gray-200 dark:border-zinc-600"
+      >
+        <div class="flex flex-col gap-1 flex-1 min-w-[min(100%,18rem)] sm:max-w-md">
+          <label for="xodim-dept-filter" class="text-xs font-medium text-gray-600 dark:text-gray-400">Tashkiliy bo‘lim bo‘yicha</label>
+          <Dropdown
+            id="xodim-dept-filter"
+            v-model="selectedDepartmentFilter"
+            :options="departmentFilterOptions"
+            option-label="label"
+            option-value="value"
+            filter
+            filter-placeholder="Qidirish..."
+            class="w-full"
+            :panel-style="{ maxWidth: 'min(26rem, 90vw)' }"
+          />
+        </div>
+        <div class="text-sm text-gray-600 dark:text-gray-400 sm:pb-2 sm:ml-auto">
+          Ko‘rsatilmoqda: <span class="font-semibold text-gray-900 dark:text-white tabular-nums">{{ filteredProducts.length }}</span>
+          / {{ products.length }}
+        </div>
+      </div>
     </div>
     <div v-if="isLoading" class="flex justify-center items-center p-4">
       <p>Ma'lumotlar yuklanmoqda...</p>
@@ -117,33 +187,60 @@ const viewLogs = (expert) => {
     <div v-if="error" class="flex justify-center items-center p-4">
       <p>{{ error }}</p>
     </div>
-    <DataTable v-if="!isLoading && !error" :value="products" :rows="100" :paginator="false" :page="currentPage - 1" responsiveLayout="scroll">
-      <Column field="nickname" header="Login" :sortable="true" style="width: 15%">
+    <DataTable v-if="!isLoading && !error" :value="filteredProducts" :rows="100" :paginator="false" responsiveLayout="scroll">
+      <Column field="nickname" header="Login" :sortable="true" style="width: 12%">
         <template #body="slotProps">
           <span :class="{'text-red-600': !slotProps.data.isActive}">
             {{ slotProps.data.nickname }}
           </span>
         </template>
       </Column>
-      <Column header="Ismi sharif" :sortable="true" style="width: 30%">
+      <Column header="Ismi sharif" :sortable="true" style="width: 22%">
         <template #body="slotProps">
           {{ slotProps.data.firstname }} {{ slotProps.data.lastname }}
         </template>
       </Column>
-      <Column field="position" header="Lavozimi" :sortable="true" style="width: 15%"></Column>
-      <Column field="permissionGroup" header="Huquq guruhi" style="width: 15%">
+      <Column field="position" header="Lavozimi" :sortable="true" style="width: 13%">
         <template #body="slotProps">
-          <Tag v-if="slotProps.data.permissionGroup" 
-               :value="slotProps.data.permissionGroup.name" 
-               severity="info" />
-          <span v-else class="text-gray-400">Belgilanmagan</span>
+          {{ slotProps.data.staffPosition?.name || slotProps.data.position || '—' }}
         </template>
       </Column>
-      <Column field="isActive" header="Holat" style="width: 10%">
+      <Column field="staffDepartment" header="Tashkiliy bo'lim" style="width: 16%">
         <template #body="slotProps">
-          <Button 
-            :icon="slotProps.data.isActive !== false ? 'pi pi-lock-open' : 'pi pi-lock'" 
-            type="button" 
+          <Tag
+            v-if="slotProps.data.staffDepartment?.name"
+            :value="slotProps.data.staffDepartment.name"
+            severity="success"
+          />
+          <span v-else class="text-gray-400 dark:text-gray-500 text-sm">—</span>
+        </template>
+      </Column>
+      <Column header="Huquq guruhi" style="width: 18%">
+        <template #body="slotProps">
+          <div class="flex flex-wrap gap-1">
+            <template v-if="slotProps.data.permissionGroups?.length">
+              <Tag
+                v-for="g in slotProps.data.permissionGroups"
+                :key="g._id"
+                :value="g.name"
+                severity="info"
+                class="text-xs"
+              />
+            </template>
+            <Tag
+              v-else-if="slotProps.data.permissionGroup"
+              :value="slotProps.data.permissionGroup.name"
+              severity="info"
+            />
+            <span v-else class="text-gray-400 dark:text-gray-500 text-sm">Belgilanmagan</span>
+          </div>
+        </template>
+      </Column>
+      <Column field="isActive" header="Holat" style="width: 8%">
+        <template #body="slotProps">
+          <Button
+            :icon="slotProps.data.isActive !== false ? 'pi pi-lock-open' : 'pi pi-lock'"
+            type="button"
             class="xodim-status-lock p-button-rounded p-button-text"
             :class="slotProps.data.isActive !== false ? 'p-button-success' : 'p-button-danger'"
             @click="toggleUserStatus(slotProps.data)"
@@ -151,7 +248,7 @@ const viewLogs = (expert) => {
           />
         </template>
       </Column>
-      <Column style="width: 20%" header="Amallar">
+      <Column style="width: 15%" header="Amallar">
         <template #body="slotProps">
           <div class="xodim-actions">
             <Button
@@ -190,7 +287,6 @@ const viewLogs = (expert) => {
   font-size: 1.35rem;
 }
 
-/* Shrink gap between Holat and Amallar (last two columns) */
 :deep(.p-datatable-tbody > tr > td:nth-last-child(2)) {
   padding-right: 0.25rem !important;
 }

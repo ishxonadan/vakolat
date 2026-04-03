@@ -28,6 +28,7 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { verifyToken, checkUserLevel, checkPermissions } = require("./src/middleware/auth.middleware")
 require("dotenv").config()
+const { DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME } = require("./routes/staff-departments.constants")
 
 const JWT_SECRET = process.env.JWT_SECRET
 
@@ -66,6 +67,27 @@ const permissionGroupSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 })
 
+/** Tashkiliy bo‘lim (xodimlar guruhlari) — pullik “Zallar” yoki huquq guruhi bilan aloqador emas */
+const staffDepartmentSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+)
+staffDepartmentSchema.index({ name: 1 }, { unique: true })
+
+/** Lavozim (xodim unvon / toifa ro‘yxati) */
+const staffPositionSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    isActive: { type: Boolean, default: true },
+    sortOrder: { type: Number, default: 1 },
+  },
+  { timestamps: true },
+)
+staffPositionSchema.index({ name: 1 }, { unique: true })
+
 const userSchema = new mongoose.Schema({
   nickname: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -74,7 +96,14 @@ const userSchema = new mongoose.Schema({
   position: { type: String },
   level: { type: String, required: true, default: "expert" },
   language: { type: String, required: true, default: "uz" },
+  /** @deprecated bir nechta uchun permissionGroups ishlating; migratsiya uchun saqlanadi */
   permissionGroup: { type: mongoose.Schema.Types.ObjectId, ref: "PermissionGroup" },
+  /** Bir yoki bir nechta huquq guruhi (ruxsatlar birlashmasi) */
+  permissionGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "PermissionGroup" }],
+  /** Tashkiliy bo‘lim (`StaffDepartment`); Zallar (`PaymentDepartment`) dan farq qiladi */
+  staffDepartment: { type: mongoose.Schema.Types.ObjectId, ref: "StaffDepartment", default: null },
+  /** Lavozim (`StaffPosition`); `position` matni bilan sinxron saqlanishi mumkin (legacy / qidiruv) */
+  staffPosition: { type: mongoose.Schema.Types.ObjectId, ref: "StaffPosition", default: null },
   isActive: { type: Boolean, default: true },
 })
 
@@ -334,6 +363,8 @@ const { attachApiAudit } = require("./src/services/audit.service")
 const Permission = vakolat.model("Permission", permissionSchema)
 const PermissionGroup = vakolat.model("PermissionGroup", permissionGroupSchema)
 const Contestant = vakolat.model("Websites", contestantSchema)
+const StaffDepartment = vakolat.model("StaffDepartment", staffDepartmentSchema)
+const StaffPosition = vakolat.model("StaffPosition", staffPositionSchema)
 const User = vakolat.model("User", userSchema)
 const AuditLog = vakolat.model("AuditLog", auditLogModel.auditLogSchema)
 const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
@@ -344,6 +375,8 @@ const SurveyVote = vakolat.model("SurveyVote", surveyVoteModel.surveyVoteSchema)
 const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plausibleCacheSchema)
 
 app.locals.User = User
+app.locals.StaffDepartment = StaffDepartment
+app.locals.StaffPosition = StaffPosition
 app.locals.Permission = Permission
 app.locals.PermissionGroup = PermissionGroup
 app.locals.AuditLog = AuditLog
@@ -1326,6 +1359,8 @@ const createTicketsRoutes = () => {
 
 const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
 const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
+const staffDepartmentRoutes = require("./routes/staff-departments.routes")(vakolat)
+const staffPositionRoutes = require("./routes/staff-positions.routes")(vakolat)
 const contestantRoutes = require("./routes/contestants.routes")(vakolat)
 const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
@@ -1342,6 +1377,8 @@ const ipAccessRoutes = require("./routes/ip-access.routes")(yoqlama)
 
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
+app.use("/api/staff-departments", staffDepartmentRoutes)
+app.use("/api/staff-positions", staffPositionRoutes)
 app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
@@ -1460,8 +1497,62 @@ if (process.env.npm_lifecycle_event === "start") {
   app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
 }
 
-app.listen(7777, () => {
+async function ensureDefaultStaffDepartment() {
+  await StaffDepartment.updateOne(
+    { name: DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME },
+    { $setOnInsert: { name: DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME, isActive: true } },
+    { upsert: true },
+  )
+}
+
+async function ensureStaffPositionsSeed() {
+  const DEFAULTS = [
+    "Rahbariyat",
+    "Xizmat rahbari",
+    "Bosh mutaxassis",
+    "Yetakchi Mutaxassis",
+    "I-toifali mutaxassis",
+    "II-toifali mutaxassis",
+  ]
+  const count = await StaffPosition.countDocuments()
+  if (count > 0) {
+    return
+  }
+  await StaffPosition.insertMany(
+    DEFAULTS.map((name, i) => ({ name, isActive: true, sortOrder: i + 1 })),
+  )
+  console.log("[seed] StaffPosition: inserted", DEFAULTS.length, "defaults")
+}
+
+/** Eski 0-based tartiblarni 1-based qilib yangilash (bir marta, kerak bo‘lsa) */
+async function migrateStaffPositionSortOrderToOneBased() {
+  const hasZero = await StaffPosition.exists({ sortOrder: 0 })
+  if (!hasZero) {
+    return
+  }
+  const rows = await StaffPosition.find({}).sort({ sortOrder: 1, name: 1 }).select("_id").lean()
+  if (!rows.length) {
+    return
+  }
+  const ops = rows.map((r, i) => ({
+    updateOne: {
+      filter: { _id: r._id },
+      update: { $set: { sortOrder: i + 1 } },
+    },
+  }))
+  await StaffPosition.bulkWrite(ops)
+  console.log("[migrate] StaffPosition sortOrder: 0-based → 1-based,", rows.length, "rows")
+}
+
+app.listen(7777, async () => {
   console.log("Server is running on \x1b[34mhttp://localhost:7777\x1b[0m")
+  try {
+    await ensureDefaultStaffDepartment()
+    await ensureStaffPositionsSeed()
+    await migrateStaffPositionSortOrderToOneBased()
+  } catch (e) {
+    console.error("DB seed (staff department / positions):", e)
+  }
 })
 
 module.exports = {

@@ -75,6 +75,24 @@ const router = createRouter({
           },
         },
         {
+          path: "/xodimlar/tashkiliy-bolimlar",
+          name: "staff_departments",
+          component: () => import("@/views/pages/staff_departments.vue"),
+          meta: {
+            requiresAuth: true,
+            requiredLevel: "admin",
+          },
+        },
+        {
+          path: "/xodimlar/lavozimlar",
+          name: "staff_positions",
+          component: () => import("@/views/pages/staff_positions.vue"),
+          meta: {
+            requiresAuth: true,
+            requiredLevel: "admin",
+          },
+        },
+        {
           path: "/system",
           name: "system_control",
           component: () => import("@/views/system/SystemControlPage.vue"),
@@ -267,6 +285,15 @@ router.beforeEach((to, from, next) => {
       permissionMeta.permissionsAny.length > 0 &&
       !authService.hasAnyPermission(permissionMeta.permissionsAny)
     ) {
+      next("/auth/access")
+      return
+    }
+  }
+
+  const levelRecord = [...to.matched].reverse().find((r) => r.meta?.requiredLevel)
+  const requiredLevel = levelRecord?.meta?.requiredLevel
+  if (requiresAuth && isAuthenticated && requiredLevel) {
+    if (!authService.hasAccess(requiredLevel)) {
       next("/auth/access")
       return
     }

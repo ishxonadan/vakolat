@@ -1,8 +1,13 @@
 const express = require("express")
+const mongoose = require("mongoose")
 const router = express.Router()
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { verifyToken, checkUserLevel } = require("../src/middleware/auth.middleware")
+const {
+  collectPermissionNamesFromPopulatedUser,
+  normalizePermissionGroupIds,
+} = require("../src/utils/userPermissionNames")
 
 // Export a function that takes the vakolat db connection and JWT_SECRET
 module.exports = function(vakolat, JWT_SECRET) {
@@ -60,14 +65,19 @@ module.exports = function(vakolat, JWT_SECRET) {
         rememberMe === true || rememberMe === "true" || rememberMe === 1 || rememberMe === "1"
       const token = auth.generateAccessToken(user, wantsRemember)
 
-      // Load permission names through permissionGroup
       let permissions = []
       try {
         const fullUser = await User.findById(user._id)
-          .populate({ path: "permissionGroup", populate: { path: "permissions", select: "name isActive" } })
+          .populate({
+            path: "permissionGroups",
+            populate: { path: "permissions", select: "name isActive" },
+          })
+          .populate({
+            path: "permissionGroup",
+            populate: { path: "permissions", select: "name isActive" },
+          })
           .lean()
-        const groupPerms = fullUser?.permissionGroup?.permissions || []
-        permissions = groupPerms.filter((p) => p.isActive !== false).map((p) => p.name)
+        permissions = collectPermissionNamesFromPopulatedUser(fullUser)
       } catch (_) {}
 
       // Explicit audit log for xodim login (skip superuser inside helper)
@@ -150,6 +160,8 @@ module.exports = function(vakolat, JWT_SECRET) {
   router.get("/api/me", verifyToken, async (req, res) => {
     try {
       const user = await User.findById(req.user.id, "-password")
+        .populate("staffPosition", "name _id isActive")
+        .lean()
       if (!user) {
         return res.status(404).json({ error: "User not found" })
       }
@@ -162,7 +174,20 @@ module.exports = function(vakolat, JWT_SECRET) {
   // Register a new user (admin only)
   router.post("/api/admin/register", checkUserLevel("admin"), async (req, res) => {
     try {
-      const { nickname, password, firstname, lastname, position, level, language } = req.body
+      const {
+        nickname,
+        password,
+        firstname,
+        lastname,
+        position,
+        level,
+        language,
+        permissionGroup,
+        permissionGroups,
+        staffDepartment,
+        staffPosition,
+        isActive,
+      } = req.body
   
       // Validate required fields
       if (!firstname || !lastname || !password) {
@@ -170,15 +195,40 @@ module.exports = function(vakolat, JWT_SECRET) {
       }
   
       const hashedPassword = await bcrypt.hash(password, 10)
+
+      const staffPositionId = (() => {
+        const s = staffPosition ? String(staffPosition).trim() : ""
+        return s && mongoose.Types.ObjectId.isValid(s) ? s : null
+      })()
+
+      let positionStr = position != null ? String(position).trim() : ""
+      if (staffPositionId) {
+        const sp = await vakolat.model("StaffPosition").findById(staffPositionId).select("name").lean()
+        if (sp?.name) {
+          positionStr = sp.name
+        }
+      }
   
+      const pgIds = normalizePermissionGroupIds(
+        permissionGroups !== undefined ? permissionGroups : permissionGroup,
+      )
+
       const user = new User({
         nickname,
         password: hashedPassword,
         firstname,
         lastname,
-        position,
+        position: positionStr || undefined,
         level: level || "expert",
         language: language || "uz",
+        permissionGroups: pgIds,
+        permissionGroup: pgIds.length ? pgIds[0] : null,
+        staffDepartment: (() => {
+          const s = staffDepartment ? String(staffDepartment).trim() : ""
+          return s && mongoose.Types.ObjectId.isValid(s) ? s : null
+        })(),
+        staffPosition: staffPositionId,
+        isActive: isActive !== false,
       })
   
       await user.save()

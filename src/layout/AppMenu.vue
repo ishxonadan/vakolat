@@ -1,12 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import AppMenuItem from './AppMenuItem.vue';
 import authService from '@/service/auth.service';
 import packageJson from '../../package.json';
+import { useLayout } from '@/layout/composables/layout';
 
 const router = useRouter();
 const route = useRoute();
+const { setActiveMenuItem } = useLayout();
 const appVersion = packageJson.version;
 
 // Hardcoded variable to control manual correction menu visibility
@@ -130,6 +132,18 @@ const menuItems = [
             requiredPermissions: ['manage_users']
           },
           {
+            label: "Tashkiliy bo'limlar",
+            icon: 'pi pi-fw pi-building',
+            to: '/xodimlar/tashkiliy-bolimlar',
+            requiredLevel: 'admin',
+          },
+          {
+            label: "Lavozimlar",
+            icon: 'pi pi-fw pi-id-card',
+            to: '/xodimlar/lavozimlar',
+            requiredLevel: 'admin',
+          },
+          {
             label: "Huquqlar",
             icon: 'pi pi-fw pi-key',
             to: '/huquqlar',
@@ -239,6 +253,68 @@ const logoutSection = {
 const model = computed(() => {
   return [...filteredModel.value, logoutSection];
 });
+
+/** Route bilan menyu `to` mosligi (bosh sahifa `/` boshqalar uchun oldini olish) */
+function routeMatchesMenuPath(path, to) {
+  if (!to) {
+    return false;
+  }
+  if (path === to) {
+    return true;
+  }
+  if (to === '/') {
+    return false;
+  }
+  const base = to.endsWith('/') ? to.replace(/\/+$/, '') : to;
+  return path.startsWith(base + '/');
+}
+
+/**
+ * AppMenuItem bilan bir xil kalitlar: bo'lim indeksi `si`, ichki elementlar `si-0-1-...`
+ * Avvalo ichkariroq (leaf) moslik qidiriladi.
+ */
+function findActiveMenuItemKeyForPath(path, items, parentKey) {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const key = `${parentKey}-${i}`;
+    if (item.items && item.items.length > 0) {
+      const nested = findActiveMenuItemKeyForPath(path, item.items, key);
+      if (nested) {
+        return nested;
+      }
+    }
+    if (item.to && routeMatchesMenuPath(path, item.to)) {
+      return key;
+    }
+  }
+  return null;
+}
+
+function syncMenuExpansionToRoute() {
+  const sections = model.value;
+  if (!sections?.length) {
+    return;
+  }
+  for (let si = 0; si < sections.length; si++) {
+    const section = sections[si];
+    if (!section.items?.length) {
+      continue;
+    }
+    const key = findActiveMenuItemKeyForPath(route.path, section.items, String(si));
+    if (key) {
+      setActiveMenuItem(key);
+      return;
+    }
+  }
+}
+
+watch(
+  () => [route.path, model.value],
+  () => {
+    syncMenuExpansionToRoute();
+  },
+  { immediate: true },
+);
 
 // Logout function
 const logout = () => {

@@ -44,8 +44,11 @@ const ApiService = {
     }
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Network error")
+      const body = await response.json().catch(() => ({}))
+      const err = new Error(body.error || "Network error")
+      err.status = response.status
+      err.payload = body
+      throw err
     }
 
     return await response.json()
@@ -68,8 +71,11 @@ const ApiService = {
     }
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Network error")
+      const body = await response.json().catch(() => ({}))
+      const err = new Error(body.error || "Network error")
+      err.status = response.status
+      err.payload = body
+      throw err
     }
 
     return await response.json()
@@ -92,8 +98,11 @@ const ApiService = {
     }
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Network error")
+      const body = await response.json().catch(() => ({}))
+      const err = new Error(body.error || "Network error")
+      err.status = response.status
+      err.payload = body
+      throw err
     }
 
     return await response.json()
@@ -116,8 +125,11 @@ const ApiService = {
     }
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Network error")
+      const body = await response.json().catch(() => ({}))
+      const err = new Error(body.error || "Network error")
+      err.status = response.status
+      err.payload = body
+      throw err
     }
 
     return await response.json()
@@ -140,8 +152,11 @@ const ApiService = {
     }
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Network error")
+      const body = await response.json().catch(() => ({}))
+      const err = new Error(body.error || "Network error")
+      err.status = response.status
+      err.payload = body
+      throw err
     }
 
     return await response.json()

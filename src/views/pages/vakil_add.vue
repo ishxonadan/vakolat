@@ -1,5 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import Dropdown from 'primevue/dropdown';
+import MultiSelect from 'primevue/multiselect';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 import apiService from '@/service/api.service';
@@ -9,18 +11,27 @@ const router = useRouter();
 const nickname = ref('');
 const firstname = ref('');
 const lastname = ref('');
-const position = ref('');
+const staffPositions = ref([]);
+const selectedStaffPosition = ref(null);
 const password = ref('');
 const confirmPassword = ref('');
-const selectedPermissionGroup = ref(null);
-const permissionGroups = ref([]);
+const selectedPermissionGroupIds = ref([]);
+const permissionGroupCatalog = ref([]);
+const staffDepartments = ref([]);
+const selectedStaffDepartment = ref(null);
 const isActive = ref(true);
 
 // Load permission groups on mount
 onMounted(async () => {
   try {
-    const data = await apiService.get('/admin/permission-groups');
-    permissionGroups.value = data.filter(group => group.isActive);
+    const [groupsData, deptData, posData] = await Promise.all([
+      apiService.get('/admin/permission-groups'),
+      apiService.get('/staff-departments'),
+      apiService.get('/staff-positions'),
+    ]);
+    permissionGroupCatalog.value = groupsData.filter((group) => group.isActive);
+    staffDepartments.value = Array.isArray(deptData) ? deptData : [];
+    staffPositions.value = Array.isArray(posData) ? posData : [];
   } catch (error) {
     console.error('Error loading permission groups:', error);
   }
@@ -43,11 +54,12 @@ async function saveData() {
     nickname: nickname.value,
     firstname: firstname.value,
     lastname: lastname.value,
-    position: position.value,
     password: password.value,
     level: 'expert',
     language: 'uz',
-    permissionGroup: selectedPermissionGroup.value,
+    permissionGroups: selectedPermissionGroupIds.value || [],
+    staffDepartment: selectedStaffDepartment.value || null,
+    staffPosition: selectedStaffPosition.value || null,
     isActive: isActive.value
   };
   
@@ -123,32 +135,60 @@ async function saveData() {
         </div>
       </div>
       
-      <!-- Position row -->
+      <!-- Lavozim -->
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="w-full">
-          <label for="position" class="block text-sm font-medium text-gray-700 mb-1">Lavozimi</label>
-          <InputText 
-            v-model="position" 
-            id="position" 
-            type="text" 
-            autocomplete="off"
-            class="w-full p-3" 
+          <label for="staffPosition" class="block text-sm font-medium text-gray-700 mb-1">Lavozimi</label>
+          <Dropdown
+            id="staffPosition"
+            v-model="selectedStaffPosition"
+            :options="staffPositions"
+            option-label="name"
+            option-value="_id"
+            placeholder="Tanlash (ixtiyoriy)"
+            show-clear
+            filter
+            class="w-full"
           />
         </div>
       </div>
 
-      <!-- Permission Group row -->
+      <!-- Tashkiliy bo‘lim (Zallar / huquq guruhi emas) -->
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="w-full">
-          <label for="permissionGroup" class="block text-sm font-medium text-gray-700 mb-1">Huquq guruhi</label>
-          <Dropdown 
-            v-model="selectedPermissionGroup" 
-            :options="permissionGroups"
-            optionLabel="name"
-            optionValue="_id"
-            placeholder="Huquq guruhini tanlang"
+          <label for="staffDepartment" class="block text-sm font-medium text-gray-700 mb-1">Tashkiliy bo‘lim</label>
+          <Dropdown
+            id="staffDepartment"
+            v-model="selectedStaffDepartment"
+            :options="staffDepartments"
+            option-label="name"
+            option-value="_id"
+            placeholder="Tanlash (ixtiyoriy)"
+            show-clear
+            filter
             class="w-full"
           />
+          <p class="text-xs text-gray-500 mt-1">Pullik zali yoki huquq guruhi bilan aloqador emas.</p>
+        </div>
+      </div>
+
+      <!-- Huquq guruhi(lari) -->
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="w-full">
+          <label for="permissionGroups" class="block text-sm font-medium text-gray-700 mb-1">Huquq guruhi</label>
+          <MultiSelect
+            id="permissionGroups"
+            v-model="selectedPermissionGroupIds"
+            :options="permissionGroupCatalog"
+            option-label="name"
+            option-value="_id"
+            placeholder="Bir yoki bir nechta guruh tanlang"
+            filter
+            display="chip"
+            class="w-full"
+            :max-selected-labels="3"
+          />
+          <p class="text-xs text-gray-500 mt-1">Bir nechta tanlansa, barcha guruhlardagi huquqlar birlashadi (takroriy huquqlar bitta hisoblanadi).</p>
         </div>
       </div>
 

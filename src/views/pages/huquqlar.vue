@@ -5,61 +5,7 @@
     </div>
 
     <TabView>
-      <!-- Permissions Tab -->
-      <TabPanel header="Huquqlar">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold">Huquqlar ro'yxati</h3>
-          <Button @click="showPermissionDialog = true" icon="pi pi-plus" label="Yangi huquq" />
-        </div>
-
-        <DataTable 
-          :value="permissions" 
-          :loading="loadingPermissions"
-          paginator 
-          :rows="pageSize"
-          :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
-          responsiveLayout="scroll"
-          @page="onPageSizeChange"
-        >
-          <Column field="name" header="Huquq nomi" sortable />
-          <Column field="description" header="Tavsif" sortable />
-          <Column field="isActive" header="Holat" sortable>
-            <template #body="slotProps">
-              <Tag :value="slotProps.data.isActive ? 'Faol' : 'Nofaol'" :severity="slotProps.data.isActive ? 'success' : 'danger'" />
-            </template>
-          </Column>
-          <Column header="Amallar">
-            <template #body="slotProps">
-              <div class="flex gap-2">
-                <Button 
-                  @click="editPermission(slotProps.data)" 
-                  icon="pi pi-pencil" 
-                  size="small" 
-                  severity="info"
-                  v-tooltip="'Tahrirlash'"
-                />
-                <Button 
-                  @click="togglePermissionStatus(slotProps.data)" 
-                  :icon="slotProps.data.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                  size="small" 
-                  :severity="slotProps.data.isActive ? 'warning' : 'success'"
-                  v-tooltip="slotProps.data.isActive ? 'Faolsizlashtirish' : 'Faollashtirish'"
-                />
-                <Button 
-                  @click="confirmDeletePermission(slotProps.data)" 
-                  icon="pi pi-trash" 
-                  size="small" 
-                  severity="danger"
-                  outlined
-                  v-tooltip="'O\'chirish'"
-                />
-              </div>
-            </template>
-          </Column>
-        </DataTable>
-      </TabPanel>
-
-      <!-- Permission Groups Tab -->
+      <!-- Permission groups first (default tab) -->
       <TabPanel header="Huquq guruhlari">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Huquq guruhlari</h3>
@@ -106,6 +52,59 @@
                 />
                 <Button 
                   @click="confirmDeleteGroup(slotProps.data)" 
+                  icon="pi pi-trash" 
+                  size="small" 
+                  severity="danger"
+                  outlined
+                  v-tooltip="'O\'chirish'"
+                />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </TabPanel>
+
+      <TabPanel header="Huquqlar">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Huquqlar ro'yxati</h3>
+          <Button @click="showPermissionDialog = true" icon="pi pi-plus" label="Yangi huquq" />
+        </div>
+
+        <DataTable 
+          :value="permissions" 
+          :loading="loadingPermissions"
+          paginator 
+          :rows="pageSize"
+          :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
+          responsiveLayout="scroll"
+          @page="onPageSizeChange"
+        >
+          <Column field="name" header="Huquq nomi" sortable />
+          <Column field="description" header="Tavsif" sortable />
+          <Column field="isActive" header="Holat" sortable>
+            <template #body="slotProps">
+              <Tag :value="slotProps.data.isActive ? 'Faol' : 'Nofaol'" :severity="slotProps.data.isActive ? 'success' : 'danger'" />
+            </template>
+          </Column>
+          <Column header="Amallar">
+            <template #body="slotProps">
+              <div class="flex gap-2">
+                <Button 
+                  @click="editPermission(slotProps.data)" 
+                  icon="pi pi-pencil" 
+                  size="small" 
+                  severity="info"
+                  v-tooltip="'Tahrirlash'"
+                />
+                <Button 
+                  @click="togglePermissionStatus(slotProps.data)" 
+                  :icon="slotProps.data.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  size="small" 
+                  :severity="slotProps.data.isActive ? 'warning' : 'success'"
+                  v-tooltip="slotProps.data.isActive ? 'Faolsizlashtirish' : 'Faollashtirish'"
+                />
+                <Button 
+                  @click="confirmDeletePermission(slotProps.data)" 
                   icon="pi pi-trash" 
                   size="small" 
                   severity="danger"

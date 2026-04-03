@@ -1,5 +1,7 @@
 # Project snapshot (technical memory)
 
+**Package:** `vakolat` — app version label in sidebar/footer reads `Talqin v<package.json#version>` (e.g. `2026.4.1`). This file is a living map of brittle/important behavior; update it when changing permissions, payment flows, or diss razdel/razdels contracts.
+
 **Diss (dissertations)** — DB: yoqlama (diss). Documents, razdel (document type + legacy category; schema `collection: 'razdel'`) and razdels (Kategoriya; schema `collection: 'razdels'`), Level, Language, Field (soha). Pagination: `/diss_list/:page?` + `?search=`, returns `{ results, total }`; backend `.limit()`/`.skip()`, search `$or` on code/title/author with `escapeRegex()`. Frontend lazy DataTable, server-side search debounced. Turi: hardcoded options "Dissertatsiya" / "Avtoreferat" (mirrors `razdel` seeds). Kategoriya: load from `/api/diss/razdels`; `categories` built from `{ name, razdel_id }` docs into `{ label, value }`. Edit/add: `category_id` normalized `Number()` for dropdown; language resolved by code or `aliases[]` from API; invalid language (not in Tillar) → red border + label "(ro'yxatda yo'q)", `validLanguageCodes` ref + `invalidLanguage` computed.
 
 **Razdel / Razdels — DO NOT BREAK.** `razdel` (model Razdel) and `razdels` (model Razdels) live in yoqlama. `razdel` documents **must** have `name` (String) and `razdel_id` (Number); seed when empty (e.g. Dissertatsiya razdel_id 1, Avtoreferat razdel_id 2). API `/api/diss/cats` uses `razdel` for legacy type/category lookups (kept for compatibility). `razdels` is the **authoritative source for Kategoriya**: `/api/diss/razdels` returns only docs with both `name` and `razdel_id`, sorted by `razdel_id`, normalized to `{ name, razdel_id }`. Frontend (diss_add, diss_edit): Turi dropdown is static (Dissertatsiya / Avtoreferat) matching `razdel` seeds; Kategoriya dropdown uses `/api/diss/razdels` → `{ label: name, value: Number(razdel_id) }`. Do not change field names or drop the filter/normalization or Kategoriya breaks. **Naming rule:** `razdel` → Turi (document type); `razdels` → Kategoriya.
@@ -14,7 +16,7 @@
 
 **Routes/menu** — Dissertatsiya: Hujjatlar, Tillar (`/diss/languages`), Soha (`/diss/soha`), Akademik daraja (`/diss/akademik-daraja`), To'liq matnga ruxsat. Each menu item guarded by its specific permission (see Huquqlar).
 
-**Huquqlar (permissions)** — Permission model: `name`, `description`, `isActive`. PermissionGroup model: `name`, `description`, `permissions[]` (ObjectId refs), `isActive`. User has `permissionGroup` (single group). Access chain: User → permissionGroup → permissions[].name. `rais` level bypasses all checks. Middleware: `checkPermissions(names[])` in `src/middleware/auth.middleware.js` — traverses the chain, requires ALL listed names. `verifyToken` for read-only routes.
+**Huquqlar (permissions)** — Permission model: `name`, `description`, `isActive`. PermissionGroup model: `name`, `description`, `permissions[]` (ObjectId refs), `isActive`. User has `permissionGroup` (single group). Access chain: User → permissionGroup → permissions[].name. `rais` level bypasses all checks. Middleware (`src/middleware/auth.middleware.js`): **`checkPermissions(names[])`** — requires **ALL** listed names; **`checkAnyPermissions(names[])`** — requires **at least one**. `verifyToken` attaches user for read/mutate routes as appropriate.
 
 Named permissions (seeded on startup, upsert-safe):
 - `view_dissertations` — list/view diss
@@ -38,7 +40,7 @@ Default groups seeded: "Admin" (all), "Dissertatsiya mutaxassisi" (view+add+edit
 
 **Impersonation (superuser → xodim → back)** — Admin can "enter" a xodim via `/api/admin/login-as-expert`. Backend (`routes/admin.routes.js`) must: find the expert, populate `permissionGroup.permissions`, and return `{ token, user, permissions[] }` where `permissions` is the expert's active permission names. Frontend (`xodimlar.vue`) must, before switching, save current session to `originalUser = { token, user, permissions }` and set `isImpersonating = 'true'`, then replace `token`, `user` and `permissions` with the expert's values and reload `/`. Topbar (`AppTopbar.vue`) must detect impersonation from localStorage and `originalUser`, and "Return to admin" must restore `token`, `user` and `permissions` from `originalUser`, clear impersonation flags, and redirect to `/xodimlar`. This guarantees the menu and access rights match the active (real or impersonated) user.
 
-**Xodimlar audit & statistics** — All authenticated `/api/**` calls (except auth + a few noisy endpoints) for non‑`rais` users are written to `AuditLog` with `user`, `action`, `entityType`, `entityId`, and `meta` (method, path, query, body, status, duration). Important actions are normalized: dissertations (`add_dissertation`, `edit_dissertation`, `disable_dissertation`, `enable_dissertation`, `view_dissertation_list`, `view_dissertation_detail`), registration (`register_user`, `edit_expert`), one‑day tickets (`add_ticket`, `view_tickets`). Superuser can read logs via `/api/admin/audit-logs` and aggregated per‑xodim stats via `/api/admin/audit-stats`. UI: `xodim_logs.vue` has two tabs — **Loglar** (human‑readable actions in Uzbek) and **Statistikalar** with three sections (Registratsiya, Bir martalik chipta, Dissertatsiya), each listing only xodimlar involved in that domain; clicking a xodim jumps back to their detailed logs.
+**Xodimlar audit & statistics** — Non‑`rais` users: most authenticated `/api/**` traffic is logged to `AuditLog` (`user`, `action`, `entityType`, `entityId`, `meta`). Normalized actions include dissertations, registration, tickets, and **pullik** bundles (`payment_topup`, `payment_spend`, `payment_service_provide`, `payment_service_cancel`, service/department CRUD, read-only payment views such as `payment_view_transactions` / `payment_read_account`, etc.—see `routes/audit.routes.js` aggregations). Superuser: `/api/admin/audit-logs`, `/api/admin/audit-stats`. **UI** `xodim_logs.vue`: **Loglar** + **Statistikalar** — jadval ketma-ketligi: **Registratsiya**, **Bir martalik chipta**, **Pullik xizmatlar** (ustunlar: to‘ldirish, yechish, xizmat ko‘rsatish, bekor, xizmat CRUD, zal, biriktirish, jami), **Dissertatsiya**. Audit ilovada **`rais`** uchun umumiy API shovqini o‘tkazib yuboriladi, lekin **`/api/members/payment`** (va chipta / ma’lum registratsiya yo‘llari) **yoziladi**, shuning uchun pullik statistikasida rais ham chiqishi mumkin.
 
 **Xodimlar page** — `xodimlar.vue` lists experts with columns: Login, Ismi sharif, Lavozimi, Huquq guruhi (Tag with group name), Holat (green lock-open / red lock icon toggle using `isActive` and PUT `/api/experts/:id`), and Amallar. Amallar has three color‑coded icon buttons: Edit (info), View logs (warning, opens `xodim_logs` with `userId`), and "Xodim sifatida kirish" (success, superadmin‑only impersonation via `/api/admin/login-as-expert`). Actions are compact, rounded buttons with larger icons; Holat/Amallar gap is reduced via table cell padding tweaks.
 
@@ -55,35 +57,35 @@ Default groups seeded: "Admin" (all), "Dissertatsiya mutaxassisi" (view+add+edit
 - `PaymentService` — catalog of paid services: `{ name, code?, price, isActive }`.
 - `PaymentDepartment` — departments for grouping xodims: `{ name, code?, isActive }`.
 - `UserDepartment` — mapping xodim → department: `{ expertId: ObjectId(User), departmentId: ObjectId(PaymentDepartment), isActive }` with unique index on `{ expertId, departmentId }`.
-- `PaymentServiceProvision` — grouped “service provision” operation: `{ userNo, items[{ serviceId, serviceName, quantity, unitPrice, totalPrice }], totalAmount, comment, status: 'active'|'cancelled', providedBy, cancelledBy?, cancelledReason?, cancelledAt? }`. Used to withdraw money per service and optionally refund on cancellation.
+- `PaymentServiceProvision` — grouped “service provision” operation: `{ userNo, departmentId?, items[{ serviceId, serviceName, quantity, unitPrice, totalPrice }], totalAmount, comment, status: 'active'|'cancelled', providedBy, cancelledBy?, cancelledReason?, cancelledAt? }`. Used to withdraw money per service and optionally refund on cancellation. Optional **`departmentId`** (Zal / `PaymentDepartment`) is stored when the client sends it and may be **required at runtime** when `SystemSettings.paymentRequireZalForServiceProvision` is true (see below).
+- `SystemSettings` — singleton-style doc (first row): **`paymentRequireZalForServiceProvision`** (boolean, default false). Loaded via `/api/system/settings`; **Tizim boshqaruvi** UI (`SystemControlPage.vue`) can toggle it. When true, **POST /service-provisions** rejects missing/invalid zal; service-provision page loads the flag and marks the zal dropdown invalid until selected.
 
-All models are registered on `vakolat` and exposed via `app.locals` (`PaymentAccount`, `PaymentTransaction`, `PaymentService`, `PaymentDepartment`, `UserDepartment`, `PaymentServiceProvision`) for reuse in routes and audit.
+Payment-related models are on `vakolat` and exposed via `app.locals` (`PaymentAccount`, `PaymentTransaction`, `PaymentService`, `PaymentDepartment`, `UserDepartment`, `PaymentServiceProvision`). **`SystemSettings`** is the same DB connection but is **not** on `app.locals`; routes use `vakolat.model("SystemSettings")` (or local `require` scope) where needed.
 
-**Payment permissions (Huquqlar)** — Added to `ALL_PERMISSIONS` seed (upsert-safe):
+**Payment permissions (Huquqlar)** — Seeded in `ALL_PERMISSIONS` (upsert-safe); descriptions in Uzbek in `server.js`:
 
-- `payment_topup_user` — may top up a user's balance.
-- `payment_withdraw_user` — may manually withdraw from user balance (general spend).
-- `payment_manage_services` — CRUD on `PaymentService`.
-- `payment_manage_departments` — CRUD on `PaymentDepartment`.
-- `payment_manage_user_departments` — assign/remove xodim ↔ department.
-- `payment_provide_service` — perform service-based withdrawals (xizmat ko'rsatish).
-- `payment_cancel_provided_service` — cancel a service provision and refund the amount.
+- `payment_topup_user` — balance top-up (manual).
+- `payment_withdraw_user` — manual withdraw from balance.
+- `payment_list_accounts` — accounts list + search (balances table).
+- `payment_read_account` — read one account by `userNo` (combined with other any-of on GET `/accounts/:userNo`).
+- `payment_view_transactions` — transaction history (global + per-user).
+- `payment_view_overview_stats` — overview aggregates for balances header cards (`/accounts/overview`).
+- `payment_manage_services` — CRUD `PaymentService`.
+- `payment_manage_departments` — CRUD **Zallar** (`PaymentDepartment`).
+- `payment_manage_user_departments` — xodim ↔ zal mapping (`UserDepartment` APIs used from departments UI).
+- `payment_provide_service` — xizmat ko'rsatish (debit + provision row).
+- `payment_cancel_provided_service` — cancel provision + refund.
 
-These are available on the Huquqlar page (`huquqlar.vue`) and usable in permission groups like any other named permission.
+Assign via **Huquqlar** (`huquqlar.vue`) like any other named permission.
 
-**Payment routes / APIs** — Implemented in `[routes/members-payment.routes.js]` and mounted under `/api/members/payment`:
+**Frontend auth helpers** — `auth.service.js`: `hasPermission(name)`, **`hasAnyPermission(names[])`**. Router (`src/router/index.js`) `beforeEach` honors **`meta.permission`** (single) or **`meta.permissionsAny`** (any). `AppMenu.vue` supports **`requiredPermissions`** and **`requiredPermissionsAny`** on items.
+
+**Payment routes / APIs** — `[routes/members-payment.routes.js]` under `/api/members/payment`. Several GETs use **`checkAnyPermissions([...])`** so operators with overlapping roles can open the same data without holding every key.
 
 - Accounts & balances:
-  - `GET /api/members/payment/accounts` — paginated list of `PaymentAccount` with optional search on Nazorat `cache` collection (`USER_NO` or `USER_NAME`). Default sort: `balance` desc. Optimized cache strategy:
-    - On startup/first call, full rebuild is done only for bootstrap case (transactions exist but `PaymentAccount` is empty).
-    - If account cache already exists, endpoint uses cached balances directly for fast loads.
-    - For search, only users missing from cache are recalculated from `PaymentTransaction` (correctness preserved, avoids expensive full search recalculation).
-  - `GET /api/members/payment/accounts/overview` — aggregate stats for balances page header:
-    - `overallMoneyInBalances` (sum of all `PaymentAccount.balance`)
-    - `overallSpending` (sum of all outgoing transactions)
-    - `spendingThisMonth` (outgoing since month start)
-    - `spendingThisYear` (outgoing since Jan 1)
-  - `GET /api/members/payment/accounts/:userNo` — recalculates that user's balance from `PaymentTransaction` and returns `{ account, member }`. Used by UI for live leverage and user header info.
+  - `GET .../accounts` — **`checkAnyPermissions`:** `payment_list_accounts`, `payment_topup_user`, `payment_withdraw_user`, `payment_view_transactions`, `payment_view_overview_stats`. Paginated `PaymentAccount` list + Nazorat `cache` search (`USER_NO` / `USER_NAME`). Default sort `balance` desc. Cache/bootstrap strategy unchanged (bootstrap when txs exist but no accounts; search recalc for missing users only).
+  - `GET .../accounts/overview` — **`checkPermissions(['payment_view_overview_stats'])`**. Header stats: `overallMoneyInBalances`, `overallSpending`, `spendingThisMonth`, `spendingThisYear`.
+  - `GET .../accounts/:userNo` — **`checkAnyPermissions`:** `payment_provide_service`, `payment_topup_user`, `payment_withdraw_user`, `payment_list_accounts`, `payment_read_account`. Recalculates balance, returns `{ account, member }` for service-provision / dialogs.
 - Manual money movements:
   - `POST /api/members/payment/topup` — guarded by `payment_topup_user`. Creates/updates `PaymentAccount` (create-if-missing, `status: 'active'`), increments `balance` by `amount`, and writes a `PaymentTransaction` (`type: 'top_up'`, `direction: 'in'`, `source: 'manual'`, `createdBy` = xodim). Used by Foydalanuvchi balansi “To'ldirish” button.
   - `POST /api/members/payment/spend` — guarded by `payment_withdraw_user`. Ensures account exists (create with `balance = 0` if missing), enforces non-negative balance, decrements `balance`, and writes a `PaymentTransaction` (`type: 'spend'`, `direction: 'out'`, `source: 'manual'`).
@@ -92,16 +94,16 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
 - Services & departments:
   - `GET /api/members/payment/services` — list of all services (front-end filters only active ones).
   - `POST/PUT/DELETE /api/members/payment/services` — guarded by `payment_manage_services`. CRUD on `PaymentService`.
-  - `GET /api/members/payment/departments` — list of departments.
-  - `POST/PUT/DELETE /api/members/payment/departments` — guarded by `payment_manage_departments`. Deletion also removes corresponding `UserDepartment` mappings.
+  - `GET .../departments` — list departments; **`checkAnyPermissions`:** `payment_provide_service`, `payment_manage_departments` (provision UI needs dropdown; admins manage).
+  - `POST/PUT/DELETE .../departments` — **`checkPermissions(['payment_manage_departments'])`**. Delete cascades related `UserDepartment` mappings.
 - Xodim departments:
   - `GET /api/members/payment/experts` — list xodims (`User` with `level: 'expert'`) with basic fields; supports department assignment UI.
   - `GET /api/members/payment/user-departments` — list mappings; can filter by `expertId`. Returns objects populated with `expertId` and `departmentId`.
   - `POST /api/members/payment/user-departments` — guarded by `payment_manage_user_departments`. Upsert mapping `{ expertId, departmentId }`.
   - `DELETE /api/members/payment/user-departments` — guarded by same permission. Removes mapping `{ expertId, departmentId }`.
 - Service provisions (xizmat ko'rsatish):
-  - `GET /api/members/payment/service-provisions` — list grouped service provisions, filterable by `userNo` and `status`. Populates `providedBy`, `cancelledBy`, and linked services.
-  - `POST /api/members/payment/service-provisions` — guarded by `payment_provide_service`. Body `{ userNo, items[{ serviceId, quantity }], comment }`. Workflow:
+  - `GET .../service-provisions` — list grouped provisions (`userNo`, `status` filters); populates `providedBy`, `cancelledBy`, services, **`departmentId`**. **`checkAnyPermissions`:** `payment_provide_service`, `payment_view_transactions`.
+  - `POST .../service-provisions` — **`checkPermissions(['payment_provide_service'])`**. Body `{ userNo, items[{ serviceId, quantity }], comment?, departmentId? }`. If system flag requires zal, **`departmentId`** must be a non-empty valid `PaymentDepartment` id. Workflow:
     - Validates each service is active and quantity > 0.
     - Computes per-item `unitPrice` from `PaymentService.price`, `totalPrice = unitPrice * quantity`, and aggregated `totalAmount`.
     - Recomputes/ensures `PaymentAccount` for `userNo` (create if missing), checks balance >= `totalAmount`, debits account, writes one `PaymentServiceProvision` with expanded `items`, and writes one or more `PaymentTransaction` rows (`type: 'spend'`, `direction: 'out'`, `source: 'service'`) — one per service line.
@@ -119,52 +121,42 @@ These are available on the Huquqlar page (`huquqlar.vue`) and usable in permissi
 - `POST /api/members/payment/service-provisions`
 - `POST /api/members/payment/service-provisions/:id/cancel`
 
-**Payment UI / menu** — Payment UI lives in its own top-level `Pullik xizmatlar` menu plus `Xodimlar boshqaruvi` for department assignment:
+**Payment UI / menu** — `Pullik xizmatlar` + **Zallar** under `Xodimlar boshqaruvi`.
 
 - Menu (`AppMenu.vue`):
-  - Top-level `Pullik xizmatlar`:
-    - `Xizmat ko'rsatish` → `/payment/service-provision` (requires `payment_provide_service`, icon updated).
-    - `Foydalanuvchi balansi` → `/payment/balances` (requires `payment_topup_user`).
-    - `Xizmatlar` → `/payment/services` (requires `payment_manage_services`).
-    - `Tarix` → `/payment/history` (requires `payment_topup_user`).
-  - Under `Xodimlar boshqaruvi`:
-    - `Bo'limlar va tegishli foydalanuvchilar` → `/payment/departments` (requires `payment_manage_user_departments`).
-  - Left sidebar footer shows non-clickable project version label: `Talqin v<package.json version>` at very bottom (separate from menu items).
+  - `Pullik xizmatlar`:
+    - `Xizmat ko'rsatish` → `/payment/service-provision` — `requiredPermissions: ['payment_provide_service']`.
+    - `Foydalanuvchi balansi` → `/payment/balances` — **`requiredPermissionsAny`:** `payment_list_accounts`, `payment_topup_user`, `payment_withdraw_user`, `payment_view_transactions`, `payment_view_overview_stats` (any one opens the menu item).
+    - `Xizmatlar` → `/payment/services` — `payment_manage_services`.
+    - `Tarix` → `/payment/history` — **`payment_view_transactions`** (not top-up permission).
+  - `Xodimlar boshqaruvi` → **Zallar** → `/payment/departments` — **`payment_manage_departments`**. The same page’s xodim–zal mapping APIs still require **`payment_manage_user_departments`**; CRUD zallar uses **`payment_manage_departments`**.
+  - Sidebar footer: non-clickable **`Talqin v<package.json#version>`**.
 
-Routes (`src/router/index.js`) map these to:
+Routes (`src/router/index.js`) meta (enforced in `beforeEach`):
 
-- `/payment/history` → `payment_history.vue`.
-- `/payment/balances` → `payment_balances.vue`.
-- `/payment/services` → `payment_services.vue`.
-- `/payment/departments` → `payment_departments.vue`.
-- `/payment/service-provision` → `payment_service_provision.vue`.
+- `/payment/history` → `payment_history.vue` — `meta.permission: 'payment_view_transactions'`.
+- `/payment/balances` → `payment_balances.vue` — **`meta.permissionsAny`:** same five names as the menu item (any).
+- `/payment/services` → `payment_services.vue` — `payment_manage_services`.
+- `/payment/departments` → `payment_departments.vue` — **`payment_manage_departments`** (aligned with Zallar menu).
+- `/payment/service-provision` → `payment_service_provision.vue` — `payment_provide_service`.
 
 Key UI behaviors:
 
-- `payment_balances.vue` — shows only users that have a `PaymentAccount` row (i.e. real participants), sorted by `balance` desc by default. Search is via Nazorat `cache` (`USER_NO`/`USER_NAME`) and on first load triggers a one-time full balance cache build. When searching specific IDs, their balances are immediately recalculated from `PaymentTransaction`. Per-row actions:
-  - Top summary cards (horizontal) show exactly: `Balanslarda pul`, `Umumiy xarajat`, `Shu oy xarajat`, `Yillik xarajat`.
-  - Top cards render amounts as integer `so'm` (no tiyin/decimal display).
-  - `Amallar` first button is `Xizmat ko'rsatish` (if `payment_provide_service`), which opens `/payment/service-provision` with selected `userNo` prefilled.
-  - `To'ldirish` / `Yechish` buttons use `/topup` and `/spend`.
-  - `Tarix` button opens a dialog with that user's balance history (both top-ups and spendings from `PaymentTransaction`, latest first). The dialog includes `Tur` tag (`To'ldirish`/`Yechish`).
-  - History comments are shown in Uzbek; legacy English migration comments are normalized on display (`Migrated ...` -> `(mig) ...`).
-  - Quick top-up/withdraw panel at the top allows specifying ID card number directly even if no account row exists yet (account is created lazily).
-- `payment_history.vue` — global payment transaction history list with filters (user, type); mostly for admins.
+- `payment_balances.vue` — account table + quick ID bar; capabilities are **split by permission**: e.g. `To'ldirish` / `Yechish` only with `payment_topup_user` / `payment_withdraw_user`; overview cards only with **`payment_view_overview_stats`**; per-row `Tarix` with **`payment_view_transactions`**; `Xizmat ko'rsatish` with **`payment_provide_service`**. Quick search row uses **`hasAnyPermission`** on `payment_list_accounts`, `payment_topup_user`, `payment_withdraw_user` (stricter than route meta so read-only roles may land without quick bar). Default sort `balance` desc; search via Nazorat `cache`; ID **`InputText`** uses **`autocomplete="off"`** (+ helper attrs) to limit browser history suggestions.
+  - Top summary cards: `Balanslarda pul`, `Umumiy xarajat`, `Shu oy xarajat`, `Yillik xarajat` (integer `so'm`).
+  - `Xizmat ko'rsatish` navigates to `/payment/service-provision?userNo=...` when permitted.
+  - Top-up/withdraw/create account behavior unchanged; history dialog + Uzbek comment normalization unchanged.
+- `payment_history.vue` — global `PaymentTransaction` list (filters: user, type); **ID field** also uses `autocomplete="off"` helpers.
 - `payment_services.vue` — CRUD UI for `PaymentService` (name, code, price, active) with inline `InputSwitch` to quickly enable/disable a service; disabled services are hidden in `payment_service_provision.vue`. Price column is formatted with `so'm`.
 - `payment_departments.vue` — two-pane view:
   - Left: departments CRUD.
   - Right: xodim ↔ department assignments, selecting xodim from `/experts` and department from left-hand list.
-- `payment_service_provision.vue` — main **Xizmat ko'rsatish** screen:
-  - Top: user lookup by ID card number, with these UX rules:
-    - Enter key triggers user search.
-    - If user enters 9 digits (`#########`), input auto-normalizes to `AAA#########`.
-    - Page can receive `?userNo=AAA#########` and auto-load that user.
-  - Large balance cards: current balance and post-service balance (color-coded green/red), plus warning banner when insufficient.
-  - Middle: dynamic list of service lines with columns `Xizmat`, `Soni`, `Birlik narxi`, `Jami`; live recalculation while typing quantity.
-  - Currency is displayed as integer `so'm` in totals/prices.
-  - If current balance is `0`, service selection/add/remove and submit are blocked; warning message instructs to top up first.
-  - Bottom: comment and “Xizmatni rasmiylashtirish” button (guarded by `payment_provide_service`, disabled when balance insufficient).
-  - Below: table with past provisions for that user, with status, items, amounts, and red `Bekor qilish` button (if `payment_cancel_provided_service` is granted). Non-`rais` users see a live 24h countdown inside button label; after deadline, cancel action is hidden/replaced with “muddati tugagan”.
+- `payment_service_provision.vue` — **Xizmat ko'rsatish**:
+  - Toolbar: **Zal** dropdown (`PaymentDepartment`) + **ID karta raqami** (`autocomplete="off"` helpers) + **Foydalanuvchini tanlash**. Loads **`/system/settings`** flag `paymentRequireZalForServiceProvision`; when true, zal required client+server, invalid styling + warn `Message`.
+  - Enter / 9-digit normalization / `?userNo=` prefetch unchanged.
+  - Balance cards + insufficient-funds messaging unchanged. Service lines grid (`Xizmat`, `Soni`, `Birlik narxi`, `Jami`) + **Yana xizmat qo'shish** outlined control.
+  - Submit **Xizmatni rasmiylashtirish**: when all prerequisites pass (`userNo`, balance, zal, lines), one-shot **~1.8s** inner shine + glow animation on the enabled button (`watch` on readiness + CSS `::before`).
+  - Past provisions table: non-cancelled status label **`Bajarildi`** (not “Faol”); **`Bekor qilingan`** unchanged; cancel rules (24h / `rais`) unchanged.
 
 **Pullik migration script notes (`scripts/migrate-pullik.js`)**
 - Script flags:

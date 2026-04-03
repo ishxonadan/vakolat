@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken")
 const JWT_SECRET = process.env.JWT_SECRET || "secret_key"
+const { collectPermissionNamesFromPopulatedUser } = require("../utils/userPermissionNames")
 
 // Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
@@ -35,7 +36,7 @@ const checkUserLevel = (requiredLevel) => {
 
 /**
  * Middleware to check specific named permissions.
- * Traverses: User → permissionGroup → permissions[].name
+ * User → permissionGroups[] va (eski) permissionGroup — barcha guruhlardan faol huquq nomlari birlashmasi
  * rais level bypasses all permission checks.
  *
  * @param {string[]} requiredPermissions - array of permission name strings
@@ -55,6 +56,10 @@ const checkPermissions = (requiredPermissions) => {
 
         const user = await User.findById(req.user.id)
           .populate({
+            path: "permissionGroups",
+            populate: { path: "permissions", select: "name isActive" },
+          })
+          .populate({
             path: "permissionGroup",
             populate: { path: "permissions", select: "name isActive" },
           })
@@ -64,11 +69,7 @@ const checkPermissions = (requiredPermissions) => {
           return res.status(404).json({ error: "User not found" })
         }
 
-        // Collect active permission names from the user's group
-        const groupPerms = user.permissionGroup?.permissions || []
-        const userPermissionNames = groupPerms
-          .filter((p) => p.isActive !== false)
-          .map((p) => p.name)
+        const userPermissionNames = collectPermissionNamesFromPopulatedUser(user)
 
         const hasAll = requiredPermissions.every((p) => userPermissionNames.includes(p))
 
@@ -110,6 +111,10 @@ const checkAnyPermissions = (anyOfPermissions) => {
 
         const user = await User.findById(req.user.id)
           .populate({
+            path: "permissionGroups",
+            populate: { path: "permissions", select: "name isActive" },
+          })
+          .populate({
             path: "permissionGroup",
             populate: { path: "permissions", select: "name isActive" },
           })
@@ -119,10 +124,7 @@ const checkAnyPermissions = (anyOfPermissions) => {
           return res.status(404).json({ error: "User not found" })
         }
 
-        const groupPerms = user.permissionGroup?.permissions || []
-        const userPermissionNames = groupPerms
-          .filter((p) => p.isActive !== false)
-          .map((p) => p.name)
+        const userPermissionNames = collectPermissionNamesFromPopulatedUser(user)
 
         const hasOne = anyOfPermissions.some((p) => userPermissionNames.includes(p))
 

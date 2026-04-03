@@ -4,19 +4,28 @@ const mongoose = require("mongoose")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { verifyToken, checkUserLevel } = require("../src/middleware/auth.middleware")
+const {
+  normalizePermissionGroupIds,
+  mergeLegacyPermissionGroups,
+} = require("../src/utils/userPermissionNames")
 
 module.exports = (vakolat, JWT_SECRET) => {
   const User = vakolat.model("User")
+  const StaffPosition = vakolat.model("StaffPosition")
 
   // Get experts - protected with token verification
   router.get("/", verifyToken, async (req, res) => {
     try {
       const expertList = await User.find(
         { level: "expert" },
-        "nickname firstname lastname position language isActive permissionGroup",
+        "nickname firstname lastname position language isActive permissionGroup permissionGroups staffDepartment staffPosition",
       )
-        .populate("permissionGroup", "name _id")
+        .populate("permissionGroup", "name _id isActive")
+        .populate("permissionGroups", "name _id isActive")
+        .populate("staffDepartment", "name _id isActive")
+        .populate("staffPosition", "name _id isActive sortOrder")
         .lean()
+      expertList.forEach((e) => mergeLegacyPermissionGroups(e))
       res.json(expertList)
     } catch (error) {
       res.status(500).json({ error: "Failed to retrieve experts." })
@@ -35,7 +44,10 @@ module.exports = (vakolat, JWT_SECRET) => {
 
       // Find the expert by ID (populate permissionGroup for edit form)
       const expert = await User.findById(expertId, "-password")
-        .populate("permissionGroup", "name _id")
+        .populate("permissionGroup", "name _id isActive")
+        .populate("permissionGroups", "name _id isActive")
+        .populate("staffDepartment", "name _id isActive")
+        .populate("staffPosition", "name _id isActive sortOrder")
         .lean()
 
       if (!expert) {
@@ -47,6 +59,7 @@ module.exports = (vakolat, JWT_SECRET) => {
         return res.status(400).json({ error: "User is not an expert" })
       }
 
+      mergeLegacyPermissionGroups(expert)
       res.json(expert)
     } catch (error) {
       console.error("Error fetching expert:", error)
@@ -58,7 +71,19 @@ module.exports = (vakolat, JWT_SECRET) => {
   router.put("/:id", checkUserLevel("admin"), async (req, res) => {
     try {
       const expertId = req.params.id
-      const { nickname, firstname, lastname, position, password, language, permissionGroup, isActive } = req.body
+      const {
+        nickname,
+        firstname,
+        lastname,
+        position,
+        password,
+        language,
+        permissionGroup,
+        permissionGroups,
+        staffDepartment,
+        staffPosition,
+        isActive,
+      } = req.body
 
       // Validate MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(expertId)) {
@@ -76,9 +101,31 @@ module.exports = (vakolat, JWT_SECRET) => {
       if (nickname !== undefined) expert.nickname = nickname
       if (firstname !== undefined) expert.firstname = firstname
       if (lastname !== undefined) expert.lastname = lastname
-      if (position !== undefined) expert.position = position || ""
       if (language !== undefined) expert.language = language || "uz"
-      if (permissionGroup !== undefined) expert.permissionGroup = permissionGroup || null
+      if (permissionGroups !== undefined || permissionGroup !== undefined) {
+        const src = permissionGroups !== undefined ? permissionGroups : permissionGroup
+        const ids = normalizePermissionGroupIds(src)
+        expert.permissionGroups = ids
+        expert.permissionGroup = ids.length ? ids[0] : null
+      }
+      if (staffDepartment !== undefined) {
+        const raw = staffDepartment ? String(staffDepartment).trim() : ""
+        expert.staffDepartment = raw && mongoose.Types.ObjectId.isValid(raw) ? raw : null
+      }
+      if (staffPosition !== undefined) {
+        const raw = staffPosition ? String(staffPosition).trim() : ""
+        const newRef = raw && mongoose.Types.ObjectId.isValid(raw) ? raw : null
+        const hadRef = !!expert.staffPosition
+        expert.staffPosition = newRef
+        if (newRef) {
+          const sp = await StaffPosition.findById(newRef).select("name").lean()
+          expert.position = sp?.name || expert.position || ""
+        } else if (hadRef) {
+          expert.position = ""
+        }
+      } else if (position !== undefined) {
+        expert.position = position || ""
+      }
       if (isActive !== undefined) expert.isActive = isActive !== false
 
       // Update password if provided

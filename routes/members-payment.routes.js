@@ -836,8 +836,9 @@ module.exports = (nazorat, vakolat) => {
     try {
       const experts = await User.find(
         { level: "expert" },
-        "nickname firstname lastname position isActive",
+        "nickname firstname lastname position isActive staffPosition",
       )
+        .populate("staffPosition", "name _id")
         .sort({ firstname: 1, lastname: 1, nickname: 1 })
         .lean()
       res.json(experts)

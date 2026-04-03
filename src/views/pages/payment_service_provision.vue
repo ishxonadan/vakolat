@@ -21,6 +21,10 @@ const member = ref(null)
 const canCancel = authService.hasPermission("payment_cancel_provided_service")
 const isRais = authService.getUserLevel() === "rais"
 const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000
+/** Yangi qator: orange fon → asta-sekin oddiy (CSS bilan bir xil) */
+const PROVISION_NEW_ROW_HIGHLIGHT_S = 4
+const highlightProvisionId = ref(null)
+let highlightProvisionTimer = null
 const nowTs = ref(Date.now())
 let timerId = null
 
@@ -117,6 +121,14 @@ const formatCountdown = (row) => {
 const cancelButtonLabel = (row) => {
   if (isRais) return "Bekor qilish"
   return `Bekor qilish (${formatCountdown(row)})`
+}
+
+const provisionTableRowClass = (data) => {
+  const id = data?._id != null ? String(data._id) : ""
+  if (highlightProvisionId.value && id === highlightProvisionId.value) {
+    return "provision-new-row"
+  }
+  return null
 }
 
 /** Populated User from API (providedBy / cancelledBy) */
@@ -216,11 +228,21 @@ const submitProvision = async () => {
       items,
       departmentId: form.value.departmentId || null,
     })
+    const newProvisionId =
+      response?.provision?._id != null ? String(response.provision._id) : null
     toast.add({ severity: "success", summary: "Muvaffaqiyat", detail: "Xizmat ko'rsatildi", life: 2500 })
     form.value.comment = ""
     form.value.items = [{ serviceId: null, quantity: 1 }]
     account.value = { ...(account.value || {}), balance: response.balance }
     await loadProvisions()
+    if (newProvisionId) {
+      highlightProvisionId.value = newProvisionId
+      if (highlightProvisionTimer) clearTimeout(highlightProvisionTimer)
+      highlightProvisionTimer = setTimeout(() => {
+        highlightProvisionId.value = null
+        highlightProvisionTimer = null
+      }, PROVISION_NEW_ROW_HIGHLIGHT_S * 1000 + 200)
+    }
   } catch (error) {
     toast.add({ severity: "error", summary: "Xato", detail: error.message, life: 3500 })
   } finally {
@@ -262,6 +284,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (timerId) clearInterval(timerId)
   if (provisionSubmitArriveTimer) clearTimeout(provisionSubmitArriveTimer)
+  if (highlightProvisionTimer) clearTimeout(highlightProvisionTimer)
 })
 </script>
 
@@ -471,7 +494,13 @@ onUnmounted(() => {
     </div>
 
     <h2 class="text-lg font-semibold mb-3 text-color">Ko'rsatilgan xizmatlar</h2>
-    <DataTable :value="provisions" responsiveLayout="scroll">
+    <DataTable
+      :value="provisions"
+      responsiveLayout="scroll"
+      class="payment-provisions-table"
+      :class="{ 'payment-provisions-table--highlighting': highlightProvisionId != null }"
+      :rowClass="provisionTableRowClass"
+    >
       <Column field="createdAt" header="Sana">
         <template #body="slotProps">{{ new Date(slotProps.data.createdAt).toLocaleString() }}</template>
       </Column>
@@ -814,5 +843,38 @@ onUnmounted(() => {
 :deep(.provision-submit-btn.p-button:disabled) {
   opacity: 0.55;
   box-shadow: none;
+}
+
+/* Yangi ko'rsatilgan xizmat qatori: orange → asta normal */
+@keyframes provision-new-row-highlight {
+  0% {
+    background-color: color-mix(in srgb, var(--p-orange-500, #f97316) 44%, transparent);
+  }
+  35% {
+    background-color: color-mix(in srgb, var(--p-orange-500, #f97316) 22%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes provision-new-row-highlight-dark {
+  0% {
+    background-color: color-mix(in srgb, var(--p-orange-400, #fb923c) 38%, transparent);
+  }
+  40% {
+    background-color: color-mix(in srgb, var(--p-orange-400, #fb923c) 14%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+:deep(.payment-provisions-table .p-datatable-tbody > tr.provision-new-row > td) {
+  animation: provision-new-row-highlight 4s ease-out forwards;
+}
+
+.app-dark :deep(.payment-provisions-table .p-datatable-tbody > tr.provision-new-row > td) {
+  animation: provision-new-row-highlight-dark 4s ease-out forwards;
 }
 </style>
