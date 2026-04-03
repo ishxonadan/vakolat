@@ -12,15 +12,18 @@
 
     <!-- Date + search -->
     <div
-      class="mb-6 rounded-xl border border-gray-200 dark:border-zinc-600 bg-gray-50/90 dark:bg-zinc-900/95 p-4 shadow-sm"
+      class="mb-6 rounded-xl border border-gray-200 bg-gray-50/90 p-4 shadow-sm dark:border-[var(--p-content-border-color)] dark:bg-[var(--p-content-background)]"
     >
-      <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-zinc-100">Chipta sanasi</h3>
-      <p class="text-sm text-gray-600 dark:text-zinc-300 mb-4 leading-relaxed">
+      <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-[var(--p-text-color)]">Chipta sanasi</h3>
+      <p class="text-sm text-gray-600 mb-4 leading-relaxed dark:text-[var(--p-text-muted-color)]">
         Kerakli kunni tanlang — jadval faqat shu kunning chiptalarini ko‘rsatadi (tartib raqamlari shu kunga tegishli).
       </p>
       <div class="flex flex-col lg:flex-row lg:items-end gap-3 mb-5">
         <div class="flex flex-col gap-1">
-          <label for="ticket-filter-date" class="text-sm font-medium text-gray-800 dark:text-zinc-200">Sana</label>
+          <label
+            for="ticket-filter-date"
+            class="text-sm font-medium text-gray-800 dark:text-[var(--p-text-color)]"
+          >Sana</label>
           <Calendar
             id="ticket-filter-date"
             v-model="filterDate"
@@ -38,7 +41,7 @@
         </div>
       </div>
 
-      <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-zinc-100">Tezkor qidiruv</h3>
+      <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-[var(--p-text-color)]">Tezkor qidiruv</h3>
       <div class="flex gap-3">
         <div class="flex-1">
           <InputText 
@@ -801,15 +804,19 @@ onMounted(() => {
 }
 </style>
 
-/* Chipta sanasi: kalendar maydoni qora temada oq qolib ketmasin */
+/* Chipta sanasi: kalendar — tema tokenlari (yumshoq qora fon) */
 <style>
 .app-dark .tickets-filter-calendar .p-inputtext,
 .app-dark .tickets-filter-calendar .p-datepicker-input {
-  background: #27272a;
-  color: #f4f4f5;
-  border-color: #52525b;
+  background: var(--p-surface-800);
+  color: var(--p-text-color);
+  border-color: var(--p-content-border-color);
+}
+.app-dark .tickets-filter-calendar .p-inputtext::placeholder,
+.app-dark .tickets-filter-calendar .p-datepicker-input::placeholder {
+  color: var(--p-text-muted-color);
 }
 .app-dark .tickets-filter-calendar .p-datepicker-dropdown {
-  color: #e4e4e7;
+  color: var(--p-text-color);
 }
 </style>

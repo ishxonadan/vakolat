@@ -52,10 +52,39 @@ const normalizeUserNoInput = (value) => {
   return raw
 }
 const statCards = [
-  { key: "overallMoneyInBalances", title: "Balanslarda pul", subtitle: "Hozirgi qoldiq", icon: "pi pi-wallet", color: "text-green-500" },
-  { key: "overallSpending", title: "Umumiy xarajat", subtitle: "Barcha davr", icon: "pi pi-arrow-down", color: "text-primary" },
-  { key: "spendingThisMonth", title: "Shu oy xarajat", subtitle: "Oy boshidan", icon: "pi pi-calendar", color: "text-orange-500" },
-  { key: "spendingThisYear", title: "Yillik xarajat", subtitle: "1-yanvardan", icon: "pi pi-chart-bar", color: "text-red-500" },
+  {
+    key: "overallMoneyInBalances",
+    title: "Balanslarda pul",
+    subtitle: "Hozirgi qoldiq",
+    icon: "pi pi-wallet",
+    stripe: "border-l-[4px] border-l-emerald-500",
+    iconWrap:
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  },
+  {
+    key: "overallSpending",
+    title: "Umumiy xarajat",
+    subtitle: "Barcha davr",
+    icon: "pi pi-arrow-down",
+    stripe: "border-l-[4px] border-l-blue-500",
+    iconWrap: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  },
+  {
+    key: "spendingThisMonth",
+    title: "Shu oy xarajat",
+    subtitle: "Oy boshidan",
+    icon: "pi pi-calendar",
+    stripe: "border-l-[4px] border-l-amber-500",
+    iconWrap: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+  },
+  {
+    key: "spendingThisYear",
+    title: "Yillik xarajat",
+    subtitle: "1-yanvardan",
+    icon: "pi pi-chart-bar",
+    stripe: "border-l-[4px] border-l-rose-500",
+    iconWrap: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  },
 ]
 
 const formatHistoryComment = (tx) => {
@@ -207,28 +236,56 @@ onMounted(async () => {
 
 <template>
   <div class="card">
-    <div v-if="canViewOverview" class="flex gap-3 mb-4 overflow-x-auto pb-1">
-      <div v-for="card in statCards" :key="card.key" class="min-w-15rem flex-1">
-        <div class="surface-card border-1 surface-border border-round p-3 h-full">
-          <div class="flex align-items-start justify-content-between mb-2">
-            <div>
-              <div class="text-900 font-semibold">{{ card.title }}</div>
-              <div class="text-500 text-sm">{{ card.subtitle }}</div>
+    <section v-if="canViewOverview" class="payment-balances-overview mb-5">
+      <h2 class="text-base font-semibold text-color mb-1">Umumiy ko'rsatkichlar</h2>
+      <p class="text-color-secondary text-sm mb-4 m-0">
+        Pullik modul bo'yicha jamlanma — balanslar va xarajat dinamikasi.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div
+          v-for="card in statCards"
+          :key="card.key"
+          class="payment-balances-stat-card surface-card border-1 surface-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 h-full"
+          :class="card.stripe"
+        >
+          <div class="p-4 pl-5">
+            <div class="flex align-items-start justify-content-between gap-3 mb-3">
+              <div class="min-w-0 flex-1 pr-2">
+                <div class="font-semibold text-color leading-snug mb-1">{{ card.title }}</div>
+                <div class="text-color-secondary text-sm leading-normal">{{ card.subtitle }}</div>
+              </div>
+              <div
+                class="w-11 h-11 rounded-xl flex align-items-center justify-content-center shrink-0 text-lg"
+                :class="card.iconWrap"
+                aria-hidden="true"
+              >
+                <i :class="card.icon"></i>
+              </div>
             </div>
-            <i :class="[card.icon, card.color]" class="text-xl"></i>
-          </div>
-          <div class="text-2xl font-bold">
-            <span v-if="overviewLoading">...</span>
-            <span v-else>{{ formatMoney(overview[card.key]) }}</span>
+            <div class="text-2xl sm:text-3xl font-bold text-color tabular-nums tracking-tight leading-tight">
+              <span v-if="overviewLoading" class="inline-block min-h-[2rem] animate-pulse text-color-secondary">…</span>
+              <span v-else>{{ formatMoney(overview[card.key]) }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-xl font-semibold">Foydalanuvchi balanslari</h1>
     </div>
-    <div class="flex gap-2 mb-4" v-if="canQuickSearch || canTopup || canSpend">
-      <InputText v-model="quickUserNo" placeholder="ID karta raqami kiriting (balans bo'lmasa ham)" />
+    <div class="flex flex-wrap items-center gap-2 mb-4" v-if="canQuickSearch || canTopup || canSpend">
+      <InputText
+        v-model="quickUserNo"
+        name="vakolat-payment-balances-user-no"
+        class="payment-balances-quick-user flex-1 min-w-[min(100%,20rem)] max-w-4xl w-full sm:min-w-[28rem]"
+        placeholder="ID karta raqami kiriting (balans bo'lmasa ham)"
+        autocomplete="off"
+        autocapitalize="characters"
+        autocorrect="off"
+        spellcheck="false"
+        data-lpignore="true"
+        data-1p-ignore
+      />
       <Button label="Qidirish" icon="pi pi-search" severity="secondary" @click="searchFromQuickInput" />
       <Button v-if="canTopup" label="To'ldirish" icon="pi pi-plus" severity="success" @click="openAction('topup', quickUserNo)" />
       <Button v-if="canSpend" label="Yechish" icon="pi pi-minus" severity="danger" @click="openAction('spend', quickUserNo)" />

@@ -62,7 +62,17 @@ onMounted(loadTransactions)
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-      <InputText v-model="filters.userNo" placeholder="ID karta raqami" />
+      <InputText
+        v-model="filters.userNo"
+        name="vakolat-payment-history-user-no"
+        placeholder="ID karta raqami"
+        autocomplete="off"
+        autocapitalize="characters"
+        autocorrect="off"
+        spellcheck="false"
+        data-lpignore="true"
+        data-1p-ignore
+      />
       <Dropdown
         v-model="filters.type"
         :options="[

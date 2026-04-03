@@ -46,7 +46,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="card max-w-3xl mx-auto">
+  <div class="card max-w-6xl mx-auto w-full">
     <h1 class="text-2xl font-semibold mb-2 text-color">Tizim boshqaruvi</h1>
     <p class="text-color-secondary text-sm mb-6">
       Barcha foydalanuvchilarga ta'sir qiladigan umumiy parametrlar.
@@ -60,7 +60,7 @@ onMounted(load)
       >
         <div>
           <div class="font-semibold text-color mb-1">Xizmat ko'rsatishda zal majburyati</div>
-          <p class="text-sm text-color-secondary m-0 max-w-xl">
+          <p class="text-sm text-color-secondary m-0 max-w-3xl">
             Yoqilganda, "Xizmat ko'rsatish" sahifasida zal tanlanmaguncha rasmiylashtirish mumkin bo'lmaydi.
             O'chirilganda zal ixtiyoriy bo'lib qoladi.
           </p>

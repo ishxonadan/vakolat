@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from "vue"
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { useToast } from "primevue/usetoast"
+import Textarea from "primevue/textarea"
 import authService from "@/service/auth.service"
 import apiService from "@/service/api.service"
 
@@ -60,6 +61,43 @@ const hasPositiveBalance = computed(() => hasSelectedUser.value && currentBalanc
 /** Tizim boshqaruvidan: zal tanlash majburiy bo'lsa, server va klient tekshiradi */
 const requireZalForProvision = ref(false)
 const zalOk = computed(() => !requireZalForProvision.value || !!form.value.departmentId)
+
+/** Tugma shartlari bajarilganda (bir marta) “arrive” animatsiyasi */
+const isProvisionSubmitReady = computed(
+  () =>
+    !!String(form.value.userNo || "").trim() &&
+    hasPositiveBalance.value &&
+    hasEnoughBalance.value &&
+    totalCost.value > 0 &&
+    zalOk.value,
+)
+/** Tugma “arrive” animatsiya davomiyligi (CSS bilan bir xil saqlansin) */
+const PROVISION_SUBMIT_ARRIVE_S = 1.8
+
+const provisionSubmitArrive = ref(false)
+let provisionSubmitArriveTimer = null
+
+const triggerProvisionSubmitArrive = () => {
+  provisionSubmitArrive.value = false
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      provisionSubmitArrive.value = true
+      if (provisionSubmitArriveTimer) clearTimeout(provisionSubmitArriveTimer)
+      provisionSubmitArriveTimer = setTimeout(() => {
+        provisionSubmitArrive.value = false
+        provisionSubmitArriveTimer = null
+      }, PROVISION_SUBMIT_ARRIVE_S * 1000 + 150)
+    })
+  })
+}
+
+watch(
+  isProvisionSubmitReady,
+  (ready, wasReady) => {
+    if (ready && !wasReady) triggerProvisionSubmitArrive()
+  },
+  { flush: "post" },
+)
 const zalPlaceholder = computed(() =>
   requireZalForProvision.value ? "Zalni tanlang (majburiy)" : "Zalni tanlang (ixtiyoriy)",
 )
@@ -223,36 +261,72 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (timerId) clearInterval(timerId)
+  if (provisionSubmitArriveTimer) clearTimeout(provisionSubmitArriveTimer)
 })
 </script>
 
 <template>
-  <div class="card">
-    <h1 class="text-xl font-semibold mb-4">Xizmat ko'rsatish</h1>
+  <div class="card payment-provision-page">
+    <h1 class="text-xl font-semibold mb-4 text-color">Xizmat ko'rsatish</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end mb-4">
-      <InputText
-        v-model="userNoSearch"
-        placeholder="ID karta raqami"
-        @blur="userNoSearch = normalizeUserNoInput(userNoSearch)"
-        @keyup.enter="searchUser"
-      />
-      <Button label="Foydalanuvchini tanlash" icon="pi pi-search" :loading="loading" @click="searchUser" />
+    <div class="provision-toolbar-row flex flex-col md:flex-row md:flex-nowrap md:items-end gap-4 mb-4 max-w-5xl">
+      <div class="flex flex-col gap-2 w-full md:flex-1 md:min-w-0 md:max-w-[22rem]">
+        <label for="provision-zal" class="text-sm font-medium text-color leading-tight">Zal</label>
+        <Dropdown
+          id="provision-zal"
+          v-model="form.departmentId"
+          :options="departments"
+          optionLabel="name"
+          optionValue="_id"
+          :placeholder="zalPlaceholder"
+          class="provision-zal-dropdown w-full"
+          :class="{ 'p-invalid': requireZalForProvision && hasSelectedUser && !form.departmentId }"
+          :panel-style="{ minWidth: 'min(22rem, 90vw)' }"
+        />
+      </div>
+      <div class="flex flex-col gap-2 w-full md:flex-1 md:min-w-0">
+        <label for="provision-user-no" class="text-sm font-medium text-color leading-tight">ID karta raqami</label>
+        <InputText
+          id="provision-user-no"
+          v-model="userNoSearch"
+          name="vakolat-service-provision-user-no"
+          placeholder="Masalan: AAA200300951"
+          class="w-full"
+          autocomplete="off"
+          autocapitalize="characters"
+          autocorrect="off"
+          spellcheck="false"
+          data-lpignore="true"
+          data-1p-ignore
+          @blur="userNoSearch = normalizeUserNoInput(userNoSearch)"
+          @keyup.enter="searchUser"
+        />
+      </div>
+      <div class="flex flex-col gap-2 w-full md:w-auto md:flex-shrink-0 md:min-w-[12rem]">
+        <span class="text-sm font-medium text-color-secondary leading-tight min-h-[1.25rem] md:block hidden">Qidiruv</span>
+        <Button
+          label="Foydalanuvchini tanlash"
+          icon="pi pi-search"
+          class="provision-toolbar-btn provision-user-pick-btn w-full md:w-auto whitespace-nowrap"
+          :loading="loading"
+          @click="searchUser"
+        />
+      </div>
     </div>
 
-    <div v-if="form.userNo" class="mb-4 text-sm">
-      <div><b>ID karta raqami:</b> {{ form.userNo }}</div>
-      <div><b>Foydalanuvchi:</b> {{ member?.USER_NAME || "-" }}</div>
+    <div v-if="form.userNo" class="mb-4 text-sm text-color border-round border-1 surface-border surface-50 p-3 max-w-3xl">
+      <div><span class="text-color-secondary font-medium">ID karta raqami:</span> {{ form.userNo }}</div>
+      <div class="mt-1"><span class="text-color-secondary font-medium">Foydalanuvchi:</span> {{ member?.USER_NAME || "-" }}</div>
     </div>
 
-    <div v-if="hasSelectedUser" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+    <div v-if="hasSelectedUser" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 max-w-4xl">
       <div class="border-round border-1 surface-border p-3">
-        <div class="text-600 text-sm mb-1">Joriy balans</div>
-        <div class="text-3xl font-bold text-900">{{ formatMoney(currentBalance) }}</div>
+        <div class="text-color-secondary text-sm mb-1">Joriy balans</div>
+        <div class="text-3xl font-bold text-color">{{ formatMoney(currentBalance) }}</div>
       </div>
       <div class="border-round border-1 p-3" :class="hasEnoughBalance ? 'border-green-300 surface-50' : 'border-red-300 surface-50'">
-        <div class="text-600 text-sm mb-1">Xizmatdan keyingi balans</div>
-        <div class="text-3xl font-bold" :class="hasEnoughBalance ? 'text-green-700' : 'text-red-700'">
+        <div class="text-color-secondary text-sm mb-1">Xizmatdan keyingi balans</div>
+        <div class="text-3xl font-bold" :class="hasEnoughBalance ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'">
           {{ formatMoney(remainingBalance) }}
         </div>
       </div>
@@ -267,53 +341,91 @@ onUnmounted(() => {
       Balans yetarli emas. Xizmatni rasmiylashtirish uchun qo'shimcha mablag' kerak.
     </Message>
 
-    <div class="mb-4 surface-50 border-round p-3">
-      <h2 class="text-lg font-semibold mb-2">Xizmatlar</h2>
-      <div class="hidden md:grid grid-cols-6 gap-2 text-600 text-sm font-medium mb-2 px-1">
-        <div class="col-span-3">Xizmat</div>
-        <div>Soni</div>
-        <div>Birlik narxi</div>
-        <div>Jami</div>
+    <div class="mb-4 surface-50 border-round border-1 surface-border p-3 md:p-4 provision-services-block">
+      <h2 class="text-lg font-semibold mb-3 text-color">Xizmatlar</h2>
+      <div
+        class="hidden md:grid grid-cols-[minmax(0,2fr)_7rem_9.5rem_10.5rem_auto] gap-x-3 gap-y-1 text-xs font-semibold text-color-secondary uppercase tracking-wide mb-3 px-1 border-b border-surface-200 dark:border-[var(--p-content-border-color)] pb-2"
+      >
+        <div>Xizmat</div>
+        <div class="text-center">Soni</div>
+        <div class="text-right">Birlik narxi</div>
+        <div class="text-right">Jami</div>
+        <div class="w-12 shrink-0" aria-hidden="true" />
       </div>
-      <div v-for="(item, idx) in form.items" :key="idx" class="grid grid-cols-1 md:grid-cols-6 gap-2 mb-2">
+      <div
+        v-for="(item, idx) in form.items"
+        :key="idx"
+        class="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_7rem_9.5rem_10.5rem_auto] gap-x-3 gap-y-2 md:gap-y-0 md:items-center mb-4 md:mb-3 pb-4 md:pb-0 border-b border-surface-200 dark:border-[var(--p-content-border-color)] md:border-0 last:border-0 last:pb-0 last:mb-3"
+      >
         <Dropdown
           v-model="item.serviceId"
           :options="services"
           optionLabel="name"
           optionValue="_id"
           placeholder="Xizmat tanlang"
-          class="md:col-span-3"
+          class="w-full"
           :disabled="!hasPositiveBalance"
         />
-        <InputNumber
-          v-model="item.quantity"
-          :min="1"
-          :useGrouping="false"
-          placeholder="Soni"
-          :disabled="!hasPositiveBalance"
-          @input="(event) => (item.quantity = Number(event.value || 0))"
-        />
-        <div class="flex items-center text-sm text-700">
-          {{ formatMoney(serviceById(item.serviceId)?.price || 0) }}
+        <div class="flex md:contents flex-col gap-1">
+          <span class="text-xs font-medium text-color-secondary md:hidden">Soni</span>
+          <InputNumber
+            v-model="item.quantity"
+            :min="1"
+            :useGrouping="false"
+            placeholder="1"
+            class="provision-qty-input w-full md:w-full md:max-w-[7rem]"
+            :disabled="!hasPositiveBalance"
+            @input="(event) => (item.quantity = Number(event.value || 0))"
+          />
         </div>
-        <div class="flex items-center gap-2">
-          <span class="font-medium">{{ formatMoney(itemCost(item)) }}</span>
-          <Button icon="pi pi-times" severity="danger" text :disabled="!hasPositiveBalance" @click="removeItem(idx)" />
+        <div class="flex md:flex-col md:items-end justify-between md:justify-center gap-1">
+          <span class="text-xs font-medium text-color-secondary md:hidden">Birlik narxi</span>
+          <span
+            class="tabular-nums text-sm text-color-secondary font-medium md:text-right md:w-full provision-unit-price"
+          >{{ formatMoney(serviceById(item.serviceId)?.price || 0) }}</span>
+        </div>
+        <div class="flex md:flex-col md:items-end justify-between md:justify-center gap-2">
+          <span class="text-xs font-medium text-color-secondary md:hidden">Jami</span>
+          <span
+            class="tabular-nums text-base font-semibold text-color md:text-right md:w-full leading-none"
+          >{{ formatMoney(itemCost(item)) }}</span>
+        </div>
+        <div class="flex justify-end md:justify-center items-center pt-1 md:pt-0">
+          <Button
+            v-tooltip.top="'Qatorni olib tashlash'"
+            icon="pi pi-times"
+            severity="danger"
+            text
+            rounded
+            :disabled="!hasPositiveBalance"
+            @click="removeItem(idx)"
+          />
         </div>
       </div>
-      <Button label="Yana xizmat qo'shish" icon="pi pi-plus" text :disabled="!hasPositiveBalance" @click="addItem" />
+      <div
+        class="provision-add-service-row mt-2 md:mt-3 pt-4 border-t border-dashed border-surface-300 dark:border-surface-600"
+      >
+        <Button
+          label="Yana xizmat qo'shish"
+          icon="pi pi-plus-circle"
+          severity="secondary"
+          outlined
+          class="provision-add-service-btn"
+          :disabled="!hasPositiveBalance"
+          @click="addItem"
+        />
+      </div>
     </div>
 
-    <div class="mb-4">
-      <h2 class="text-lg font-semibold mb-2">Zal</h2>
-      <Dropdown
-        v-model="form.departmentId"
-        :options="departments"
-        optionLabel="name"
-        optionValue="_id"
-        :placeholder="zalPlaceholder"
-        class="w-full md:w-20rem"
-        :class="{ 'p-invalid': requireZalForProvision && hasSelectedUser && !form.departmentId }"
+    <div class="mb-4 max-w-5xl">
+      <label for="provision-comment" class="block text-sm font-medium text-color mb-2">Izoh</label>
+      <Textarea
+        id="provision-comment"
+        v-model="form.comment"
+        class="w-full provision-comment-field"
+        placeholder="Ixtiyoriy izoh…"
+        :rows="4"
+        :auto-resize="true"
       />
     </div>
 
@@ -330,31 +442,35 @@ onUnmounted(() => {
       Balans 0 so'm. Xizmat tanlash uchun avval foydalanuvchi balansini to'ldiring.
     </Message>
 
-    <div class="mb-4">
-      <InputText v-model="form.comment" class="w-full" placeholder="Izoh" />
-    </div>
-
     <div
-      class="flex flex-wrap justify-between items-center gap-4 mb-6 p-4 border-round border-1 surface-border surface-ground"
+      class="provision-cta-bar flex flex-wrap justify-between items-center gap-4 mb-6 rounded-2xl border-1 surface-border surface-ground p-4 md:p-5"
     >
-      <div class="text-lg md:text-xl font-medium text-color">
-        <span class="text-color-secondary font-normal">Jami:</span>
-        {{ formatMoney(totalCost) }}
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 mb-1">
+          Yakuniy qadam
+        </div>
+        <div class="text-lg md:text-xl font-medium text-color">
+          <span class="text-color-secondary font-normal">Jami:</span>
+          {{ formatMoney(totalCost) }}
+        </div>
       </div>
       <Button
         label="Xizmatni rasmiylashtirish"
         icon="pi pi-check-circle"
         severity="success"
         size="large"
-        raised
-        class="provision-submit-btn font-bold min-w-[18rem] !text-lg"
+        class="provision-submit-btn"
+        :class="{ 'provision-submit-btn--arrive': provisionSubmitArrive }"
+        :style="
+          provisionSubmitArrive ? { '--provision-submit-arrive-duration': `${PROVISION_SUBMIT_ARRIVE_S}s` } : {}
+        "
         :disabled="!form.userNo || !hasPositiveBalance || !hasEnoughBalance || totalCost <= 0 || !zalOk"
         :loading="saving"
         @click="submitProvision"
       />
     </div>
 
-    <h2 class="text-lg font-semibold mb-2">Ko'rsatilgan xizmatlar</h2>
+    <h2 class="text-lg font-semibold mb-3 text-color">Ko'rsatilgan xizmatlar</h2>
     <DataTable :value="provisions" responsiveLayout="scroll">
       <Column field="createdAt" header="Sana">
         <template #body="slotProps">{{ new Date(slotProps.data.createdAt).toLocaleString() }}</template>
@@ -378,7 +494,7 @@ onUnmounted(() => {
         <template #body="slotProps">
           <div class="flex flex-column gap-1">
             <Tag
-              :value="slotProps.data.status === 'cancelled' ? 'Bekor qilingan' : 'Faol'"
+              :value="slotProps.data.status === 'cancelled' ? 'Bekor qilingan' : 'Bajarildi'"
               :severity="slotProps.data.status === 'cancelled' ? 'danger' : 'success'"
             />
             <span v-if="slotProps.data.status === 'cancelled'" class="text-500 text-xs">
@@ -414,3 +530,289 @@ onUnmounted(() => {
     </DataTable>
   </div>
 </template>
+
+<style scoped>
+/* Yuqori qator: maydonlar va tugma bir xil balandlik, md+ pastki chiziq tekis */
+.provision-toolbar-row :deep(.p-inputtext) {
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+
+.provision-toolbar-row :deep(.p-select) {
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+
+.provision-toolbar-row :deep(.provision-toolbar-btn.p-button) {
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+
+/* Foydalanuvchini tanlash: indigo — asosiy tugma va yashil rasmiylashtirishdan alohida */
+.provision-toolbar-row :deep(.provision-user-pick-btn.p-button:not(:disabled)) {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #6366f1, #fff 14%) 0%,
+    #4f46e5 46%,
+    color-mix(in srgb, #4338ca, #000 8%) 100%
+  );
+  border-color: #4338ca;
+  color: #fff;
+}
+
+.provision-toolbar-row :deep(.provision-user-pick-btn.p-button:not(:disabled):hover) {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #818cf8, #fff 10%) 0%,
+    #6366f1 50%,
+    color-mix(in srgb, #4f46e5, #000 6%) 100%
+  );
+  border-color: #4f46e5;
+  color: #fff;
+  filter: brightness(1.03);
+}
+
+.provision-toolbar-row :deep(.provision-user-pick-btn.p-button:focus-visible) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, #6366f1, transparent 55%);
+}
+
+.app-dark .provision-toolbar-row :deep(.provision-user-pick-btn.p-button:not(:disabled)) {
+  background: linear-gradient(180deg, #6366f1 0%, #4338ca 100%);
+  border-color: #818cf8;
+}
+
+.app-dark .provision-toolbar-row :deep(.provision-user-pick-btn.p-button:not(:disabled):hover) {
+  background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
+  border-color: #a5b4fc;
+}
+
+/* Zal: trigger to‘liq kenglik; panel alohida */
+:deep(.provision-zal-dropdown.p-select),
+:deep(.provision-zal-dropdown) {
+  max-width: 100%;
+  width: 100%;
+}
+
+.provision-comment-field {
+  min-height: 6.5rem;
+  line-height: 1.5;
+}
+
+.provision-services-block :deep(.provision-qty-input input),
+.provision-services-block :deep(.provision-qty-input .p-inputnumber-input) {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.provision-add-service-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.provision-services-block :deep(.provision-add-service-btn.p-button) {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  padding: 0.65rem 1.2rem;
+  border-radius: var(--p-border-radius-lg, 0.75rem);
+  gap: 0.5rem;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.provision-services-block :deep(.provision-add-service-btn.p-button:not(:disabled):hover) {
+  background: color-mix(in srgb, var(--p-primary-color), transparent 92%) !important;
+  border-color: color-mix(in srgb, var(--p-primary-color), var(--p-content-border-color) 35%) !important;
+  color: var(--p-primary-color) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--p-primary-color), transparent 88%);
+}
+
+.app-dark .provision-services-block :deep(.provision-add-service-btn.p-button:not(:disabled):hover) {
+  background: color-mix(in srgb, var(--p-primary-color), transparent 88%) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--p-primary-color), transparent 70%);
+}
+
+.provision-cta-bar {
+  border-left: 4px solid var(--p-green-500, #22c55e);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--p-green-500, #22c55e), transparent 85%),
+    0 8px 28px color-mix(in srgb, var(--surface-ground, #f8fafc), #000 8%);
+}
+
+.app-dark .provision-cta-bar {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--p-green-400, #4ade80), transparent 75%),
+    0 12px 40px color-mix(in srgb, #000, transparent 55%);
+}
+
+/* Tugma ichidagi “shine” — afzallik bilan ko‘rinadi */
+@keyframes provision-submit-inner-shine {
+  0% {
+    transform: translateX(-140%) skewX(-22deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.95;
+  }
+  42% {
+    transform: translateX(200%) skewX(-22deg);
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(200%) skewX(-22deg);
+    opacity: 0;
+  }
+}
+
+@keyframes provision-submit-inner-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 0 color-mix(in srgb, var(--p-green-700, #15803d), transparent 35%),
+      0 10px 28px color-mix(in srgb, var(--p-green-500, #22c55e), transparent 45%),
+      inset 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+  22% {
+    box-shadow:
+      0 4px 0 color-mix(in srgb, var(--p-green-700, #15803d), transparent 30%),
+      0 10px 32px color-mix(in srgb, var(--p-green-400, #4ade80), transparent 35%),
+      inset 0 0 22px rgba(255, 255, 255, 0.22);
+  }
+  55% {
+    box-shadow:
+      0 4px 0 color-mix(in srgb, var(--p-green-700, #15803d), transparent 34%),
+      0 14px 36px rgba(34, 197, 94, 0.35),
+      inset 0 0 12px rgba(255, 255, 255, 0.1);
+  }
+}
+
+@keyframes provision-submit-inner-glow-dark {
+  0%,
+  100% {
+    box-shadow:
+      0 3px 0 color-mix(in srgb, #000, transparent 40%),
+      0 8px 32px color-mix(in srgb, var(--p-green-400, #4ade80), transparent 55%),
+      inset 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+  25% {
+    box-shadow:
+      0 3px 0 color-mix(in srgb, #000, transparent 35%),
+      0 12px 40px color-mix(in srgb, var(--p-green-400, #4ade80), transparent 45%),
+      inset 0 0 24px rgba(255, 255, 255, 0.14);
+  }
+  55% {
+    box-shadow:
+      0 3px 0 color-mix(in srgb, #000, transparent 38%),
+      0 14px 38px rgba(74, 222, 128, 0.28),
+      inset 0 0 14px rgba(255, 255, 255, 0.08);
+  }
+}
+
+:deep(.provision-submit-btn.p-button) {
+  min-width: min(100%, 20rem);
+  padding: 0.9rem 2.35rem !important;
+  font-size: 1.0625rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.provision-submit-btn.p-button:not(:disabled)) {
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--p-green-500, #22c55e), #fff 8%) 0%,
+    var(--p-green-500, #22c55e) 45%,
+    color-mix(in srgb, var(--p-green-500, #22c55e), #000 12%) 100%
+  );
+  border-color: color-mix(in srgb, var(--p-green-600, #16a34a), #000 5%);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--p-green-700, #15803d), transparent 35%),
+    0 10px 28px color-mix(in srgb, var(--p-green-500, #22c55e), transparent 45%);
+}
+
+:deep(.provision-submit-btn.p-button:not(:disabled) .p-button-label),
+:deep(.provision-submit-btn.p-button:not(:disabled) .p-button-icon),
+:deep(.provision-submit-btn.p-button:not(:disabled) .p-button-loading-icon) {
+  position: relative;
+  z-index: 2;
+}
+
+:deep(.provision-submit-btn.p-button:not(:disabled).provision-submit-btn--arrive)::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 0;
+  width: 50%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 44%,
+    rgba(255, 255, 255, 0.14) 54%,
+    transparent 100%
+  );
+  animation: provision-submit-inner-shine var(--provision-submit-arrive-duration, 1.8s) ease-in-out both;
+}
+
+:deep(.provision-submit-btn.p-button:not(:disabled):hover) {
+  filter: brightness(1.06);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--p-green-700, #15803d), transparent 30%),
+    0 12px 32px color-mix(in srgb, var(--p-green-500, #22c55e), transparent 40%);
+}
+
+:deep(.provision-submit-btn.p-button:not(:disabled).provision-submit-btn--arrive) {
+  animation: provision-submit-inner-glow var(--provision-submit-arrive-duration, 1.8s) ease-in-out both;
+}
+
+.app-dark :deep(.provision-submit-btn.p-button:not(:disabled).provision-submit-btn--arrive)::before {
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.58) 42%,
+    rgba(255, 255, 255, 0.2) 56%,
+    transparent 100%
+  );
+}
+
+.app-dark :deep(.provision-submit-btn.p-button:not(:disabled).provision-submit-btn--arrive) {
+  animation: provision-submit-inner-glow-dark var(--provision-submit-arrive-duration, 1.8s) ease-in-out both;
+}
+
+.app-dark :deep(.provision-submit-btn.p-button:not(:disabled)) {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--p-green-500, #22c55e), #fff 12%) 0%,
+    var(--p-green-600, #16a34a) 100%
+  );
+  border-color: color-mix(in srgb, var(--p-green-500, #22c55e), #000 8%);
+  box-shadow:
+    0 3px 0 color-mix(in srgb, #000, transparent 40%),
+    0 8px 32px color-mix(in srgb, var(--p-green-400, #4ade80), transparent 55%);
+}
+
+.app-dark :deep(.provision-submit-btn.p-button:not(:disabled):hover) {
+  filter: brightness(1.06);
+  box-shadow:
+    0 3px 0 color-mix(in srgb, #000, transparent 40%),
+    0 12px 32px color-mix(in srgb, var(--p-green-400, #4ade80), transparent 40%);
+}
+
+:deep(.provision-submit-btn.p-button:disabled) {
+  opacity: 0.55;
+  box-shadow: none;
+}
+</style>
