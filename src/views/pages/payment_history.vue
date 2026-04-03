@@ -1,18 +1,18 @@
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted, watch } from "vue"
 import { useToast } from "primevue/usetoast"
 import apiService from "@/service/api.service"
 import {
   paymentTransactionTypeLabel,
   paymentTransactionDirectionLabel,
 } from "@/utils/paymentLabels"
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from "@/service/pagination.service"
 
 const toast = useToast()
 const loading = ref(false)
 const transactions = ref([])
 const total = ref(0)
 const page = ref(1)
-const rows = ref(50)
 const filters = ref({
   userNo: "",
   type: "",
@@ -24,7 +24,7 @@ const loadTransactions = async () => {
     const data = await apiService.get("/members/payment/transactions", {
       params: {
         page: page.value,
-        limit: rows.value,
+        limit: pageSize.value,
         userNo: filters.value.userNo || undefined,
         type: filters.value.type || undefined,
       },
@@ -39,10 +39,18 @@ const loadTransactions = async () => {
 }
 
 const onPage = (event) => {
+  if (event.rows != null && event.rows !== pageSize.value) {
+    pageSize.value = event.rows
+    return
+  }
   page.value = event.page + 1
-  rows.value = event.rows
   loadTransactions()
 }
+
+watch(pageSize, () => {
+  page.value = 1
+  loadTransactions()
+})
 
 onMounted(loadTransactions)
 </script>
@@ -74,11 +82,12 @@ onMounted(loadTransactions)
     <DataTable
       :value="transactions"
       :loading="loading"
-      :rows="rows"
+      :rows="pageSize"
+      :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
       :totalRecords="total"
       :paginator="true"
       :lazy="true"
-      :first="(page - 1) * rows"
+      :first="(page - 1) * pageSize"
       @page="onPage"
       responsiveLayout="scroll"
     >

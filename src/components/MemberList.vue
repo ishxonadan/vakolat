@@ -84,7 +84,7 @@
       :lazy="true"
       @page="onPage"
       @row-dblclick="onRowDblClick"
-      :rowsPerPageOptions="[25, 50, 100]"
+      :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       currentPageReportTemplate="{first} dan {last} gacha, jami {totalRecords} ta"
       responsiveLayout="scroll"
@@ -121,6 +121,7 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import InputText from 'primevue/inputtext'
+import { ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 
 const props = defineProps({
   members: {
@@ -141,7 +142,7 @@ const props = defineProps({
   },
   rowsPerPage: {
     type: Number,
-    default: 50
+    default: 30
   },
   searchFilters: {
     type: Array,

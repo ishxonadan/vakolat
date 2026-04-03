@@ -75,12 +75,29 @@ const router = createRouter({
           },
         },
         {
+          path: "/system",
+          name: "system_control",
+          component: () => import("@/views/system/SystemControlPage.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "system_manage",
+          },
+        },
+        {
           path: "/settings",
           name: "settings",
-          component: () => import("@/views/pages/settings.vue"),
+          component: () => import("@/views/settings/SettingsPage.vue"),
           meta: {
             requiresAuth: true,
           },
+        },
+        {
+          path: "/settings/password",
+          redirect: { path: "/settings" },
+        },
+        {
+          path: "/settings/pagination",
+          redirect: { path: "/settings", query: { tab: "pagination" } },
         },
         {
           path: "/xodim_add",
@@ -151,7 +168,7 @@ const router = createRouter({
           component: () => import("@/views/pages/payment_history.vue"),
           meta: {
             requiresAuth: true,
-            permission: "payment_topup_user",
+            permission: "payment_view_transactions",
           },
         },
         {
@@ -160,7 +177,13 @@ const router = createRouter({
           component: () => import("@/views/pages/payment_balances.vue"),
           meta: {
             requiresAuth: true,
-            permission: "payment_topup_user",
+            permissionsAny: [
+              "payment_list_accounts",
+              "payment_topup_user",
+              "payment_withdraw_user",
+              "payment_view_transactions",
+              "payment_view_overview_stats",
+            ],
           },
         },
         {
@@ -178,7 +201,7 @@ const router = createRouter({
           component: () => import("@/views/pages/payment_departments.vue"),
           meta: {
             requiresAuth: true,
-            permission: "payment_manage_user_departments",
+            permission: "payment_manage_departments",
           },
         },
         {
@@ -226,9 +249,30 @@ router.beforeEach((to, from, next) => {
 
   if (requiresAuth && !isAuthenticated) {
     next("/auth/login")
-  } else {
-    next()
+    return
   }
+
+  const permissionMetas = to.matched
+    .map((record) => record.meta)
+    .filter((m) => m && (m.permission || (m.permissionsAny && m.permissionsAny.length)))
+  const permissionMeta = permissionMetas.length ? permissionMetas[permissionMetas.length - 1] : null
+
+  if (requiresAuth && isAuthenticated && permissionMeta) {
+    if (permissionMeta.permission && !authService.hasPermission(permissionMeta.permission)) {
+      next("/auth/access")
+      return
+    }
+    if (
+      permissionMeta.permissionsAny &&
+      permissionMeta.permissionsAny.length > 0 &&
+      !authService.hasAnyPermission(permissionMeta.permissionsAny)
+    ) {
+      next("/auth/access")
+      return
+    }
+  }
+
+  next()
 })
 
 export default router

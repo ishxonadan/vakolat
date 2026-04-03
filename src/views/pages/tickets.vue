@@ -10,17 +10,43 @@
       />
     </div>
 
-    <!-- Search Section -->
-    <div class="card mb-6 bg-blue-50 border border-blue-200">
-      <h3 class="text-lg font-semibold mb-4 text-blue-900">Tezkor qidiruv</h3>
+    <!-- Date + search -->
+    <div
+      class="mb-6 rounded-xl border border-gray-200 dark:border-zinc-600 bg-gray-50/90 dark:bg-zinc-900/95 p-4 shadow-sm"
+    >
+      <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-zinc-100">Chipta sanasi</h3>
+      <p class="text-sm text-gray-600 dark:text-zinc-300 mb-4 leading-relaxed">
+        Kerakli kunni tanlang — jadval faqat shu kunning chiptalarini ko‘rsatadi (tartib raqamlari shu kunga tegishli).
+      </p>
+      <div class="flex flex-col lg:flex-row lg:items-end gap-3 mb-5">
+        <div class="flex flex-col gap-1">
+          <label for="ticket-filter-date" class="text-sm font-medium text-gray-800 dark:text-zinc-200">Sana</label>
+          <Calendar
+            id="ticket-filter-date"
+            v-model="filterDate"
+            dateFormat="dd.mm.yy"
+            :showIcon="true"
+            :showButtonBar="true"
+            placeholder="Sanani tanlang"
+            class="w-full md:w-20rem tickets-filter-calendar"
+            @update:model-value="applyFilters"
+          />
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <Button type="button" label="Bugun" icon="pi pi-calendar" severity="secondary" outlined @click="setFilterToday" />
+          <Button type="button" label="Barcha sanalar" icon="pi pi-filter-slash" severity="secondary" text @click="clearDateFilter" />
+        </div>
+      </div>
+
+      <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-zinc-100">Tezkor qidiruv</h3>
       <div class="flex gap-3">
         <div class="flex-1">
           <InputText 
             v-model="searchQuery"
             placeholder="Pasport, F.I.Sh yoki Chipta ID bo'yicha qidiring..."
             class="w-full"
-            @input="filterTickets"
-            @keyup.enter="filterTickets"
+            @input="applyFilters"
+            @keyup.enter="applyFilters"
           />
         </div>
         <Button 
@@ -38,11 +64,12 @@
       :value="tickets" 
       :loading="loading"
       paginator 
-      :rows="10"
-      :rowsPerPageOptions="[5, 10, 20]"
+      :rows="pageSize"
+      :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
       paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
       currentPageReportTemplate="{first} dan {last} gacha, jami {totalRecords} ta"
       responsiveLayout="scroll"
+      @page="onTicketsPage"
     >
       <Column field="ticketId" header="Chipta ID" sortable>
         <template #body="slotProps">
@@ -61,7 +88,7 @@
       </Column>
       <Column field="dailyOrderNumber" header="Tartib raqami" sortable>
         <template #body="slotProps">
-          <span class="font-semibold text-blue-600">{{ slotProps.data.dailyOrderNumber }}</span>
+          <span class="font-semibold text-blue-600 dark:text-blue-400">{{ slotProps.data.dailyOrderNumber }}</span>
         </template>
       </Column>
       <Column field="date" header="Chipta sanasi" sortable>
@@ -174,6 +201,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import apiService from '@/service/api.service';
 import authService from '@/service/auth.service';
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service';
 import LibraryLogo from '@/components/LibraryLogo.vue';
 
 const toast = useToast();
@@ -181,6 +209,8 @@ const canCreate = computed(() => authService.hasPermission('create_tickets'));
 const allTickets = ref([]);
 const tickets = ref([]);
 const loading = ref(false);
+/** null = barcha kunlar; aks holda faqat shu kalendarkunidagi chiptalar */
+const filterDate = ref(null);
 const searchQuery = ref('');
 const showTicketDialog = ref(false);
 const selectedTicket = ref(null);
@@ -192,7 +222,7 @@ const loadTickets = async () => {
     loading.value = true;
     const data = await apiService.get('/tickets');
     allTickets.value = data;
-    tickets.value = data;
+    applyFilters();
   } catch (error) {
     toast.add({ 
       severity: 'error', 
@@ -555,37 +585,54 @@ const formatDateTime = (date) => {
   return new Date(date).toLocaleString('uz-UZ');
 };
 
-const filterTickets = () => {
-  if (!searchQuery.value.trim()) {
-    tickets.value = allTickets.value;
-    return;
-  }
-  
+/** Mahalliy kalendarkun kaliti (serverdagi `date` maydoni bilan moslash uchun) */
+const calendarDayKey = (value) => {
+  if (value == null || value === '') return '';
+  const t = new Date(value);
+  if (Number.isNaN(t.getTime())) return '';
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, '0');
+  const d = String(t.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const matchesSearch = (ticket, query) => {
+  if (!query) return true;
+  if (ticket.ticketId && ticket.ticketId.toLowerCase().includes(query)) return true;
+  if (ticket.fullname && ticket.fullname.toLowerCase().includes(query)) return true;
+  if (ticket.passport && ticket.passport.toLowerCase().includes(query)) return true;
+  return false;
+};
+
+const applyFilters = () => {
   const query = searchQuery.value.toLowerCase().trim();
-  
-  tickets.value = allTickets.value.filter(ticket => {
-    // Search in ticket ID
-    if (ticket.ticketId && ticket.ticketId.toLowerCase().includes(query)) {
-      return true;
-    }
-    
-    // Search in full name
-    if (ticket.fullname && ticket.fullname.toLowerCase().includes(query)) {
-      return true;
-    }
-    
-    // Search in passport
-    if (ticket.passport && ticket.passport.toLowerCase().includes(query)) {
-      return true;
-    }
-    
-    return false;
+  const dayKey = filterDate.value ? calendarDayKey(filterDate.value) : null;
+
+  tickets.value = allTickets.value.filter((ticket) => {
+    if (dayKey && calendarDayKey(ticket.date) !== dayKey) return false;
+    return matchesSearch(ticket, query);
   });
+};
+
+const setFilterToday = () => {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  filterDate.value = t;
+  applyFilters();
+};
+
+const clearDateFilter = () => {
+  filterDate.value = null;
+  applyFilters();
 };
 
 const clearSearch = () => {
   searchQuery.value = '';
-  tickets.value = allTickets.value;
+  applyFilters();
+};
+
+const onTicketsPage = (event) => {
+  if (event.rows != null) pageSize.value = event.rows;
 };
 
 onMounted(() => {
@@ -751,5 +798,18 @@ onMounted(() => {
   .no-print {
     display: none !important;
   }
+}
+</style>
+
+/* Chipta sanasi: kalendar maydoni qora temada oq qolib ketmasin */
+<style>
+.app-dark .tickets-filter-calendar .p-inputtext,
+.app-dark .tickets-filter-calendar .p-datepicker-input {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #52525b;
+}
+.app-dark .tickets-filter-calendar .p-datepicker-dropdown {
+  color: #e4e4e7;
 }
 </style>

@@ -79,7 +79,9 @@ module.exports = (vakolat) => {
             // Payment
             paymentTopupCount: 0,
             paymentSpendCount: 0,
-            paymentServiceCount: 0,
+            paymentServiceProvideCount: 0,
+            paymentServiceCancelCount: 0,
+            paymentServiceCrudCount: 0,
             paymentDepartmentCount: 0,
             paymentUserDepartmentCount: 0,
             totalPaymentActions: 0,
@@ -127,12 +129,18 @@ module.exports = (vakolat) => {
             entry.paymentSpendCount++
             entry.totalPaymentActions++
             break
+          case "payment_service_provide":
+            entry.paymentServiceProvideCount++
+            entry.totalPaymentActions++
+            break
+          case "payment_service_cancel":
+            entry.paymentServiceCancelCount++
+            entry.totalPaymentActions++
+            break
           case "payment_service_create":
           case "payment_service_update":
           case "payment_service_delete":
-          case "payment_service_provide":
-          case "payment_service_cancel":
-            entry.paymentServiceCount++
+            entry.paymentServiceCrudCount++
             entry.totalPaymentActions++
             break
           case "payment_department_create":
@@ -144,6 +152,13 @@ module.exports = (vakolat) => {
           case "payment_user_department_add":
           case "payment_user_department_remove":
             entry.paymentUserDepartmentCount++
+            entry.totalPaymentActions++
+            break
+          case "payment_view_transactions":
+          case "payment_view_balances":
+          case "payment_view_overview_stats":
+          case "payment_read_account":
+          case "payment_view_service_provisions":
             entry.totalPaymentActions++
             break
           default:

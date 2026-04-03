@@ -33,6 +33,7 @@ const normalizeUserNoInput = (value) => {
 const form = ref({
   userNo: "",
   comment: "",
+  departmentId: null,
   items: [{ serviceId: null, quantity: 1 }],
 })
 
@@ -55,6 +56,13 @@ const remainingBalance = computed(() => currentBalance.value - totalCost.value)
 const hasEnoughBalance = computed(() => remainingBalance.value >= 0)
 /** Only after a user is chosen and loaded; avoids treating "no user" as balance 0 */
 const hasPositiveBalance = computed(() => hasSelectedUser.value && currentBalance.value > 0)
+
+/** Tizim boshqaruvidan: zal tanlash majburiy bo'lsa, server va klient tekshiradi */
+const requireZalForProvision = ref(false)
+const zalOk = computed(() => !requireZalForProvision.value || !!form.value.departmentId)
+const zalPlaceholder = computed(() =>
+  requireZalForProvision.value ? "Zalni tanlang (majburiy)" : "Zalni tanlang (ixtiyoriy)",
+)
 const getCancelDeadline = (row) => new Date(row.createdAt).getTime() + CANCEL_WINDOW_MS
 const canCancelRow = (row) => {
   if (isRais) return true
@@ -73,6 +81,22 @@ const cancelButtonLabel = (row) => {
   return `Bekor qilish (${formatCountdown(row)})`
 }
 
+/** Populated User from API (providedBy / cancelledBy) */
+const staffDisplay = (user) => {
+  if (!user) return "—"
+  const name = [user.firstname, user.lastname].filter(Boolean).join(" ").trim()
+  if (name) return name
+  if (user.nickname) return user.nickname
+  return "—"
+}
+
+const departmentDisplay = (row) => {
+  const d = row?.departmentId
+  if (!d) return "—"
+  if (typeof d === "object" && d.name) return d.name
+  return "—"
+}
+
 const loadServices = async () => {
   services.value = await apiService.get("/members/payment/services")
   services.value = services.value.filter((s) => s.isActive !== false)
@@ -80,6 +104,15 @@ const loadServices = async () => {
 
 const loadDepartments = async () => {
   departments.value = await apiService.get("/members/payment/departments")
+}
+
+const loadSystemSettings = async () => {
+  try {
+    const data = await apiService.get("/system/settings")
+    requireZalForProvision.value = !!data.paymentRequireZalForServiceProvision
+  } catch {
+    requireZalForProvision.value = false
+  }
 }
 
 const loadUser = async () => {
@@ -134,6 +167,11 @@ const submitProvision = async () => {
       return
     }
 
+    if (!zalOk.value) {
+      toast.add({ severity: "warn", summary: "Ogohlantirish", detail: "Zalni tanlang", life: 2500 })
+      return
+    }
+
     const response = await apiService.post("/members/payment/service-provisions", {
       userNo,
       comment: form.value.comment,
@@ -169,7 +207,7 @@ const cancelProvision = async (row) => {
 
 onMounted(async () => {
   try {
-    await Promise.all([loadServices(), loadDepartments()])
+    await Promise.all([loadServices(), loadDepartments(), loadSystemSettings()])
     const presetUserNo = normalizeUserNoInput(route.query.userNo)
     if (presetUserNo) {
       userNoSearch.value = presetUserNo
@@ -273,10 +311,20 @@ onUnmounted(() => {
         :options="departments"
         optionLabel="name"
         optionValue="_id"
-        placeholder="Zalni tanlang (ixtiyoriy)"
+        :placeholder="zalPlaceholder"
         class="w-full md:w-20rem"
+        :class="{ 'p-invalid': requireZalForProvision && hasSelectedUser && !form.departmentId }"
       />
     </div>
+
+    <Message
+      v-if="requireZalForProvision && hasSelectedUser && !form.departmentId"
+      severity="warn"
+      :closable="false"
+      class="mb-4"
+    >
+      Tizim sozlamalariga ko'ra zal tanlash majburiy.
+    </Message>
 
     <Message v-if="hasSelectedUser && !hasPositiveBalance" severity="warn" :closable="false" class="mb-4">
       Balans 0 so'm. Xizmat tanlash uchun avval foydalanuvchi balansini to'ldiring.
@@ -286,12 +334,21 @@ onUnmounted(() => {
       <InputText v-model="form.comment" class="w-full" placeholder="Izoh" />
     </div>
 
-    <div class="flex justify-between items-center mb-6">
-      <div class="text-lg"><b>Jami:</b> {{ formatMoney(totalCost) }}</div>
+    <div
+      class="flex flex-wrap justify-between items-center gap-4 mb-6 p-4 border-round border-1 surface-border surface-ground"
+    >
+      <div class="text-lg md:text-xl font-medium text-color">
+        <span class="text-color-secondary font-normal">Jami:</span>
+        {{ formatMoney(totalCost) }}
+      </div>
       <Button
         label="Xizmatni rasmiylashtirish"
-        icon="pi pi-check"
-        :disabled="!form.userNo || !hasPositiveBalance || !hasEnoughBalance || totalCost <= 0"
+        icon="pi pi-check-circle"
+        severity="success"
+        size="large"
+        raised
+        class="provision-submit-btn font-bold min-w-[18rem] !text-lg"
+        :disabled="!form.userNo || !hasPositiveBalance || !hasEnoughBalance || totalCost <= 0 || !zalOk"
         :loading="saving"
         @click="submitProvision"
       />
@@ -302,6 +359,16 @@ onUnmounted(() => {
       <Column field="createdAt" header="Sana">
         <template #body="slotProps">{{ new Date(slotProps.data.createdAt).toLocaleString() }}</template>
       </Column>
+      <Column header="Xodim">
+        <template #body="slotProps">
+          <span class="text-sm">{{ staffDisplay(slotProps.data.providedBy) }}</span>
+        </template>
+      </Column>
+      <Column header="Zal">
+        <template #body="slotProps">
+          <span class="text-sm">{{ departmentDisplay(slotProps.data) }}</span>
+        </template>
+      </Column>
       <Column field="totalAmount" header="Jami summa">
         <template #body="slotProps">
           {{ formatMoney(slotProps.data.totalAmount) }}
@@ -309,10 +376,15 @@ onUnmounted(() => {
       </Column>
       <Column field="status" header="Holat">
         <template #body="slotProps">
-          <Tag
-            :value="slotProps.data.status === 'cancelled' ? 'Bekor qilingan' : 'Faol'"
-            :severity="slotProps.data.status === 'cancelled' ? 'danger' : 'success'"
-          />
+          <div class="flex flex-column gap-1">
+            <Tag
+              :value="slotProps.data.status === 'cancelled' ? 'Bekor qilingan' : 'Faol'"
+              :severity="slotProps.data.status === 'cancelled' ? 'danger' : 'success'"
+            />
+            <span v-if="slotProps.data.status === 'cancelled'" class="text-500 text-xs">
+              Bekor qildi: {{ staffDisplay(slotProps.data.cancelledBy) }}
+            </span>
+          </div>
         </template>
       </Column>
       <Column header="Xizmatlar">

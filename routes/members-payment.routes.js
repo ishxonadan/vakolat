@@ -1,6 +1,6 @@
 const express = require("express")
 const mongoose = require("mongoose")
-const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+const { verifyToken, checkPermissions, checkAnyPermissions } = require("../src/middleware/auth.middleware")
 
 module.exports = (nazorat, vakolat) => {
   const router = express.Router()
@@ -13,6 +13,15 @@ module.exports = (nazorat, vakolat) => {
   const UserDepartment = vakolat.model("UserDepartment")
   const User = vakolat.model("User")
   const PaymentServiceProvision = vakolat.model("PaymentServiceProvision")
+  const SystemSettings = vakolat.model("SystemSettings")
+
+  const getOrCreateSystemSettings = async () => {
+    let doc = await SystemSettings.findOne()
+    if (!doc) {
+      doc = await SystemSettings.create({ paymentRequireZalForServiceProvision: false })
+    }
+    return doc
+  }
 
   const cacheSchema = new mongoose.Schema(
     {
@@ -154,101 +163,112 @@ module.exports = (nazorat, vakolat) => {
     await balanceCacheInitPromise
   }
 
-  router.get("/accounts", verifyToken, async (req, res) => {
-    try {
-      await ensureBalanceCacheInitialized()
-      const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
-      const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 200)
-      const skip = (page - 1) * limit
-      const search = String(req.query.search || "").trim()
-      const allowedSortFields = new Set(["balance", "userNo", "createdAt", "updatedAt"])
-      const requestedSortField = String(req.query.sortField || "balance").trim()
-      const sortField = allowedSortFields.has(requestedSortField) ? requestedSortField : "balance"
-      const sortOrder = String(req.query.sortOrder || "-1") === "1" ? 1 : -1
+  router.get(
+    "/accounts",
+    verifyToken,
+    checkAnyPermissions([
+      "payment_list_accounts",
+      "payment_topup_user",
+      "payment_withdraw_user",
+      "payment_view_transactions",
+      "payment_view_overview_stats",
+    ]),
+    async (req, res) => {
+      try {
+        await ensureBalanceCacheInitialized()
+        const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
+        const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 200)
+        const skip = (page - 1) * limit
+        const search = String(req.query.search || "").trim()
+        const allowedSortFields = new Set(["balance", "userNo", "createdAt", "updatedAt"])
+        const requestedSortField = String(req.query.sortField || "balance").trim()
+        const sortField = allowedSortFields.has(requestedSortField) ? requestedSortField : "balance"
+        const sortOrder = String(req.query.sortOrder || "-1") === "1" ? 1 : -1
 
-      let userNoFilter = null
-      if (search) {
-        const searchRegex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
-        const normalizedSearch = normalizeReaderId(search)
-        const normalizedRegex = new RegExp(normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
-        let matchingMembers = await CacheUser.find({
-          $or: [{ USER_NO: searchRegex }, { USER_NAME: searchRegex }],
-        })
-          .select("USER_NO")
-          .limit(5000)
-          .lean()
-
-        // Fallback to a'zo bo'lganlar source shape (same cache collection) using
-        // normalized user number when generic search yields nothing.
-        if (!matchingMembers.length && normalizedSearch) {
-          matchingMembers = await CacheUser.find({
-            $or: [{ USER_NO: normalizedRegex }, { USER_ID: normalizedRegex }, { CARD_NO: normalizedRegex }],
+        let userNoFilter = null
+        if (search) {
+          const searchRegex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+          const normalizedSearch = normalizeReaderId(search)
+          const normalizedRegex = new RegExp(normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+          let matchingMembers = await CacheUser.find({
+            $or: [{ USER_NO: searchRegex }, { USER_NAME: searchRegex }],
           })
             .select("USER_NO")
             .limit(5000)
             .lean()
-        }
-        userNoFilter = [...new Set(matchingMembers.map((m) => m.USER_NO).filter(Boolean))]
 
-        // Do not recalculate all matched users here (too slow for large results).
-        // We only recalculate missing account-cache entries after reading current cache below.
-      }
-
-      const accountFilter = userNoFilter ? { userNo: { $in: userNoFilter } } : {}
-      const [accounts, total] = await Promise.all([
-        PaymentAccount.find(accountFilter).sort({ [sortField]: sortOrder }).skip(skip).limit(limit).lean(),
-        PaymentAccount.countDocuments(accountFilter),
-      ])
-
-      let normalizedAccounts = [...accounts]
-      const existingSet = new Set(accounts.map((a) => a.userNo))
-      if (userNoFilter && userNoFilter.length > 0) {
-        const missingUserNos = userNoFilter.filter((userNo) => !existingSet.has(userNo))
-        // To preserve correctness, create exact cache rows only for missing users.
-        for (const userNo of missingUserNos) {
-          const recalculated = await recalculateUserBalance(userNo)
-          if (recalculated) {
-            const row = recalculated.toObject ? recalculated.toObject() : recalculated
-            normalizedAccounts.push(row)
-            existingSet.add(userNo)
-          }
-        }
-      }
-      if (userNoFilter && userNoFilter.length > 0) {
-        for (const userNo of userNoFilter) {
-          if (!existingSet.has(userNo)) {
-            normalizedAccounts.push({
-              _id: `virtual_${userNo}`,
-              userNo,
-              balance: 0,
-              status: "active",
-              meta: {},
-              createdAt: null,
-              updatedAt: null,
+          // Fallback to a'zo bo'lganlar source shape (same cache collection) using
+          // normalized user number when generic search yields nothing.
+          if (!matchingMembers.length && normalizedSearch) {
+            matchingMembers = await CacheUser.find({
+              $or: [{ USER_NO: normalizedRegex }, { USER_ID: normalizedRegex }, { CARD_NO: normalizedRegex }],
             })
+              .select("USER_NO")
+              .limit(5000)
+              .lean()
+          }
+          userNoFilter = [...new Set(matchingMembers.map((m) => m.USER_NO).filter(Boolean))]
+
+          // Do not recalculate all matched users here (too slow for large results).
+          // We only recalculate missing account-cache entries after reading current cache below.
+        }
+
+        const accountFilter = userNoFilter ? { userNo: { $in: userNoFilter } } : {}
+        const [accounts, total] = await Promise.all([
+          PaymentAccount.find(accountFilter).sort({ [sortField]: sortOrder }).skip(skip).limit(limit).lean(),
+          PaymentAccount.countDocuments(accountFilter),
+        ])
+
+        let normalizedAccounts = [...accounts]
+        const existingSet = new Set(accounts.map((a) => a.userNo))
+        if (userNoFilter && userNoFilter.length > 0) {
+          const missingUserNos = userNoFilter.filter((userNo) => !existingSet.has(userNo))
+          // To preserve correctness, create exact cache rows only for missing users.
+          for (const userNo of missingUserNos) {
+            const recalculated = await recalculateUserBalance(userNo)
+            if (recalculated) {
+              const row = recalculated.toObject ? recalculated.toObject() : recalculated
+              normalizedAccounts.push(row)
+              existingSet.add(userNo)
+            }
           }
         }
+        if (userNoFilter && userNoFilter.length > 0) {
+          for (const userNo of userNoFilter) {
+            if (!existingSet.has(userNo)) {
+              normalizedAccounts.push({
+                _id: `virtual_${userNo}`,
+                userNo,
+                balance: 0,
+                status: "active",
+                meta: {},
+                createdAt: null,
+                updatedAt: null,
+              })
+            }
+          }
+        }
+
+        const userNos = normalizedAccounts.map((a) => a.userNo)
+        const members = await CacheUser.find({ USER_NO: { $in: userNos } })
+          .select("USER_NO USER_NAME USER_POSITION TEL_NO")
+          .lean()
+        const memberMap = new Map(members.map((m) => [m.USER_NO, m]))
+
+        res.json({
+          items: normalizedAccounts.map((a) => ({ ...a, member: memberMap.get(a.userNo) || null })),
+          total: userNoFilter ? normalizedAccounts.length : total,
+          page,
+          limit,
+        })
+      } catch (error) {
+        console.error("Error loading payment accounts:", error)
+        res.status(500).json({ error: "Balanslarni yuklashda xatolik" })
       }
+    },
+  )
 
-      const userNos = normalizedAccounts.map((a) => a.userNo)
-      const members = await CacheUser.find({ USER_NO: { $in: userNos } })
-        .select("USER_NO USER_NAME USER_POSITION TEL_NO")
-        .lean()
-      const memberMap = new Map(members.map((m) => [m.USER_NO, m]))
-
-      res.json({
-        items: normalizedAccounts.map((a) => ({ ...a, member: memberMap.get(a.userNo) || null })),
-        total: userNoFilter ? normalizedAccounts.length : total,
-        page,
-        limit,
-      })
-    } catch (error) {
-      console.error("Error loading payment accounts:", error)
-      res.status(500).json({ error: "Balanslarni yuklashda xatolik" })
-    }
-  })
-
-  router.get("/accounts/overview", verifyToken, async (req, res) => {
+  router.get("/accounts/overview", verifyToken, checkPermissions(["payment_view_overview_stats"]), async (req, res) => {
     try {
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -282,27 +302,38 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/accounts/:userNo", verifyToken, async (req, res) => {
-    try {
-      const userNo = String(req.params.userNo || "").trim()
-      if (!userNo) {
-        return res.status(400).json({ error: "userNo talab qilinadi" })
-      }
+  router.get(
+    "/accounts/:userNo",
+    verifyToken,
+    checkAnyPermissions([
+      "payment_provide_service",
+      "payment_topup_user",
+      "payment_withdraw_user",
+      "payment_list_accounts",
+      "payment_read_account",
+    ]),
+    async (req, res) => {
+      try {
+        const userNo = String(req.params.userNo || "").trim()
+        if (!userNo) {
+          return res.status(400).json({ error: "userNo talab qilinadi" })
+        }
 
-      const recalculated = await recalculateUserBalance(userNo)
-      const account = recalculated ? recalculated.toObject() : null
-      const member = await CacheUser.findOne({ USER_NO: userNo })
-        .select("USER_NO USER_NAME USER_POSITION TEL_NO")
-        .lean()
-      res.json({
-        account: account || { userNo, balance: 0, status: "active", meta: {} },
-        member: member || null,
-      })
-    } catch (error) {
-      console.error("Error loading payment account:", error)
-      res.status(500).json({ error: "Balansni yuklashda xatolik" })
-    }
-  })
+        const recalculated = await recalculateUserBalance(userNo)
+        const account = recalculated ? recalculated.toObject() : null
+        const member = await CacheUser.findOne({ USER_NO: userNo })
+          .select("USER_NO USER_NAME USER_POSITION TEL_NO")
+          .lean()
+        res.json({
+          account: account || { userNo, balance: 0, status: "active", meta: {} },
+          member: member || null,
+        })
+      } catch (error) {
+        console.error("Error loading payment account:", error)
+        res.status(500).json({ error: "Balansni yuklashda xatolik" })
+      }
+    },
+  )
 
   router.post("/topup", verifyToken, checkPermissions(["payment_topup_user"]), async (req, res) => {
     try {
@@ -412,7 +443,7 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/transactions", verifyToken, async (req, res) => {
+  router.get("/transactions", verifyToken, checkPermissions(["payment_view_transactions"]), async (req, res) => {
     try {
       const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
       const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 200)
@@ -448,32 +479,38 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/service-provisions", verifyToken, async (req, res) => {
-    try {
-      const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
-      const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 200)
-      const skip = (page - 1) * limit
-      const filter = {}
-      if (req.query.userNo) filter.userNo = String(req.query.userNo).trim()
-      if (req.query.status) filter.status = String(req.query.status).trim()
+  router.get(
+    "/service-provisions",
+    verifyToken,
+    checkAnyPermissions(["payment_provide_service", "payment_view_transactions"]),
+    async (req, res) => {
+      try {
+        const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
+        const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 200)
+        const skip = (page - 1) * limit
+        const filter = {}
+        if (req.query.userNo) filter.userNo = String(req.query.userNo).trim()
+        if (req.query.status) filter.status = String(req.query.status).trim()
 
-      const [items, total] = await Promise.all([
-        PaymentServiceProvision.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .populate("providedBy", "nickname firstname lastname")
-          .populate("cancelledBy", "nickname firstname lastname")
-          .populate("items.serviceId", "name code")
-          .lean(),
-        PaymentServiceProvision.countDocuments(filter),
-      ])
-      res.json({ items, total, page, limit })
-    } catch (error) {
-      console.error("Error loading service provisions:", error)
-      res.status(500).json({ error: "Xizmat ko'rsatish tarixini yuklashda xatolik" })
-    }
-  })
+        const [items, total] = await Promise.all([
+          PaymentServiceProvision.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate("providedBy", "nickname firstname lastname")
+            .populate("cancelledBy", "nickname firstname lastname")
+            .populate("departmentId", "name code")
+            .populate("items.serviceId", "name code")
+            .lean(),
+          PaymentServiceProvision.countDocuments(filter),
+        ])
+        res.json({ items, total, page, limit })
+      } catch (error) {
+        console.error("Error loading service provisions:", error)
+        res.status(500).json({ error: "Xizmat ko'rsatish tarixini yuklashda xatolik" })
+      }
+    },
+  )
 
   router.post(
     "/service-provisions",
@@ -484,9 +521,22 @@ module.exports = (nazorat, vakolat) => {
         const userNo = String(req.body.userNo || "").trim()
         const rawItems = Array.isArray(req.body.items) ? req.body.items : []
         const comment = String(req.body.comment || "")
-        const departmentId = req.body.departmentId || null
+        let departmentId = req.body.departmentId || null
         if (!userNo || rawItems.length === 0) {
           return res.status(400).json({ error: "ID karta raqami va xizmatlar ro'yxati talab qilinadi" })
+        }
+
+        const systemFlags = await getOrCreateSystemSettings()
+        if (systemFlags.paymentRequireZalForServiceProvision) {
+          const depRaw = departmentId != null ? String(departmentId).trim() : ""
+          if (!depRaw || !mongoose.Types.ObjectId.isValid(depRaw)) {
+            return res.status(400).json({ error: "Zal tanlash majburiy" })
+          }
+          const dep = await PaymentDepartment.findById(depRaw).lean()
+          if (!dep) {
+            return res.status(400).json({ error: "Tanlangan zal topilmadi" })
+          }
+          departmentId = depRaw
         }
 
         const normalizedItems = rawItems
@@ -670,14 +720,19 @@ module.exports = (nazorat, vakolat) => {
     },
   )
 
-  router.get("/services", verifyToken, async (req, res) => {
-    try {
-      const items = await PaymentService.find().sort({ createdAt: -1 }).lean()
-      res.json(items)
-    } catch (error) {
-      res.status(500).json({ error: "Xizmatlarni yuklashda xatolik" })
-    }
-  })
+  router.get(
+    "/services",
+    verifyToken,
+    checkAnyPermissions(["payment_provide_service", "payment_manage_services"]),
+    async (req, res) => {
+      try {
+        const items = await PaymentService.find().sort({ createdAt: -1 }).lean()
+        res.json(items)
+      } catch (error) {
+        res.status(500).json({ error: "Xizmatlarni yuklashda xatolik" })
+      }
+    },
+  )
 
   router.post("/services", verifyToken, checkPermissions(["payment_manage_services"]), async (req, res) => {
     try {
@@ -712,14 +767,19 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/departments", verifyToken, async (req, res) => {
-    try {
-      const items = await PaymentDepartment.find().sort({ createdAt: -1 }).lean()
-      res.json(items)
-    } catch (error) {
-      res.status(500).json({ error: "Bo'limlarni yuklashda xatolik" })
-    }
-  })
+  router.get(
+    "/departments",
+    verifyToken,
+    checkAnyPermissions(["payment_provide_service", "payment_manage_departments"]),
+    async (req, res) => {
+      try {
+        const items = await PaymentDepartment.find().sort({ createdAt: -1 }).lean()
+        res.json(items)
+      } catch (error) {
+        res.status(500).json({ error: "Bo'limlarni yuklashda xatolik" })
+      }
+    },
+  )
 
   router.post("/departments", verifyToken, checkPermissions(["payment_manage_departments"]), async (req, res) => {
     try {
@@ -755,7 +815,7 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/user-departments", verifyToken, async (req, res) => {
+  router.get("/user-departments", verifyToken, checkPermissions(["payment_manage_user_departments"]), async (req, res) => {
     try {
       const filter = {}
       if (req.query.expertId) filter.expertId = String(req.query.expertId).trim()
@@ -772,7 +832,7 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/experts", verifyToken, async (req, res) => {
+  router.get("/experts", verifyToken, checkPermissions(["payment_manage_user_departments"]), async (req, res) => {
     try {
       const experts = await User.find(
         { level: "expert" },

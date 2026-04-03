@@ -61,7 +61,13 @@ const menuItems = [
             label: "Foydalanuvchi balansi",
             icon: 'pi pi-fw pi-credit-card',
             to: '/payment/balances',
-            requiredPermissions: ['payment_topup_user']
+            requiredPermissionsAny: [
+              'payment_list_accounts',
+              'payment_topup_user',
+              'payment_withdraw_user',
+              'payment_view_transactions',
+              'payment_view_overview_stats',
+            ],
           },
           {
             label: "Xizmatlar",
@@ -73,7 +79,7 @@ const menuItems = [
             label: "Tarix",
             icon: 'pi pi-fw pi-history',
             to: '/payment/history',
-            requiredPermissions: ['payment_topup_user']
+            requiredPermissions: ['payment_view_transactions'],
           },
         ]
       },
@@ -144,15 +150,15 @@ const menuItems = [
         ]
       },
       {
+        label: "Tizim boshqaruvi",
+        icon: 'pi pi-fw pi-sliders-h',
+        to: "/system",
+        requiredPermissions: ["system_manage"],
+      },
+      {
         label: "Sozlamalar",
         icon: 'pi pi-fw pi-cog',
-        items: [
-          {
-            label: "Parolni o'zgartirish",
-            icon: 'pi pi-fw pi-key',
-            to: '/settings',
-          },
-        ],
+        to: "/settings",
       },
     ]
   },
@@ -162,7 +168,11 @@ const menuItems = [
 // Enhanced filtering function that checks both levels and permissions
 const hasAccess = (item) => {
   // If no requirements, everyone can access
-  if (!item.requiredLevel && !item.requiredPermissions) {
+  if (
+    !item.requiredLevel &&
+    !item.requiredPermissions &&
+    !item.requiredPermissionsAny
+  ) {
     return true;
   }
 
@@ -171,9 +181,16 @@ const hasAccess = (item) => {
     return false;
   }
 
-  // Check permission requirements
+  // Check permission requirements (all required)
   if (item.requiredPermissions && item.requiredPermissions.length > 0) {
     if (!authService.hasPermissions(item.requiredPermissions)) {
+      return false;
+    }
+  }
+
+  // Check permission requirements (at least one)
+  if (item.requiredPermissionsAny && item.requiredPermissionsAny.length > 0) {
+    if (!authService.hasAnyPermission(item.requiredPermissionsAny)) {
       return false;
     }
   }

@@ -90,4 +90,57 @@ const checkPermissions = (requiredPermissions) => {
   }
 }
 
-module.exports = { verifyToken, checkUserLevel, checkPermissions }
+/**
+ * User must have at least one of the listed active permissions.
+ * rais bypasses.
+ *
+ * @param {string[]} anyOfPermissions
+ */
+const checkAnyPermissions = (anyOfPermissions) => {
+  return async (req, res, next) => {
+    verifyToken(req, res, async (err) => {
+      if (err) return next(err)
+      try {
+        if (req.user.level === "rais") return next()
+
+        const User = req.app.locals.User
+        if (!User) {
+          return res.status(500).json({ error: "User model not available" })
+        }
+
+        const user = await User.findById(req.user.id)
+          .populate({
+            path: "permissionGroup",
+            populate: { path: "permissions", select: "name isActive" },
+          })
+          .lean()
+
+        if (!user) {
+          return res.status(404).json({ error: "User not found" })
+        }
+
+        const groupPerms = user.permissionGroup?.permissions || []
+        const userPermissionNames = groupPerms
+          .filter((p) => p.isActive !== false)
+          .map((p) => p.name)
+
+        const hasOne = anyOfPermissions.some((p) => userPermissionNames.includes(p))
+
+        if (hasOne) {
+          req.userPermissions = userPermissionNames
+          next()
+        } else {
+          res.status(403).json({
+            error: "Ruxsat yo'q",
+            requiredAny: anyOfPermissions,
+          })
+        }
+      } catch (error) {
+        console.error("Error checking permissions:", error)
+        res.status(500).json({ error: "Error checking permissions" })
+      }
+    })
+  }
+}
+
+module.exports = { verifyToken, checkUserLevel, checkPermissions, checkAnyPermissions }

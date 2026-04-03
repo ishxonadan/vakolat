@@ -1,10 +1,11 @@
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
 import { useToast } from "primevue/usetoast"
 import authService from "@/service/auth.service"
 import apiService from "@/service/api.service"
 import { paymentTransactionTypeLabel } from "@/utils/paymentLabels"
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from "@/service/pagination.service"
 
 const toast = useToast()
 const router = useRouter()
@@ -12,7 +13,6 @@ const loading = ref(false)
 const items = ref([])
 const total = ref(0)
 const page = ref(1)
-const rows = ref(50)
 const search = ref("")
 const sortField = ref("balance")
 const sortOrder = ref(-1)
@@ -37,6 +37,13 @@ const overview = ref({
 const canTopup = authService.hasPermission("payment_topup_user")
 const canSpend = authService.hasPermission("payment_withdraw_user")
 const canProvideService = authService.hasPermission("payment_provide_service")
+const canViewOverview = authService.hasPermission("payment_view_overview_stats")
+const canViewUserTransactions = authService.hasPermission("payment_view_transactions")
+const canQuickSearch = authService.hasAnyPermission([
+  "payment_list_accounts",
+  "payment_topup_user",
+  "payment_withdraw_user",
+])
 
 const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 const normalizeUserNoInput = (value) => {
@@ -74,7 +81,7 @@ const loadBalances = async () => {
     const data = await apiService.get("/members/payment/accounts", {
       params: {
         page: page.value,
-        limit: rows.value,
+        limit: pageSize.value,
         search: search.value || undefined,
         sortField: sortField.value,
         sortOrder: sortOrder.value,
@@ -107,10 +114,18 @@ const loadOverview = async () => {
 }
 
 const onPage = (event) => {
+  if (event.rows != null && event.rows !== pageSize.value) {
+    pageSize.value = event.rows
+    return
+  }
   page.value = event.page + 1
-  rows.value = event.rows
   loadBalances()
 }
+
+watch(pageSize, () => {
+  page.value = 1
+  loadBalances()
+})
 
 const onSort = (event) => {
   sortField.value = event.sortField || "balance"
@@ -184,13 +199,15 @@ const searchFromQuickInput = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadOverview(), loadBalances()])
+  const tasks = [loadBalances()]
+  if (canViewOverview) tasks.push(loadOverview())
+  await Promise.all(tasks)
 })
 </script>
 
 <template>
   <div class="card">
-    <div class="flex gap-3 mb-4 overflow-x-auto pb-1">
+    <div v-if="canViewOverview" class="flex gap-3 mb-4 overflow-x-auto pb-1">
       <div v-for="card in statCards" :key="card.key" class="min-w-15rem flex-1">
         <div class="surface-card border-1 surface-border border-round p-3 h-full">
           <div class="flex align-items-start justify-content-between mb-2">
@@ -210,7 +227,7 @@ onMounted(async () => {
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-xl font-semibold">Foydalanuvchi balanslari</h1>
     </div>
-    <div class="flex gap-2 mb-4" v-if="canTopup || canSpend">
+    <div class="flex gap-2 mb-4" v-if="canQuickSearch || canTopup || canSpend">
       <InputText v-model="quickUserNo" placeholder="ID karta raqami kiriting (balans bo'lmasa ham)" />
       <Button label="Qidirish" icon="pi pi-search" severity="secondary" @click="searchFromQuickInput" />
       <Button v-if="canTopup" label="To'ldirish" icon="pi pi-plus" severity="success" @click="openAction('topup', quickUserNo)" />
@@ -220,11 +237,12 @@ onMounted(async () => {
     <DataTable
       :value="items"
       :loading="loading"
-      :rows="rows"
+      :rows="pageSize"
+      :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
       :totalRecords="total"
       :paginator="true"
       :lazy="true"
-      :first="(page - 1) * rows"
+      :first="(page - 1) * pageSize"
       :sortField="sortField"
       :sortOrder="sortOrder"
       @page="onPage"
@@ -266,6 +284,7 @@ onMounted(async () => {
               @click="openAction('spend', slotProps.data.userNo)"
             />
             <Button
+              v-if="canViewUserTransactions"
               icon="pi pi-clock"
               severity="info"
               label="Tarix"

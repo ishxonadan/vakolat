@@ -98,23 +98,24 @@ onMounted(fetchTvStats)
 }
 
 .stat-card {
-  background: #fff;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   padding: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
 .stat-title {
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-color);
   margin: 0 0 3px 0;
   line-height: 1.2;
 }
 
 .stat-subtitle {
   font-size: 12px;
-  color: #666;
+  color: var(--text-color-secondary);
   margin: 0 0 10px 0;
 }
 

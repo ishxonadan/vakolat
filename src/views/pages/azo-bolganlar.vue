@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import apiService from '@/service/api.service'
@@ -9,6 +9,7 @@ import TabPanel from 'primevue/tabpanel'
 import MemberList from '@/components/MemberList.vue'
 import MemberForm from '@/components/MemberForm.vue'
 import VisitHistory from '@/components/VisitHistory.vue'
+import { pageSize } from '@/service/pagination.service'
 
 const router = useRouter()
 const toast = useToast()
@@ -17,7 +18,6 @@ const members = ref([])
 const loading = ref(false)
 const totalRecords = ref(0)
 const currentPage = ref(1)
-const rowsPerPage = ref(50)
 
 const showDialog = ref(false)
 const selectedMember = ref(null)
@@ -50,7 +50,7 @@ const fetchMembers = async () => {
     const activeFilters = searchFilters.value.filter(f => f.value.trim() !== '')
     const requestBody = {
       page: currentPage.value,
-      limit: rowsPerPage.value,
+      limit: pageSize.value,
       filters: activeFilters
     }
 
@@ -209,6 +209,20 @@ const imageSource = computed(() => {
   return `data:image/jpeg;base64,${memberImagePreview.value}`
 })
 
+watch(pageSize, () => {
+  currentPage.value = 1
+  fetchMembers()
+})
+
+const onUpdateCurrentPage = (p) => {
+  currentPage.value = p
+  fetchMembers()
+}
+
+const onUpdateRowsPerPage = (r) => {
+  pageSize.value = r
+}
+
 onMounted(() => {
   fetchMembers()
 })
@@ -221,12 +235,12 @@ onMounted(() => {
       :loading="loading"
       :total-records="totalRecords"
       :current-page="currentPage"
-      :rows-per-page="rowsPerPage"
+      :rows-per-page="pageSize"
       :search-filters="searchFilters"
       :search-fields="searchFields"
       @add-member="openAddMemberDialog"
-      @update:current-page="(page) => { currentPage = page; fetchMembers() }"
-      @update:rows-per-page="(rows) => { rowsPerPage = rows; fetchMembers() }"
+      @update:current-page="onUpdateCurrentPage"
+      @update:rows-per-page="onUpdateRowsPerPage"
       @apply-search="() => { currentPage = 1; fetchMembers() }"
       @row-dblclick="(member) => openMemberDialog(member)"
     />

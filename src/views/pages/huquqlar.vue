@@ -16,8 +16,10 @@
           :value="permissions" 
           :loading="loadingPermissions"
           paginator 
-          :rows="10"
+          :rows="pageSize"
+          :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
           responsiveLayout="scroll"
+          @page="onPageSizeChange"
         >
           <Column field="name" header="Huquq nomi" sortable />
           <Column field="description" header="Tavsif" sortable />
@@ -68,8 +70,10 @@
           :value="permissionGroups" 
           :loading="loadingGroups"
           paginator 
-          :rows="10"
+          :rows="pageSize"
+          :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
           responsiveLayout="scroll"
+          @page="onPageSizeChange"
         >
           <Column field="name" header="Guruh nomi" sortable />
           <Column field="description" header="Tavsif" sortable />
@@ -226,8 +230,13 @@ import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import ConfirmDialog from 'primevue/confirmdialog';
 import apiService from '@/service/api.service';
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service';
 
 const toast = useToast();
+
+const onPageSizeChange = (e) => {
+  if (e.rows != null) pageSize.value = e.rows;
+};
 const confirm = useConfirm();
 const permissions = ref([]);
 const permissionGroups = ref([]);

@@ -3,9 +3,11 @@
     :value="userVisits"
     :loading="loadingVisits"
     :paginator="true"
-    :rows="10"
+    :rows="pageSize"
+    :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
     responsiveLayout="scroll"
     stripedRows
+    @page="onPageSizeChange"
   >
     <Column field="date" header="Sana" sortable style="min-width: 120px" />
     <Column field="keldi" header="Keldi" sortable style="min-width: 100px" />
@@ -25,6 +27,11 @@
 <script setup>
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
+
+const onPageSizeChange = (e) => {
+  if (e.rows != null) pageSize.value = e.rows
+}
 
 const props = defineProps({
   userVisits: {

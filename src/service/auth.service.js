@@ -150,6 +150,15 @@ class AuthService {
     return requiredPermissions.every((p) => perms.includes(p))
   }
 
+  hasAnyPermission(permissions) {
+    if (!permissions || permissions.length === 0) return true
+    if (this.getUserLevel() === "rais") {
+      return true
+    }
+    const perms = this.getPermissions()
+    return permissions.some((p) => perms.includes(p))
+  }
+
   hasAccess(requiredLevel) {
     const userLevel = this.getUserLevel()
     if (!userLevel) return false

@@ -43,8 +43,8 @@
         v-if="!isLoading && !error"
         :value="ips" 
         :paginator="true" 
-        :rows="rowsPerPage"
-        :rowsPerPageOptions="[30, 50, 100, 300]"
+        :rows="pageSize"
+        :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
         :totalRecords="totalRecords"
         :first="first"
         :lazy="true"
@@ -233,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import DataTable from 'primevue/datatable'
@@ -248,6 +248,7 @@ import Message from 'primevue/message'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import apiService from '@/service/api.service'
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 
 const toast = useToast()
 
@@ -257,7 +258,6 @@ const isLoading = ref(false)
 const error = ref(null)
 const searchQuery = ref('')
 const currentPage = ref(1)
-const rowsPerPage = ref(30)
 const first = ref(0)
 const totalRecords = ref(0)
 const dialogVisible = ref(false)
@@ -302,7 +302,7 @@ const fetchIPs = async (page = 1, sortParams = null, limit = null) => {
   try {
     const params = {
       page,
-      limit: limit || rowsPerPage.value,
+      limit: limit || pageSize.value,
       search: searchQuery.value || undefined
     }
     
@@ -321,8 +321,7 @@ const fetchIPs = async (page = 1, sortParams = null, limit = null) => {
       ips.value = response.data
       totalRecords.value = response.pagination.total
       currentPage.value = response.pagination.page
-      rowsPerPage.value = response.pagination.limit || rowsPerPage.value
-      first.value = (currentPage.value - 1) * rowsPerPage.value
+      first.value = (currentPage.value - 1) * pageSize.value
     } else {
       throw new Error(response.message || 'Failed to fetch IPs')
     }
@@ -349,11 +348,14 @@ const onSearch = () => {
 
 // Pagination
 const onPageChange = (event) => {
+  if (event.rows != null && event.rows !== pageSize.value) {
+    pageSize.value = event.rows
+    return
+  }
   currentPage.value = event.page + 1
-  rowsPerPage.value = event.rows
   first.value = event.first
   const sortParams = sortField.value ? { sortField: sortField.value, sortOrder: sortOrder.value } : null
-  fetchIPs(currentPage.value, sortParams, event.rows)
+  fetchIPs(currentPage.value, sortParams, pageSize.value)
 }
 
 // Sorting
@@ -554,6 +556,12 @@ const toggleStatus = async (ip, newValue) => {
     fetchIPs(currentPage.value)
   }
 }
+
+watch(pageSize, () => {
+  currentPage.value = 1
+  first.value = 0
+  fetchIPs(1)
+})
 
 onMounted(() => {
   fetchIPs()

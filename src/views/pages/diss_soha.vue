@@ -37,8 +37,9 @@
         responsiveLayout="scroll"
         class="p-datatable-sm"
         :paginator="true"
-        :rows="25"
-        :rowsPerPageOptions="[25, 50, 100]"
+        :rows="pageSize"
+        :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
+        @page="onPageSizeChange"
       >
         <Column field="code" header="Kod" sortable style="width: 140px">
           <template #body="{ data }">
@@ -127,8 +128,13 @@ import ProgressSpinner from 'primevue/progressspinner'
 import ConfirmDialog from 'primevue/confirmdialog'
 import ConfirmPopup from 'primevue/confirmpopup'
 import { useConfirm } from 'primevue/useconfirm'
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 
 const toast = useToast()
+
+const onPageSizeChange = (e) => {
+  if (e.rows != null) pageSize.value = e.rows
+}
 const confirm = useConfirm()
 
 const fields = ref([])

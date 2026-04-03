@@ -11,6 +11,7 @@ import Calendar from 'primevue/calendar'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import Timeline from 'primevue/timeline'
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 
 const router = useRouter()
 const toast = useToast()
@@ -37,7 +38,6 @@ const visits = ref([])
 const loading = ref(false)
 const totalRecords = ref(0)
 const currentPage = ref(1)
-const rowsPerPage = ref(20)
 const searchQuery = ref('')
 const dateRangeFilter = ref(null) // For filtering table
 const dateRangeStats = ref(null) // For statistics only
@@ -154,7 +154,7 @@ const fetchVisits = async (isAutoRefresh = false) => {
     // Build query string manually to ensure it's sent correctly
     const params = new URLSearchParams()
     params.append('page', currentPage.value.toString())
-    params.append('limit', rowsPerPage.value.toString())
+    params.append('limit', pageSize.value.toString())
     
     if (searchQuery.value) {
       params.append('search', searchQuery.value)
@@ -238,11 +238,15 @@ const fetchStatistics = async () => {
 }
 
 // Computed
-const totalPages = computed(() => Math.ceil(totalRecords.value / rowsPerPage.value))
+const totalPages = computed(() => Math.ceil(totalRecords.value / pageSize.value))
 
 // Methods
 const onPageChange = (event) => {
   console.log('📄 Page change event:', event)
+  if (event.rows != null && event.rows !== pageSize.value) {
+    pageSize.value = event.rows
+    return
+  }
   currentPage.value = event.page + 1
   console.log('📄 New current page:', currentPage.value)
   fetchVisits(false)
@@ -328,7 +332,7 @@ const manualRefresh = () => {
 }
 
 // Watch for rows per page changes
-watch(rowsPerPage, (newValue) => {
+watch(pageSize, (newValue) => {
   console.log('📊 Rows per page changed:', newValue)
   currentPage.value = 1
   fetchVisits(false)
@@ -354,55 +358,55 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="tashriflar-page p-6 text-gray-900 dark:text-[var(--p-text-color)]">
     <!-- Statistics Cards - Horizontal Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       <!-- Today's Stats Card -->
-      <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+      <div class="bg-white dark:bg-[var(--p-content-background)] rounded-xl shadow-sm p-6 border border-gray-100 dark:border-[var(--p-content-border-color)] hover:shadow-md transition-shadow">
         <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <i class="pi pi-calendar text-blue-600 text-2xl"></i>
+          <div class="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+            <i class="pi pi-calendar text-blue-600 dark:text-blue-400 text-2xl"></i>
           </div>
           <div class="flex-1">
-            <h3 class="text-sm font-medium text-gray-500 mb-1">Bugungi tashriflar</h3>
-            <div class="flex items-baseline gap-3">
-              <span class="text-3xl font-bold text-gray-900">{{ todayStats.total }}</span>
-              <span class="text-sm text-gray-500">{{ todayStats.unique }} noyob | {{ todayStats.current }} hozir kutubxonada</span>
+            <h3 class="text-sm font-medium text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Bugungi tashriflar</h3>
+            <div class="flex items-baseline gap-3 flex-wrap">
+              <span class="text-3xl font-bold text-gray-900 dark:text-[var(--p-text-color)]">{{ todayStats.total }}</span>
+              <span class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)]">{{ todayStats.unique }} noyob | {{ todayStats.current }} hozir kutubxonada</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Month Stats Card -->
-      <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+      <div class="bg-white dark:bg-[var(--p-content-background)] rounded-xl shadow-sm p-6 border border-gray-100 dark:border-[var(--p-content-border-color)] hover:shadow-md transition-shadow">
         <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-            <i class="pi pi-chart-line text-green-600 text-2xl"></i>
+          <div class="w-14 h-14 rounded-xl bg-green-50 dark:bg-emerald-900/38 flex items-center justify-center flex-shrink-0">
+            <i class="pi pi-chart-line text-green-600 dark:text-emerald-400 text-2xl"></i>
           </div>
           <div class="flex-1">
-            <h3 class="text-sm font-medium text-gray-500 mb-1">Shu oy</h3>
-            <div class="flex items-baseline gap-3">
-              <span class="text-3xl font-bold text-gray-900">{{ monthStats.total }}</span>
-              <span class="text-sm text-gray-500">{{ monthStats.unique }} noyob | O'rtacha: {{ monthStats.average }}/kun</span>
+            <h3 class="text-sm font-medium text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Shu oy</h3>
+            <div class="flex items-baseline gap-3 flex-wrap">
+              <span class="text-3xl font-bold text-gray-900 dark:text-[var(--p-text-color)]">{{ monthStats.total }}</span>
+              <span class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)]">{{ monthStats.unique }} noyob | O'rtacha: {{ monthStats.average }}/kun</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Period Stats Card with Date Selector -->
-      <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+      <div class="bg-white dark:bg-[var(--p-content-background)] rounded-xl shadow-sm p-6 border border-gray-100 dark:border-[var(--p-content-border-color)] hover:shadow-md transition-shadow">
         <div class="flex items-center gap-4 mb-3">
-          <div class="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-            <i class="pi pi-filter text-purple-600 text-2xl"></i>
+          <div class="w-14 h-14 rounded-xl bg-purple-50 dark:bg-purple-900/38 flex items-center justify-center flex-shrink-0">
+            <i class="pi pi-filter text-purple-600 dark:text-purple-400 text-2xl"></i>
           </div>
           <div class="flex-1">
-            <h3 class="text-sm font-medium text-gray-500 mb-1">Tanlangan davr</h3>
-            <div class="flex items-baseline gap-3">
-              <span class="text-3xl font-bold text-gray-900">{{ periodStats.total || 0 }}</span>
-              <span class="text-sm text-gray-500" v-if="periodStats.days">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Tanlangan davr</h3>
+            <div class="flex items-baseline gap-3 flex-wrap">
+              <span class="text-3xl font-bold text-gray-900 dark:text-[var(--p-text-color)]">{{ periodStats.total || 0 }}</span>
+              <span class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)]" v-if="periodStats.days">
                 {{ periodStats.days }} kun | O'rtacha: {{ periodStats.average }}/kun
               </span>
-              <span class="text-sm text-gray-500" v-else>Davrni tanlang</span>
+              <span class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)]" v-else>Davrni tanlang</span>
             </div>
           </div>
         </div>
@@ -414,15 +418,15 @@ onUnmounted(() => {
           dateFormat="dd.mm.yy"
           placeholder="Sana oralig'ini tanlang"
           @date-select="onDateStatsChange"
-          class="w-full text-sm"
+          class="w-full text-sm tashriflar-stats-calendar"
         />
       </div>
     </div>
 
     <!-- Visits Table -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+    <div class="bg-white dark:bg-[var(--p-content-background)] rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-[var(--p-content-border-color)]">
       <!-- Cool Header with Gradient -->
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-900 p-6">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
@@ -489,7 +493,7 @@ onUnmounted(() => {
               dateFormat="dd.mm.yy"
               placeholder="Sana filtri"
               @date-select="onDateFilterChange"
-              class="bg-white/10 border-white/20"
+              class="tashriflar-toolbar-calendar"
             />
 
             <!-- Search Button -->
@@ -518,45 +522,45 @@ onUnmounted(() => {
       <DataTable
         :value="visits"
         :loading="loading"
-        :rows="rowsPerPage"
+        :rows="pageSize"
         :totalRecords="totalRecords"
         :lazy="true"
         :paginator="true"
         @page="onPageChange"
-        v-model:rows="rowsPerPage"
+        v-model:rows="pageSize"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        :rowsPerPageOptions="[10, 20, 50]"
+        :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
         currentPageReportTemplate="{first} - {last} / {totalRecords}"
         class="text-base"
       >
         <Column field="id" header="ID" style="min-width: 120px">
           <template #body="{ data }">
-            <span class="font-mono font-bold text-gray-900 text-base">{{ data.id }}</span>
+            <span class="font-mono font-bold text-gray-900 dark:text-[var(--p-text-color)] text-base">{{ data.id }}</span>
           </template>
         </Column>
 
         <Column field="userName" header="F.I.O" style="min-width: 280px">
           <template #body="{ data }">
             <div 
-              class="flex items-center gap-4 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+              class="flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-[var(--p-content-hover-background)] p-2 rounded-lg transition-colors"
               @click="showUserDetails(data)"
             >
               <img
                 v-if="data.userPhoto"
                 :src="getPhotoUrl(data.userPhoto)"
                 :alt="data.userName"
-                class="w-20 h-20 rounded-full object-cover border-3 border-gray-200 hover:border-blue-400 transition-colors shadow-md"
+                class="w-20 h-20 rounded-full object-cover border-3 border-gray-200 dark:border-[var(--p-content-border-color)] hover:border-blue-400 dark:hover:border-blue-500 transition-colors shadow-md"
                 @error="(e) => { e.target.style.display = 'none'; console.error('Photo load error for:', data.id) }"
               />
               <div
                 v-else
-                class="w-20 h-20 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-2xl shadow-md"
+                class="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/85 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-2xl shadow-md"
               >
                 {{ data.userName?.charAt(0) || '?' }}
               </div>
               <div>
-                <div class="font-semibold text-gray-900 text-base">{{ data.userName }}</div>
-                <div class="text-sm text-gray-500">{{ data.userPosition }}</div>
+                <div class="font-semibold text-gray-900 dark:text-[var(--p-text-color)] text-base">{{ data.userName }}</div>
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)]">{{ data.userPosition }}</div>
               </div>
             </div>
           </template>
@@ -564,25 +568,25 @@ onUnmounted(() => {
 
         <Column field="date" header="Sana" style="min-width: 130px">
           <template #body="{ data }">
-            <span class="text-gray-700 text-base">{{ formatDate(data.date) }}</span>
+            <span class="text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ formatDate(data.date) }}</span>
           </template>
         </Column>
 
         <Column field="keldi" header="Keldi" style="min-width: 110px">
           <template #body="{ data }">
-            <span class="font-mono text-gray-700 text-base">{{ formatTime(data.keldi) }}</span>
+            <span class="font-mono text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ formatTime(data.keldi) }}</span>
           </template>
         </Column>
 
         <Column field="ketdi" header="Ketdi" style="min-width: 110px">
           <template #body="{ data }">
-            <span class="font-mono text-gray-700 text-base">{{ formatTime(data.ketdi) }}</span>
+            <span class="font-mono text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ formatTime(data.ketdi) }}</span>
           </template>
         </Column>
 
         <Column field="duration" header="Davomiyligi" style="min-width: 130px">
           <template #body="{ data }">
-            <span class="text-gray-700 text-base">{{ data.duration || '-' }}</span>
+            <span class="text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ data.duration || '-' }}</span>
           </template>
         </Column>
 
@@ -601,6 +605,7 @@ onUnmounted(() => {
       :closable="true"
       :draggable="false"
       class="w-full"
+      contentClass="tashriflar-user-dialog"
       :style="{ width: '90vw', maxWidth: '1200px' }"
     >
       <template #header>
@@ -612,23 +617,23 @@ onUnmounted(() => {
 
       <div v-if="selectedUser" class="space-y-6">
         <!-- User Photo and Basic Info -->
-        <div class="flex items-start gap-6 pb-6 border-b">
+        <div class="flex items-start gap-6 pb-6 border-b border-gray-200 dark:border-[var(--p-content-border-color)]">
           <img
             v-if="selectedUser.userPhoto"
             :src="getPhotoUrl(selectedUser.userPhoto)"
             :alt="selectedUser.userName"
-            class="w-48 h-48 rounded-2xl object-cover border-4 border-blue-100 shadow-xl"
+            class="w-48 h-48 rounded-2xl object-cover border-4 border-blue-100 dark:border-blue-800/70 shadow-xl"
           />
           <div
             v-else
-            class="w-48 h-48 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-6xl shadow-xl"
+            class="w-48 h-48 rounded-2xl bg-blue-100 dark:bg-blue-900/85 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-6xl shadow-xl"
           >
             {{ selectedUser.userName?.charAt(0) || '?' }}
           </div>
           
           <div class="flex-1">
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ selectedUser.userName }}</h3>
-            <p class="text-lg text-gray-600 mb-4">{{ selectedUser.userPosition }}</p>
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-[var(--p-text-color)] mb-2">{{ selectedUser.userName }}</h3>
+            <p class="text-lg text-gray-600 dark:text-[var(--p-text-muted-color)] mb-4">{{ selectedUser.userPosition }}</p>
             <div class="flex items-center gap-2">
               <Tag 
                 :value="getStatusText(selectedUser)" 
@@ -641,42 +646,42 @@ onUnmounted(() => {
 
         <!-- Current Visit Details -->
         <div>
-          <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <i class="pi pi-calendar text-blue-600"></i>
+          <h4 class="text-lg font-bold text-gray-900 dark:text-[var(--p-text-color)] mb-4 flex items-center gap-2">
+            <i class="pi pi-calendar text-blue-600 dark:text-blue-400"></i>
             Joriy tashrif ma'lumotlari
           </h4>
           <div class="grid grid-cols-2 gap-6">
             <div class="space-y-4">
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-500 mb-1">ID raqam</div>
-                <div class="text-lg font-mono font-bold text-gray-900">{{ selectedUser.id }}</div>
+              <div class="bg-gray-50 dark:bg-[var(--p-surface-800)] p-4 rounded-lg border border-transparent dark:border-[var(--p-content-border-color)]">
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">ID raqam</div>
+                <div class="text-lg font-mono font-bold text-gray-900 dark:text-[var(--p-text-color)]">{{ selectedUser.id }}</div>
               </div>
 
-              <div class="bg-blue-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-500 mb-1">Kelgan sana</div>
-                <div class="text-lg font-semibold text-gray-900">{{ formatDate(selectedUser.date) }}</div>
+              <div class="bg-blue-50 dark:bg-blue-900/35 p-4 rounded-lg border border-transparent dark:border-blue-800/45">
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Kelgan sana</div>
+                <div class="text-lg font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ formatDate(selectedUser.date) }}</div>
               </div>
 
-              <div class="bg-green-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-500 mb-1">Kelgan vaqt</div>
-                <div class="text-lg font-mono font-semibold text-gray-900">{{ formatTime(selectedUser.keldi) }}</div>
+              <div class="bg-green-50 dark:bg-emerald-900/32 p-4 rounded-lg border border-transparent dark:border-emerald-800/38">
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Kelgan vaqt</div>
+                <div class="text-lg font-mono font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ formatTime(selectedUser.keldi) }}</div>
               </div>
             </div>
 
             <div class="space-y-4">
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-500 mb-1">Telefon raqam</div>
-                <div class="text-lg font-semibold text-gray-900">{{ selectedUser.userTel || '-' }}</div>
+              <div class="bg-gray-50 dark:bg-[var(--p-surface-800)] p-4 rounded-lg border border-transparent dark:border-[var(--p-content-border-color)]">
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Telefon raqam</div>
+                <div class="text-lg font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ selectedUser.userTel || '-' }}</div>
               </div>
 
-              <div class="bg-orange-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-500 mb-1">Ketgan vaqt</div>
-                <div class="text-lg font-mono font-semibold text-gray-900">{{ formatTime(selectedUser.ketdi) }}</div>
+              <div class="bg-orange-50 dark:bg-orange-900/30 p-4 rounded-lg border border-transparent dark:border-orange-800/35">
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Ketgan vaqt</div>
+                <div class="text-lg font-mono font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ formatTime(selectedUser.ketdi) }}</div>
               </div>
 
-              <div class="bg-purple-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-500 mb-1">Davomiyligi</div>
-                <div class="text-lg font-semibold text-gray-900">{{ selectedUser.duration || '-' }}</div>
+              <div class="bg-purple-50 dark:bg-purple-900/32 p-4 rounded-lg border border-transparent dark:border-purple-800/38">
+                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)] mb-1">Davomiyligi</div>
+                <div class="text-lg font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ selectedUser.duration || '-' }}</div>
               </div>
             </div>
           </div>
@@ -684,18 +689,18 @@ onUnmounted(() => {
 
         <!-- Visit History Timeline -->
         <div>
-          <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <i class="pi pi-history text-purple-600"></i>
+          <h4 class="text-lg font-bold text-gray-900 dark:text-[var(--p-text-color)] mb-4 flex items-center gap-2">
+            <i class="pi pi-history text-purple-600 dark:text-purple-400"></i>
             Tashriflar tarixi
-            <span class="text-sm font-normal text-gray-500">({{ userHistory.length }} ta tashrif)</span>
+            <span class="text-sm font-normal text-gray-500 dark:text-[var(--p-text-muted-color)]">({{ userHistory.length }} ta tashrif)</span>
           </h4>
           
           <div v-if="loadingHistory" class="flex justify-center items-center py-8">
-            <i class="pi pi-spin pi-spinner text-3xl text-blue-600"></i>
-            <span class="ml-3 text-gray-600">Yuklanmoqda...</span>
+            <i class="pi pi-spin pi-spinner text-3xl text-blue-600 dark:text-blue-400"></i>
+            <span class="ml-3 text-gray-600 dark:text-[var(--p-text-color)]">Yuklanmoqda...</span>
           </div>
 
-          <div v-else-if="userHistory.length === 0" class="text-center py-8 text-gray-500">
+          <div v-else-if="userHistory.length === 0" class="text-center py-8 text-gray-500 dark:text-[var(--p-text-muted-color)]">
             <i class="pi pi-inbox text-4xl mb-3"></i>
             <p>Tashriflar tarixi topilmadi</p>
           </div>
@@ -705,52 +710,52 @@ onUnmounted(() => {
               <Timeline :value="userHistory" align="left" class="customized-timeline">
               <template #marker="{ item }">
                 <div 
-                  class="flex w-10 h-10 items-center justify-center text-white rounded-full shadow-md border-2 border-white"
-                  :class="isStillInLibrary(item) ? 'bg-green-500' : 'bg-blue-500'"
+                  class="flex w-10 h-10 items-center justify-center text-white rounded-full shadow-md border-2 border-white dark:border-[var(--p-content-border-color)]"
+                  :class="isStillInLibrary(item) ? 'bg-green-500 dark:bg-green-600' : 'bg-blue-500 dark:bg-blue-600'"
                 >
                   <i :class="isStillInLibrary(item) ? 'pi pi-clock text-sm' : 'pi pi-check text-sm'"></i>
                 </div>
               </template>
               <template #content="{ item }">
                 <div class="ml-3 mb-5">
-                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all p-4">
+                  <div class="bg-white dark:bg-[var(--p-surface-800)] rounded-xl shadow-sm border border-gray-200 dark:border-[var(--p-content-border-color)] hover:shadow-md transition-all p-4">
                     <div class="flex items-start justify-between mb-3">
                       <div class="flex-1">
                         <div class="flex items-center gap-2 mb-3">
-                          <i class="pi pi-calendar text-blue-500"></i>
-                          <span class="font-bold text-gray-900 text-lg">{{ formatDate(item.date) }}</span>
+                          <i class="pi pi-calendar text-blue-500 dark:text-blue-400"></i>
+                          <span class="font-bold text-gray-900 dark:text-[var(--p-text-color)] text-lg">{{ formatDate(item.date) }}</span>
                         </div>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                          <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                            <i class="pi pi-sign-in text-green-600 text-lg"></i>
+                          <div class="flex items-center gap-2 p-2 bg-green-50 dark:bg-emerald-900/38 rounded-lg border border-transparent dark:border-emerald-800/35">
+                            <i class="pi pi-sign-in text-green-600 dark:text-emerald-400 text-lg"></i>
                             <div>
-                              <div class="text-xs text-gray-500">Keldi</div>
-                              <div class="font-semibold text-gray-900">{{ formatTime(item.keldi) }}</div>
+                              <div class="text-xs text-gray-500 dark:text-[var(--p-text-muted-color)]">Keldi</div>
+                              <div class="font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ formatTime(item.keldi) }}</div>
                             </div>
                           </div>
                           
-                          <div v-if="item.ketdi" class="flex items-center gap-2 p-2 bg-red-50 rounded-lg">
-                            <i class="pi pi-sign-out text-red-600 text-lg"></i>
+                          <div v-if="item.ketdi" class="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/32 rounded-lg border border-transparent dark:border-red-800/35">
+                            <i class="pi pi-sign-out text-red-600 dark:text-red-400 text-lg"></i>
                             <div>
-                              <div class="text-xs text-gray-500">Ketdi</div>
-                              <div class="font-semibold text-gray-900">{{ formatTime(item.ketdi) }}</div>
+                              <div class="text-xs text-gray-500 dark:text-[var(--p-text-muted-color)]">Ketdi</div>
+                              <div class="font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ formatTime(item.ketdi) }}</div>
                             </div>
                           </div>
                           
-                          <div v-else class="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-                            <i class="pi pi-clock text-yellow-600 text-lg"></i>
+                          <div v-else class="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/28 rounded-lg border border-transparent dark:border-yellow-800/32">
+                            <i class="pi pi-clock text-yellow-600 dark:text-yellow-400 text-lg"></i>
                             <div>
-                              <div class="text-xs text-gray-500">Holat</div>
-                              <div class="font-semibold text-gray-900">Kutubxonada</div>
+                              <div class="text-xs text-gray-500 dark:text-[var(--p-text-muted-color)]">Holat</div>
+                              <div class="font-semibold text-gray-900 dark:text-[var(--p-text-color)]">Kutubxonada</div>
                             </div>
                           </div>
                           
-                          <div v-if="item.duration" class="flex items-center gap-2 p-2 bg-purple-50 rounded-lg">
-                            <i class="pi pi-hourglass text-purple-600 text-lg"></i>
+                          <div v-if="item.duration" class="flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/32 rounded-lg border border-transparent dark:border-purple-800/35">
+                            <i class="pi pi-hourglass text-purple-600 dark:text-purple-400 text-lg"></i>
                             <div>
-                              <div class="text-xs text-gray-500">Davomiyligi</div>
-                              <div class="font-semibold text-gray-900">{{ item.duration }}</div>
+                              <div class="text-xs text-gray-500 dark:text-[var(--p-text-muted-color)]">Davomiyligi</div>
+                              <div class="font-semibold text-gray-900 dark:text-[var(--p-text-color)]">{{ item.duration }}</div>
                             </div>
                           </div>
                         </div>
@@ -808,13 +813,16 @@ onUnmounted(() => {
   border-top: 1px solid #e2e8f0;
 }
 
-:deep(.p-calendar input) {
+/* Header toolbar datepicker (gradient strip) */
+:deep(.tashriflar-toolbar-calendar .p-inputtext),
+:deep(.tashriflar-toolbar-calendar input) {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
-:deep(.p-calendar input::placeholder) {
+:deep(.tashriflar-toolbar-calendar .p-inputtext::placeholder),
+:deep(.tashriflar-toolbar-calendar input::placeholder) {
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -871,5 +879,61 @@ onUnmounted(() => {
 :deep(.customized-timeline .p-timeline-event-separator) {
   align-items: flex-start;
   gap: 1rem;
+}
+</style>
+
+<!-- Qora tema: Prime semantic tokenlar (jadval, paginator, dialog, kalendar) -->
+<style>
+.app-dark .tashriflar-page .p-datatable .p-datatable-thead > tr > th {
+  background: var(--p-surface-800);
+  color: var(--p-text-muted-color);
+  border-bottom-color: var(--p-content-border-color);
+}
+
+.app-dark .tashriflar-page .p-datatable .p-datatable-tbody > tr {
+  background: var(--p-surface-950);
+}
+
+.app-dark .tashriflar-page .p-datatable .p-datatable-tbody > tr > td {
+  color: var(--p-text-color);
+  border-color: var(--p-content-border-color);
+}
+
+.app-dark .tashriflar-page .p-datatable .p-datatable-tbody > tr:hover {
+  background: var(--p-content-hover-background);
+}
+
+.app-dark .tashriflar-page .p-paginator {
+  background: var(--p-surface-800);
+  border-top-color: var(--p-content-border-color);
+  color: var(--p-text-color);
+}
+
+.app-dark .tashriflar-page .tashriflar-stats-calendar .p-inputtext,
+.app-dark .tashriflar-page .tashriflar-stats-calendar input {
+  background: var(--p-surface-800);
+  color: var(--p-text-color);
+  border-color: var(--p-content-border-color);
+}
+
+.app-dark .tashriflar-page .tashriflar-stats-calendar .p-inputtext::placeholder,
+.app-dark .tashriflar-page .tashriflar-stats-calendar input::placeholder {
+  color: var(--p-text-muted-color);
+}
+
+/* Foydalanuvchi dialogi (portal) — faqat shu modalka */
+.app-dark .p-dialog:has(.tashriflar-user-dialog) .p-dialog-content {
+  background: var(--p-content-background);
+  color: var(--p-text-color);
+}
+
+.app-dark .p-dialog:has(.tashriflar-user-dialog) .p-dialog-footer {
+  background: var(--p-content-background);
+  border-top-color: var(--p-content-border-color);
+}
+
+.app-dark .tashriflar-page .customized-timeline .p-timeline-event-connector {
+  background: linear-gradient(to bottom, #60a5fa, #a78bfa);
+  opacity: 0.85;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import authService from '@/service/auth.service';
@@ -14,6 +14,7 @@ import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputSwitch from 'primevue/inputswitch';
+import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service';
 
 const router = useRouter();
 const toast = useToast();
@@ -26,7 +27,6 @@ const canDownload  = computed(() => authService.hasPermission('download_disserta
 const documents = ref([]);
 const currentPage = ref(1);
 const first = ref(0);
-const rowsPerPage = 30;
 const totalRecords = ref(0);
 const isLoading = ref(false);
 const error = ref(null);
@@ -43,7 +43,9 @@ const fetchData = async (page = 1) => {
   error.value = null;
   try {
     const search = searchQuery.value.trim() || '';
-    const url = `/api/diss_list/${page}${search ? `?search=${encodeURIComponent(search)}` : ''}`;
+    const limitQs = `limit=${pageSize.value}`;
+    const searchQs = search ? `&search=${encodeURIComponent(search)}` : '';
+    const url = `/api/diss_list/${page}?${limitQs}${searchQs}`;
     const response = await fetch(url, { headers: authHeaders() });
     if (!response.ok) {
       throw new Error('Failed to fetch documents');
@@ -52,7 +54,7 @@ const fetchData = async (page = 1) => {
     documents.value = data.results || [];
     totalRecords.value = data.total ?? 0;
     currentPage.value = page;
-    first.value = (page - 1) * rowsPerPage;
+    first.value = (page - 1) * pageSize.value;
   } catch (err) {
     console.error('Error fetching data:', err);
     error.value = 'Ma\'lumotlarni yuklashda xatolik. Iltimos, qayta urinib ko\'ring.';
@@ -81,10 +83,20 @@ onMounted(() => {
 });
 
 const onPageChange = (event) => {
+  if (event.rows != null && event.rows !== pageSize.value) {
+    pageSize.value = event.rows;
+    return;
+  }
   const page = event.page + 1;
   first.value = event.first;
   fetchData(page);
 };
+
+watch(pageSize, () => {
+  currentPage.value = 1;
+  first.value = 0;
+  fetchData(1);
+});
 
 const goToAddPage = () => {
   router.push('/diss/add');
@@ -168,7 +180,8 @@ const toggleStatus = async (uuid, currentStatus, newValue) => {
     <DataTable 
       v-if="!isLoading && !error" 
       :value="documents" 
-      :rows="rowsPerPage"
+      :rows="pageSize"
+      :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
       :totalRecords="totalRecords"
       :lazy="true"
       :first="first"

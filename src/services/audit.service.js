@@ -8,13 +8,28 @@ const getAuditModel = (req) => {
 
 const shouldSkipUser = (user) => {
   if (!user) return true
-  // Do not log superuser (rais) actions as requested
   if (user.level === "rais") return true
   return false
 }
 
 /**
- * Attach a post-response audit hook for authenticated API requests (non-rais users).
+ * rais: katta hajmdagi API shovqinini auditdan chiqaramiz; muhim amallar istisno.
+ * (Pullik, bir martalik chipta, xodim registratsiyasi — statistika / loglar uchun.)
+ */
+const shouldSkipApiAudit = (user, req) => {
+  if (!user) return true
+  if (user.level === "rais") {
+    const path = req.path || ""
+    if (path.startsWith("/api/members/payment")) return false
+    if (path.startsWith("/api/tickets")) return false
+    if (path.startsWith("/api/admin/register")) return false
+    return true
+  }
+  return false
+}
+
+/**
+ * Attach a post-response audit hook for authenticated API requests (rais ham istisno yo'llarda).
  * Called once per request; logs after the response has been sent (res.on('finish')).
  */
 const attachApiAudit = (req, res, next) => {
@@ -56,7 +71,7 @@ const attachApiAudit = (req, res, next) => {
         }
       }
 
-      if (shouldSkipUser(actor)) {
+      if (shouldSkipApiAudit(actor, req)) {
         return
       }
 
@@ -155,6 +170,12 @@ const attachApiAudit = (req, res, next) => {
           action = "payment_view_transactions"
         } else if (req.method === "GET" && req.path === "/api/members/payment/accounts") {
           action = "payment_view_balances"
+        } else if (req.method === "GET" && req.path === "/api/members/payment/accounts/overview") {
+          action = "payment_view_overview_stats"
+        } else if (req.method === "GET" && /^\/api\/members\/payment\/accounts\//.test(req.path)) {
+          action = "payment_read_account"
+        } else if (req.method === "GET" && req.path === "/api/members/payment/service-provisions") {
+          action = "payment_view_service_provisions"
         }
       }
 

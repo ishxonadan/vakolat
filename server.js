@@ -276,6 +276,14 @@ const userDepartmentSchema = new mongoose.Schema(
 )
 userDepartmentSchema.index({ expertId: 1, departmentId: 1 }, { unique: true })
 
+/** Singleton-style document (first row): runtime flags for the whole app */
+const systemSettingsSchema = new mongoose.Schema(
+  {
+    paymentRequireZalForServiceProvision: { type: Boolean, default: false },
+  },
+  { timestamps: true },
+)
+
 const paymentServiceProvisionSchema = new mongoose.Schema(
   {
     userNo: { type: String, required: true, index: true },
@@ -314,6 +322,7 @@ const PaymentService = vakolat.model("PaymentService", paymentServiceSchema)
 const PaymentDepartment = vakolat.model("PaymentDepartment", paymentDepartmentSchema)
 const UserDepartment = vakolat.model("UserDepartment", userDepartmentSchema)
 const PaymentServiceProvision = vakolat.model("PaymentServiceProvision", paymentServiceProvisionSchema)
+const SystemSettings = vakolat.model("SystemSettings", systemSettingsSchema)
 
 const ratingModel = require("./src/model/rating.model")
 const userRatingModel = require("./src/model/user-rating.model")
@@ -439,13 +448,19 @@ const ALL_PERMISSIONS = [
   { name: "manage_users",          description: "Foydalanuvchilar (xodimlar) boshqaruvi" },
   { name: "view_tickets",          description: "Bir martalik chiptalar ro'yxatini ko'rish" },
   { name: "create_tickets",        description: "Bir martalik chiptalar yaratish" },
-  { name: "payment_topup_user",    description: "Foydalanuvchi balansini to'ldirish" },
-  { name: "payment_withdraw_user", description: "Foydalanuvchi balansidan mablag' yechish" },
-  { name: "payment_manage_services", description: "Pullik xizmatlarni boshqarish" },
-  { name: "payment_manage_departments", description: "Bo'limlarni boshqarish" },
-  { name: "payment_manage_user_departments", description: "Foydalanuvchi bo'lim birikmalarini boshqarish" },
-  { name: "payment_provide_service", description: "Foydalanuvchiga xizmat ko'rsatib mablag' yechish" },
-  { name: "payment_cancel_provided_service", description: "Ko'rsatilgan xizmatni bekor qilish (refund)" },
+  { name: "payment_topup_user", description: "Foydalanuvchi balansini qo'lda to'ldirish" },
+  { name: "payment_withdraw_user", description: "Foydalanuvchi balansidan qo'lda mablag' yechish" },
+  { name: "payment_list_accounts", description: "Foydalanuvchi balanslari ro'yxati va qidiruv" },
+  { name: "payment_read_account", description: "Bitta foydalanuvchi balansini ko'rish (ID bo'yicha)" },
+  { name: "payment_view_transactions", description: "Pullik to'lovlar tarixi (tranzaksiyalar)" },
+  { name: "payment_view_overview_stats", description: "Pullik umumiy statistikasi (jami balanslar, xarajatlar)" },
+  { name: "payment_manage_services", description: "Pullik xizmatlar ro'yxatini boshqarish (CRUD)" },
+  { name: "payment_manage_departments", description: "Zallarni boshqarish (CRUD)" },
+  { name: "payment_manage_user_departments", description: "Xodim–zal biriktirishlari (legacy API)" },
+  { name: "payment_provide_service", description: "Pullik xizmat ko'rsatish (balansdan yechish)" },
+  { name: "payment_cancel_provided_service", description: "Ko'rsatilgan pullik xizmatni bekor qilish (refund)" },
+  // Tizim
+  { name: "system_manage", description: "Tizim boshqaruvi (umumiy sozlamalar)" },
   // Huquqlar
   { name: "manage_permissions",    description: "Huquqlar va huquq guruhlarini boshqarish" },
 ]
@@ -1322,6 +1337,7 @@ const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
 const membersRoutes = require("./routes/members.routes")(nazorat)
 const membersPaymentRoutes = require("./routes/members-payment.routes")(nazorat, vakolat)
+const systemRoutes = require("./routes/system.routes")(vakolat)
 const ipAccessRoutes = require("./routes/ip-access.routes")(yoqlama)
 
 app.use("/", authRoutes)
@@ -1338,6 +1354,7 @@ app.use("/api/tickets", createTicketsRoutes())
 app.use("/api/visits", visitsRoutes)
 app.use("/api/members", membersRoutes)
 app.use("/api/members/payment", membersPaymentRoutes)
+app.use("/api/system", systemRoutes)
 app.use("/api/ip-access", ipAccessRoutes)
 
 app.use(
