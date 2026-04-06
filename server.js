@@ -1544,7 +1544,7 @@ async function migrateStaffPositionSortOrderToOneBased() {
   console.log("[migrate] StaffPosition sortOrder: 0-based → 1-based,", rows.length, "rows")
 }
 
-app.listen(7777, async () => {
+app.listen(7070, async () => {
   console.log("Server is running on \x1b[34mhttp://localhost:7777\x1b[0m")
   try {
     await ensureDefaultStaffDepartment()
