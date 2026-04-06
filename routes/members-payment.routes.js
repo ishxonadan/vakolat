@@ -274,27 +274,52 @@ module.exports = (nazorat, vakolat) => {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       const yearStart = new Date(now.getFullYear(), 0, 1)
 
+      const spendProjection = {
+        amountNum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
+        // Spend logic:
+        // - any OUT transaction increases spend
+        // - service refunds (IN, source=service) decrease spend
+        spendDelta: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$direction", "out"] }, then: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } },
+              {
+                case: {
+                  $and: [{ $eq: ["$direction", "in"] }, { $eq: ["$source", "service"] }],
+                },
+                then: {
+                  $multiply: [-1, { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } }],
+                },
+              },
+            ],
+            default: 0,
+          },
+        },
+      }
+
       const [balancesRows, spendingRows, spendingMonthRows, spendingYearRows] = await Promise.all([
         PaymentAccount.aggregate([{ $group: { _id: null, total: { $sum: "$balance" } } }]),
         PaymentTransaction.aggregate([
-          { $match: { direction: "out" } },
-          { $group: { _id: null, total: { $sum: "$amount" } } },
+          { $project: spendProjection },
+          { $group: { _id: null, total: { $sum: "$spendDelta" } } },
         ]),
         PaymentTransaction.aggregate([
-          { $match: { direction: "out", createdAt: { $gte: monthStart } } },
-          { $group: { _id: null, total: { $sum: "$amount" } } },
+          { $match: { createdAt: { $gte: monthStart } } },
+          { $project: spendProjection },
+          { $group: { _id: null, total: { $sum: "$spendDelta" } } },
         ]),
         PaymentTransaction.aggregate([
-          { $match: { direction: "out", createdAt: { $gte: yearStart } } },
-          { $group: { _id: null, total: { $sum: "$amount" } } },
+          { $match: { createdAt: { $gte: yearStart } } },
+          { $project: spendProjection },
+          { $group: { _id: null, total: { $sum: "$spendDelta" } } },
         ]),
       ])
 
       res.json({
         overallMoneyInBalances: Number(balancesRows[0]?.total || 0),
-        overallSpending: Number(spendingRows[0]?.total || 0),
-        spendingThisMonth: Number(spendingMonthRows[0]?.total || 0),
-        spendingThisYear: Number(spendingYearRows[0]?.total || 0),
+        overallSpending: Math.max(0, Number(spendingRows[0]?.total || 0)),
+        spendingThisMonth: Math.max(0, Number(spendingMonthRows[0]?.total || 0)),
+        spendingThisYear: Math.max(0, Number(spendingYearRows[0]?.total || 0)),
       })
     } catch (error) {
       console.error("Error loading payment overview:", error)
