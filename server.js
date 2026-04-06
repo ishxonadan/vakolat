@@ -1483,8 +1483,8 @@ app.post("/api/public/check-ticket", async (req, res) => {
     })
   }
 })
-
-if (process.env.npm_lifecycle_event === "start") {
+//process.env.npm_lifecycle_event === "start"
+if (true) {
   console.log("PRODUCTION")
   const distPath = path.join(__dirname, "dist")
   app.use(express.static(distPath))
