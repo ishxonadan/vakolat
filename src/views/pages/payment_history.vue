@@ -120,7 +120,7 @@ onMounted(loadTransactions)
       <Column field="amount" header="Miqdor" />
       <Column header="Xizmat">
         <template #body="slotProps">
-          {{ slotProps.data.serviceId?.name || "-" }}
+          {{ slotProps.data.serviceId?.name || slotProps.data.serviceName || "-" }}
         </template>
       </Column>
       <Column header="Bo'lim">

@@ -54,6 +54,7 @@ Default groups seeded: "Admin" (all), "Dissertatsiya mutaxassisi" (view+add+edit
 
 - `PaymentAccount` — `{ userNo: String, balance: Number, status: 'active'|..., meta: Mixed }`, unique by `userNo`. Represents cached balance for library users (ID karta raqami; aligns with `ReaderID` from old `/pullik` after normalization to `AAA#########`).
 - `PaymentTransaction` — per-movement log: `{ userNo, type: 'top_up'|'spend'|'adjustment'|'migration', direction: 'in'|'out', amount, serviceId?, departmentId?, source: 'manual'|'service'|'migration', comment, createdBy }` with index `{ userNo: 1, createdAt: -1 }`. **Authoritative source** for recomputing balances; `balance` can be fully recalculated from this table.
+- `PaymentTransaction` now also stores **`serviceName` snapshot** for safety when service catalog IDs/names change. History API returns `serviceName` with fallback from populate (`serviceId.name || serviceName`) so old rows keep labels after catalog replacement.
 - `PaymentService` — catalog of paid services: `{ name, code?, price, isActive }`.
 - `PaymentDepartment` — departments for grouping xodims: `{ name, code?, isActive }`.
 - `UserDepartment` — mapping xodim → department: `{ expertId: ObjectId(User), departmentId: ObjectId(PaymentDepartment), isActive }` with unique index on `{ expertId, departmentId }`.
@@ -91,6 +92,10 @@ Assign via **Huquqlar** (`huquqlar.vue`) like any other named permission.
   - `POST /api/members/payment/spend` — guarded by `payment_withdraw_user`. Ensures account exists (create with `balance = 0` if missing), enforces non-negative balance, decrements `balance`, and writes a `PaymentTransaction` (`type: 'spend'`, `direction: 'out'`, `source: 'manual'`).
 - Transactions listing:
   - `GET /api/members/payment/transactions` — list/filter `PaymentTransaction` with `userNo`, `type`, `serviceId`, `departmentId`, and `from`/`to` date range. Used by history views and per-user “Tarix” dialog.
+  - `GET /api/members/payment/statistics` — payment statistics for selected period (`from`, `to`, defaults to `1-yanvar → hozir`): 
+    - `dailyTopups[]` grouped by day for `type=top_up`, `direction=in`
+    - `userSpending[]` grouped by `userNo` using spend-delta logic (`out` positive, service refund `in` negative), only positive totals returned
+    - `summary` totals for both sections. Guarded by `payment_view_transactions`.
 - Services & departments:
   - `GET /api/members/payment/services` — list of all services (front-end filters only active ones).
   - `POST/PUT/DELETE /api/members/payment/services` — guarded by `payment_manage_services`. CRUD on `PaymentService`.
@@ -105,6 +110,7 @@ Assign via **Huquqlar** (`huquqlar.vue`) like any other named permission.
   - `GET .../service-provisions` — list grouped provisions (`userNo`, `status` filters); populates `providedBy`, `cancelledBy`, services, **`departmentId`**. **`checkAnyPermissions`:** `payment_provide_service`, `payment_view_transactions`.
   - `POST .../service-provisions` — **`checkPermissions(['payment_provide_service'])`**. Body `{ userNo, items[{ serviceId, quantity }], comment?, departmentId? }`. If system flag requires zal, **`departmentId`** must be a non-empty valid `PaymentDepartment` id. Workflow:
     - Validates each service is active and quantity > 0.
+    - Supports special item `serviceId: "__custom_price__"` ("O'zingiz narx qo'ying"): requires positive `customPrice`; stores provision item with `serviceId: null`, `serviceName: "O'zingiz narx qo'ying"`, and writes transaction with `serviceName` snapshot.
     - Computes per-item `unitPrice` from `PaymentService.price`, `totalPrice = unitPrice * quantity`, and aggregated `totalAmount`.
     - Recomputes/ensures `PaymentAccount` for `userNo` (create if missing), checks balance >= `totalAmount`, debits account, writes one `PaymentServiceProvision` with expanded `items`, and writes one or more `PaymentTransaction` rows (`type: 'spend'`, `direction: 'out'`, `source: 'service'`) — one per service line.
   - `POST /api/members/payment/service-provisions/:id/cancel` — guarded by `payment_cancel_provided_service`. Idempotent-ish:
@@ -129,12 +135,14 @@ Assign via **Huquqlar** (`huquqlar.vue`) like any other named permission.
     - `Foydalanuvchi balansi` → `/payment/balances` — **`requiredPermissionsAny`:** `payment_list_accounts`, `payment_topup_user`, `payment_withdraw_user`, `payment_view_transactions`, `payment_view_overview_stats` (any one opens the menu item).
     - `Xizmatlar` → `/payment/services` — `payment_manage_services`.
     - `Tarix` → `/payment/history` — **`payment_view_transactions`** (not top-up permission).
+    - `Statistika` → `/payment/statistics` — **`payment_view_transactions`**.
   - `Xodimlar boshqaruvi` → **Zallar** → `/payment/departments` — **`payment_manage_departments`**. The same page’s xodim–zal mapping APIs still require **`payment_manage_user_departments`**; CRUD zallar uses **`payment_manage_departments`**.
   - Sidebar footer: non-clickable **`Talqin v<package.json#version>`**.
 
 Routes (`src/router/index.js`) meta (enforced in `beforeEach`):
 
 - `/payment/history` → `payment_history.vue` — `meta.permission: 'payment_view_transactions'`.
+- `/payment/statistics` → `payment_statistics.vue` — `meta.permission: 'payment_view_transactions'`; period presets: `1-yanvar → hozir` (default), `1-chorak`, `2-chorak`, `1-yanvar → 20-dekabr`, and `custom`.
 - `/payment/balances` → `payment_balances.vue` — **`meta.permissionsAny`:** same five names as the menu item (any).
 - `/payment/services` → `payment_services.vue` — `payment_manage_services`.
 - `/payment/departments` → `payment_departments.vue` — **`payment_manage_departments`** (aligned with Zallar menu).
@@ -155,6 +163,7 @@ Key UI behaviors:
   - Toolbar: **Zal** dropdown (`PaymentDepartment`) + **ID karta raqami** (`autocomplete="off"` helpers) + **Foydalanuvchini tanlash**. Loads **`/system/settings`** flag `paymentRequireZalForServiceProvision`; when true, zal required client+server, invalid styling + warn `Message`.
   - Enter / 9-digit normalization / `?userNo=` prefetch unchanged.
   - Balance cards + insufficient-funds messaging unchanged. Service lines grid (`Xizmat`, `Soni`, `Birlik narxi`, `Jami`) + **Yana xizmat qo'shish** outlined control.
+  - `Xizmat` dropdown first option is **`O'zingiz narx qo'ying`** (tagged as maxsus). When selected, unit price becomes manual `InputNumber`; total uses `customPrice * quantity`.
   - Submit **Xizmatni rasmiylashtirish**: when all prerequisites pass (`userNo`, balance, zal, lines), one-shot **~1.8s** inner shine + glow animation on the enabled button (`watch` on readiness + CSS `::before`).
   - Past provisions table: non-cancelled status label **`Bajarildi`** (not “Faol”); **`Bekor qilingan`** unchanged; cancel rules (24h / `rais`) unchanged.
 
@@ -180,3 +189,10 @@ Key UI behaviors:
   - Service prices are recovered from legacy price sources when `dbo_ent_Service` has no direct price field:
     - primary: `dbo_info_ServiceHistory.Price` (latest per service)
     - fallback: inferred from `dbo_doc_GiveServiceTab` (`Total / ServiceCount`)
+
+**Service catalog replacement (`scripts/import-payment-services-2026.js`)**
+- Purpose: replace old payment services catalog with approved 2026 list.
+- Safety before replace: backfills missing `PaymentTransaction.serviceName` from current `PaymentService` names.
+- Run modes:
+  - dry-run: `node scripts/import-payment-services-2026.js`
+  - write: `node scripts/import-payment-services-2026.js --write`

@@ -190,6 +190,15 @@ const router = createRouter({
           },
         },
         {
+          path: "/payment/statistics",
+          name: "payment_statistics",
+          component: () => import("@/views/pages/payment_statistics.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "payment_view_transactions",
+          },
+        },
+        {
           path: "/payment/balances",
           name: "payment_balances",
           component: () => import("@/views/pages/payment_balances.vue"),

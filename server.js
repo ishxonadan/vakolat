@@ -267,6 +267,7 @@ const paymentTransactionSchema = new mongoose.Schema(
     amount: { type: Number, required: true, min: 0 },
     direction: { type: String, enum: ["in", "out"], required: true },
     serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", default: null },
+    serviceName: { type: String, default: "" },
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", default: null },
     source: { type: String, enum: ["manual", "migration", "service"], default: "manual" },
     comment: { type: String, default: "" },
@@ -319,7 +320,7 @@ const paymentServiceProvisionSchema = new mongoose.Schema(
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", default: null },
     items: [
       {
-        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", required: true },
+        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", default: null },
         serviceName: { type: String, required: true },
         quantity: { type: Number, required: true, min: 1 },
         unitPrice: { type: Number, required: true, min: 0 },

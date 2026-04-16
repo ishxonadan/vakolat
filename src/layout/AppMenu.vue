@@ -83,6 +83,12 @@ const menuItems = [
             to: '/payment/history',
             requiredPermissions: ['payment_view_transactions'],
           },
+          {
+            label: "Statistika",
+            icon: 'pi pi-fw pi-chart-line',
+            to: '/payment/statistics',
+            requiredPermissions: ['payment_view_transactions'],
+          },
         ]
       },
       {

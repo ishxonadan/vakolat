@@ -5,6 +5,8 @@ const { verifyToken, checkPermissions, checkAnyPermissions } = require("../src/m
 module.exports = (nazorat, vakolat) => {
   const router = express.Router()
   const SERVICE_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000
+  const CUSTOM_PRICED_SERVICE_ID = "__custom_price__"
+  const CUSTOM_PRICED_SERVICE_NAME = "O'zingiz narx qo'ying"
 
   const PaymentAccount = vakolat.model("PaymentAccount")
   const PaymentTransaction = vakolat.model("PaymentTransaction")
@@ -38,6 +40,52 @@ module.exports = (nazorat, vakolat) => {
     const parsed = Number(value)
     if (!Number.isFinite(parsed) || parsed <= 0) return null
     return parsed
+  }
+  const resolveServiceNameById = async (serviceId, session = null) => {
+    if (!serviceId) return ""
+    let query = PaymentService.findById(serviceId).select("name").lean()
+    if (session) query = query.session(session)
+    const service = await query
+    return String(service?.name || "").trim()
+  }
+  const startOfDay = (value) => {
+    const date = new Date(value)
+    date.setHours(0, 0, 0, 0)
+    return date
+  }
+  const endOfDay = (value) => {
+    const date = new Date(value)
+    date.setHours(23, 59, 59, 999)
+    return date
+  }
+  const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime())
+  const resolveStatisticsDateRange = ({ from, to }) => {
+    const now = new Date()
+    const yearStart = new Date(now.getFullYear(), 0, 1)
+
+    const parsedFrom = from ? new Date(from) : null
+    const parsedTo = to ? new Date(to) : null
+
+    if (from && !isValidDate(parsedFrom)) {
+      const error = new Error("INVALID_FROM_DATE")
+      error.status = 400
+      throw error
+    }
+    if (to && !isValidDate(parsedTo)) {
+      const error = new Error("INVALID_TO_DATE")
+      error.status = 400
+      throw error
+    }
+
+    const rangeStart = parsedFrom ? startOfDay(parsedFrom) : yearStart
+    const rangeEnd = parsedTo ? endOfDay(parsedTo) : now
+    if (rangeStart > rangeEnd) {
+      const error = new Error("INVALID_DATE_RANGE")
+      error.status = 400
+      throw error
+    }
+
+    return { rangeStart, rangeEnd }
   }
   const normalizeReaderId = (value) => {
     const raw = String(value || "").trim().toUpperCase()
@@ -375,6 +423,7 @@ module.exports = (nazorat, vakolat) => {
       let account
       let transaction
       await runWithOptionalTransaction(async (session) => {
+        const serviceName = await resolveServiceNameById(serviceId, session)
         account = await PaymentAccount.findOneAndUpdate(
           { userNo },
           { $inc: { balance: amount }, $setOnInsert: { status: "active", meta: {} } },
@@ -389,6 +438,7 @@ module.exports = (nazorat, vakolat) => {
               amount,
               direction: "in",
               serviceId,
+              serviceName,
               departmentId,
               source: "manual",
               comment,
@@ -422,6 +472,7 @@ module.exports = (nazorat, vakolat) => {
       let account
       let transaction
       await runWithOptionalTransaction(async (session) => {
+        const serviceName = await resolveServiceNameById(serviceId, session)
         let accountQuery = PaymentAccount.findOne({ userNo })
         if (session) accountQuery = accountQuery.session(session)
         account = await accountQuery
@@ -447,6 +498,7 @@ module.exports = (nazorat, vakolat) => {
               amount,
               direction: "out",
               serviceId,
+              serviceName,
               departmentId,
               source: "manual",
               comment,
@@ -497,10 +549,135 @@ module.exports = (nazorat, vakolat) => {
         PaymentTransaction.countDocuments(filter),
       ])
 
-      res.json({ items, total, page, limit })
+      res.json({
+        items: items.map((item) => ({
+          ...item,
+          serviceName: String(item?.serviceId?.name || item?.serviceName || "").trim(),
+        })),
+        total,
+        page,
+        limit,
+      })
     } catch (error) {
       console.error("Error loading payment transactions:", error)
       res.status(500).json({ error: "Tranzaksiyalarni yuklashda xatolik" })
+    }
+  })
+
+  router.get("/statistics", verifyToken, checkPermissions(["payment_view_transactions"]), async (req, res) => {
+    try {
+      const { rangeStart, rangeEnd } = resolveStatisticsDateRange({ from: req.query.from, to: req.query.to })
+      const dateMatch = { createdAt: { $gte: rangeStart, $lte: rangeEnd } }
+
+      const [dailyTopupsRaw, userSpendingRaw] = await Promise.all([
+        PaymentTransaction.aggregate([
+          {
+            $match: {
+              ...dateMatch,
+              type: "top_up",
+              direction: "in",
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: "%Y-%m-%d",
+                  date: "$createdAt",
+                },
+              },
+              totalAmount: { $sum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } },
+              operationsCount: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: -1 } },
+        ]),
+        PaymentTransaction.aggregate([
+          { $match: dateMatch },
+          {
+            $project: {
+              userNo: 1,
+              isSpendOperation: { $cond: [{ $eq: ["$direction", "out"] }, 1, 0] },
+              spendDelta: {
+                $switch: {
+                  branches: [
+                    {
+                      case: { $eq: ["$direction", "out"] },
+                      then: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
+                    },
+                    {
+                      case: {
+                        $and: [{ $eq: ["$direction", "in"] }, { $eq: ["$source", "service"] }],
+                      },
+                      then: {
+                        $multiply: [-1, { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } }],
+                      },
+                    },
+                  ],
+                  default: 0,
+                },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: "$userNo",
+              totalSpent: { $sum: "$spendDelta" },
+              operationsCount: { $sum: "$isSpendOperation" },
+            },
+          },
+          { $match: { totalSpent: { $gt: 0 } } },
+          { $sort: { totalSpent: -1 } },
+        ]),
+      ])
+
+      const userNos = userSpendingRaw.map((item) => item._id).filter(Boolean)
+      const members = userNos.length
+        ? await CacheUser.find({ USER_NO: { $in: userNos } }).select("USER_NO USER_NAME").lean()
+        : []
+      const memberMap = new Map(members.map((item) => [item.USER_NO, item.USER_NAME || ""]))
+
+      const dailyTopups = dailyTopupsRaw.map((item) => ({
+        date: item._id,
+        totalAmount: Number(item.totalAmount || 0),
+        operationsCount: Number(item.operationsCount || 0),
+      }))
+      const userSpending = userSpendingRaw.map((item) => ({
+        userNo: item._id,
+        userName: memberMap.get(item._id) || "",
+        totalSpent: Number(item.totalSpent || 0),
+        operationsCount: Number(item.operationsCount || 0),
+      }))
+
+      const dailyTopupsTotal = dailyTopups.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0)
+      const userSpendingTotal = userSpending.reduce((sum, item) => sum + Number(item.totalSpent || 0), 0)
+
+      res.json({
+        from: rangeStart.toISOString(),
+        to: rangeEnd.toISOString(),
+        dailyTopups,
+        userSpending,
+        summary: {
+          dailyTopupsTotal,
+          dailyTopupsDays: dailyTopups.length,
+          userSpendingTotal,
+          userSpendingUsers: userSpending.length,
+        },
+      })
+    } catch (error) {
+      if (error.status === 400) {
+        if (error.message === "INVALID_FROM_DATE") {
+          return res.status(400).json({ error: "Boshlanish sanasi noto'g'ri" })
+        }
+        if (error.message === "INVALID_TO_DATE") {
+          return res.status(400).json({ error: "Tugash sanasi noto'g'ri" })
+        }
+        if (error.message === "INVALID_DATE_RANGE") {
+          return res.status(400).json({ error: "Boshlanish sanasi tugash sanasidan katta bo'lmasligi kerak" })
+        }
+      }
+      console.error("Error loading payment statistics:", error)
+      res.status(500).json({ error: "Statistikani yuklashda xatolik" })
     }
   })
 
@@ -568,19 +745,38 @@ module.exports = (nazorat, vakolat) => {
           .map((item) => ({
             serviceId: String(item.serviceId || "").trim(),
             quantity: Math.max(Number(item.quantity) || 0, 0),
+            customPrice: parsePositiveAmount(item.customPrice),
           }))
           .filter((item) => item.serviceId && item.quantity > 0)
         if (normalizedItems.length === 0) {
           return res.status(400).json({ error: "Kamida bitta xizmat va miqdor kiriting" })
         }
 
-        const serviceIds = normalizedItems.map((item) => item.serviceId)
+        const serviceIds = normalizedItems
+          .filter((item) => item.serviceId !== CUSTOM_PRICED_SERVICE_ID)
+          .map((item) => item.serviceId)
         const services = await PaymentService.find({ _id: { $in: serviceIds }, isActive: true }).lean()
         const serviceMap = new Map(services.map((s) => [String(s._id), s]))
 
         const provisionItems = []
         let totalAmount = 0
         for (const item of normalizedItems) {
+          if (item.serviceId === CUSTOM_PRICED_SERVICE_ID) {
+            if (!item.customPrice) {
+              return res.status(400).json({ error: "O'zingiz narx qo'yish uchun narxni kiriting" })
+            }
+            const totalPrice = item.customPrice * item.quantity
+            totalAmount += totalPrice
+            provisionItems.push({
+              serviceId: null,
+              serviceName: CUSTOM_PRICED_SERVICE_NAME,
+              quantity: item.quantity,
+              unitPrice: item.customPrice,
+              totalPrice,
+            })
+            continue
+          }
+
           const service = serviceMap.get(item.serviceId)
           if (!service) {
             return res.status(400).json({ error: "Tanlangan xizmatlardan biri faol emas yoki topilmadi" })
@@ -643,7 +839,8 @@ module.exports = (nazorat, vakolat) => {
             type: "spend",
             amount: item.totalPrice,
             direction: "out",
-            serviceId: item.serviceId,
+            serviceId: item.serviceId || null,
+            serviceName: item.serviceName,
             source: "service",
             comment: `${comment || ""} [xizmat:${item.serviceName}; soni:${item.quantity}]`.trim(),
             createdBy: req.user.id,

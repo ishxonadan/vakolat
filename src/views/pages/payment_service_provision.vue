@@ -8,6 +8,7 @@ import apiService from "@/service/api.service"
 
 const toast = useToast()
 const route = useRoute()
+const CUSTOM_PRICED_SERVICE_ID = "__custom_price__"
 const loading = ref(false)
 const saving = ref(false)
 const cancellingId = ref(null)
@@ -39,18 +40,33 @@ const form = ref({
   userNo: "",
   comment: "",
   departmentId: null,
-  items: [{ serviceId: null, quantity: 1 }],
+  items: [{ serviceId: null, quantity: 1, customPrice: null }],
 })
 
-const addItem = () => form.value.items.push({ serviceId: null, quantity: 1 })
+const customPricedServiceOption = {
+  _id: CUSTOM_PRICED_SERVICE_ID,
+  name: "O'zingiz narx qo'ying",
+  isCustom: true,
+}
+const serviceOptions = computed(() => [customPricedServiceOption, ...services.value])
+const isCustomService = (item) => String(item?.serviceId || "") === CUSTOM_PRICED_SERVICE_ID
+
+const addItem = () => form.value.items.push({ serviceId: null, quantity: 1, customPrice: null })
 const removeItem = (idx) => {
   form.value.items.splice(idx, 1)
   if (form.value.items.length === 0) addItem()
 }
 
 const serviceById = (id) => services.value.find((s) => s._id === id)
+const serviceOptionLabel = (serviceId) => {
+  if (String(serviceId || "") === CUSTOM_PRICED_SERVICE_ID) return customPricedServiceOption.name
+  return serviceById(serviceId)?.name || ""
+}
 const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 const itemCost = (item) => {
+  if (isCustomService(item)) {
+    return (Number(item.customPrice || 0) || 0) * (Number(item.quantity || 0) || 0)
+  }
   const svc = serviceById(item.serviceId)
   return (Number(svc?.price || 0) || 0) * (Number(item.quantity || 0) || 0)
 }
@@ -210,10 +226,18 @@ const submitProvision = async () => {
     }
 
     const items = form.value.items
-      .map((i) => ({ serviceId: i.serviceId, quantity: Number(i.quantity || 0) }))
+      .map((i) => ({
+        serviceId: i.serviceId,
+        quantity: Number(i.quantity || 0),
+        customPrice: isCustomService(i) ? Number(i.customPrice || 0) : undefined,
+      }))
       .filter((i) => i.serviceId && i.quantity > 0)
     if (items.length === 0) {
       toast.add({ severity: "warn", summary: "Ogohlantirish", detail: "Kamida bitta xizmat tanlang", life: 2500 })
+      return
+    }
+    if (items.some((i) => i.serviceId === CUSTOM_PRICED_SERVICE_ID && !(Number(i.customPrice) > 0))) {
+      toast.add({ severity: "warn", summary: "Ogohlantirish", detail: "Maxsus xizmat uchun narxni kiriting", life: 2500 })
       return
     }
 
@@ -232,7 +256,7 @@ const submitProvision = async () => {
       response?.provision?._id != null ? String(response.provision._id) : null
     toast.add({ severity: "success", summary: "Muvaffaqiyat", detail: "Xizmat ko'rsatildi", life: 2500 })
     form.value.comment = ""
-    form.value.items = [{ serviceId: null, quantity: 1 }]
+    form.value.items = [{ serviceId: null, quantity: 1, customPrice: null }]
     account.value = { ...(account.value || {}), balance: response.balance }
     await loadProvisions()
     if (newProvisionId) {
@@ -382,13 +406,38 @@ onUnmounted(() => {
       >
         <Dropdown
           v-model="item.serviceId"
-          :options="services"
+          :options="serviceOptions"
           optionLabel="name"
           optionValue="_id"
           placeholder="Xizmat tanlang"
           class="w-full"
           :disabled="!hasPositiveBalance"
-        />
+          @change="isCustomService(item) ? null : (item.customPrice = null)"
+        >
+          <template #option="slotProps">
+            <div class="flex items-center justify-between gap-2 w-full">
+              <span>{{ slotProps.option.name }}</span>
+              <Tag
+                v-if="slotProps.option.isCustom"
+                value="Maxsus"
+                severity="warning"
+                class="custom-service-option-tag"
+              />
+            </div>
+          </template>
+          <template #value="slotProps">
+            <div v-if="slotProps.value" class="flex items-center gap-2">
+              <span>{{ serviceOptionLabel(slotProps.value) }}</span>
+              <Tag
+                v-if="String(slotProps.value || '') === CUSTOM_PRICED_SERVICE_ID"
+                value="Maxsus"
+                severity="warning"
+                class="custom-service-option-tag"
+              />
+            </div>
+            <span v-else>{{ slotProps.placeholder }}</span>
+          </template>
+        </Dropdown>
         <div class="flex md:contents flex-col gap-1">
           <span class="text-xs font-medium text-color-secondary md:hidden">Soni</span>
           <InputNumber
@@ -403,7 +452,18 @@ onUnmounted(() => {
         </div>
         <div class="flex md:flex-col md:items-end justify-between md:justify-center gap-1">
           <span class="text-xs font-medium text-color-secondary md:hidden">Birlik narxi</span>
+          <template v-if="isCustomService(item)">
+            <InputNumber
+              v-model="item.customPrice"
+              :min="1"
+              :useGrouping="false"
+              placeholder="Narx kiriting"
+              class="provision-custom-price-input w-full md:w-full"
+              :disabled="!hasPositiveBalance"
+            />
+          </template>
           <span
+            v-else
             class="tabular-nums text-sm text-color-secondary font-medium md:text-right md:w-full provision-unit-price"
           >{{ formatMoney(serviceById(item.serviceId)?.price || 0) }}</span>
         </div>
@@ -631,6 +691,17 @@ onUnmounted(() => {
 .provision-services-block :deep(.provision-qty-input .p-inputnumber-input) {
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+.provision-services-block :deep(.provision-custom-price-input input),
+.provision-services-block :deep(.provision-custom-price-input .p-inputnumber-input) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+:deep(.custom-service-option-tag.p-tag) {
+  font-size: 0.72rem;
+  padding: 0.12rem 0.4rem;
 }
 
 .provision-add-service-row {
