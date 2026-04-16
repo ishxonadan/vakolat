@@ -8,6 +8,26 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config/
 export default defineConfig({
     logLevel: 'error',
+    server: {
+        proxy: {
+            '/api': {
+                target: 'http://localhost:7070',
+                changeOrigin: true
+            },
+            '/auth': {
+                target: 'http://localhost:7070',
+                changeOrigin: true
+            },
+            '/survey': {
+                target: 'http://localhost:7070',
+                changeOrigin: true
+            },
+            '/rolik': {
+                target: 'http://localhost:7070',
+                changeOrigin: true
+            }
+        }
+    },
     build: {
         outDir: './dist',
         emptyOutDir: true

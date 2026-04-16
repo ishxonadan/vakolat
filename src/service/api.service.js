@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:7777"
+const API_BASE_URL = ""
 
 // Helper function to handle 401 errors
 const handleUnauthorized = () => {

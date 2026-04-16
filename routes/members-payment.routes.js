@@ -569,7 +569,7 @@ module.exports = (nazorat, vakolat) => {
       const { rangeStart, rangeEnd } = resolveStatisticsDateRange({ from: req.query.from, to: req.query.to })
       const dateMatch = { createdAt: { $gte: rangeStart, $lte: rangeEnd } }
 
-      const [dailyTopupsRaw, userSpendingRaw] = await Promise.all([
+      const [dailyTopupsRaw, userSpendingRaw, userSpendingMonthlyRaw] = await Promise.all([
         PaymentTransaction.aggregate([
           {
             $match: {
@@ -629,9 +629,53 @@ module.exports = (nazorat, vakolat) => {
           { $match: { totalSpent: { $gt: 0 } } },
           { $sort: { totalSpent: -1 } },
         ]),
+        PaymentTransaction.aggregate([
+          { $match: dateMatch },
+          {
+            $project: {
+              userNo: 1,
+              month: {
+                $dateToString: {
+                  format: "%Y-%m",
+                  date: "$createdAt",
+                },
+              },
+              isSpendOperation: { $cond: [{ $eq: ["$direction", "out"] }, 1, 0] },
+              spendDelta: {
+                $switch: {
+                  branches: [
+                    {
+                      case: { $eq: ["$direction", "out"] },
+                      then: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
+                    },
+                    {
+                      case: {
+                        $and: [{ $eq: ["$direction", "in"] }, { $eq: ["$source", "service"] }],
+                      },
+                      then: {
+                        $multiply: [-1, { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } }],
+                      },
+                    },
+                  ],
+                  default: 0,
+                },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: { month: "$month", userNo: "$userNo" },
+              totalSpent: { $sum: "$spendDelta" },
+              operationsCount: { $sum: "$isSpendOperation" },
+            },
+          },
+          { $match: { totalSpent: { $gt: 0 } } },
+          { $sort: { "_id.month": -1, totalSpent: -1 } },
+        ]),
       ])
 
-      const userNos = userSpendingRaw.map((item) => item._id).filter(Boolean)
+      const monthlyUserNos = userSpendingMonthlyRaw.map((item) => item?._id?.userNo).filter(Boolean)
+      const userNos = [...new Set([...userSpendingRaw.map((item) => item._id).filter(Boolean), ...monthlyUserNos])]
       const members = userNos.length
         ? await CacheUser.find({ USER_NO: { $in: userNos } }).select("USER_NO USER_NAME").lean()
         : []
@@ -648,6 +692,46 @@ module.exports = (nazorat, vakolat) => {
         totalSpent: Number(item.totalSpent || 0),
         operationsCount: Number(item.operationsCount || 0),
       }))
+      const userSpendingByMonthMap = new Map()
+      for (const row of userSpendingMonthlyRaw) {
+        const month = String(row?._id?.month || "")
+        const userNo = String(row?._id?.userNo || "")
+        if (!month || !userNo) continue
+        if (!userSpendingByMonthMap.has(month)) {
+          userSpendingByMonthMap.set(month, [])
+        }
+        userSpendingByMonthMap.get(month).push({
+          userNo,
+          userName: memberMap.get(userNo) || "",
+          totalSpent: Number(row.totalSpent || 0),
+          operationsCount: Number(row.operationsCount || 0),
+        })
+      }
+      const userSpendingByMonth = [...userSpendingByMonthMap.entries()]
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([month, items]) => ({
+          month,
+          totalSpent: items.reduce((sum, item) => sum + Number(item.totalSpent || 0), 0),
+          usersCount: items.length,
+          items,
+        }))
+      const dailyTopupsByMonthMap = new Map()
+      for (const row of dailyTopups) {
+        const month = String(row?.date || "").slice(0, 7)
+        if (!month) continue
+        if (!dailyTopupsByMonthMap.has(month)) {
+          dailyTopupsByMonthMap.set(month, [])
+        }
+        dailyTopupsByMonthMap.get(month).push(row)
+      }
+      const dailyTopupsByMonth = [...dailyTopupsByMonthMap.entries()]
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([month, items]) => ({
+          month,
+          totalAmount: items.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0),
+          daysCount: items.length,
+          items,
+        }))
 
       const dailyTopupsTotal = dailyTopups.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0)
       const userSpendingTotal = userSpending.reduce((sum, item) => sum + Number(item.totalSpent || 0), 0)
@@ -656,7 +740,9 @@ module.exports = (nazorat, vakolat) => {
         from: rangeStart.toISOString(),
         to: rangeEnd.toISOString(),
         dailyTopups,
+        dailyTopupsByMonth,
         userSpending,
+        userSpendingByMonth,
         summary: {
           dailyTopupsTotal,
           dailyTopupsDays: dailyTopups.length,

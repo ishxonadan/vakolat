@@ -3,7 +3,6 @@ const multer = require("multer")
 const path = require("path")
 const express = require("express")
 const cors = require("cors")
-const mongoose = require("mongoose")
 const { createProxyMiddleware } = require("http-proxy-middleware")
 const app = express()
 
@@ -28,365 +27,42 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { verifyToken, checkUserLevel, checkPermissions } = require("./src/middleware/auth.middleware")
 require("dotenv").config()
-const { DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME } = require("./routes/staff-departments.constants")
+const { createDbConnections } = require("./src/bootstrap/db-connections")
+const { registerModels, attachCoreModelsToAppLocals } = require("./src/models")
+const { seedPermissionsAndGroups } = require("./src/bootstrap/seed-permissions")
+const {
+  ensureDefaultStaffDepartment,
+  ensureStaffPositionsSeed,
+  migrateStaffPositionSortOrderToOneBased,
+} = require("./src/bootstrap/seed-staff")
+const { attachApiAudit } = require("./src/services/audit.service")
 
 const JWT_SECRET = process.env.JWT_SECRET
 
-const vakolat = mongoose.createConnection(process.env.DB_CURRENT, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-vakolat.on("connected", () => console.log("Connected to vakolat"))
-
-const yoqlama = mongoose.createConnection(process.env.DB_DISS, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-yoqlama.on("connected", () => console.log("Connected to dissertation"))
-
-const nazorat = mongoose.createConnection(process.env.DB_NAZORAT, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-nazorat.on("connected", () => console.log("Connected to nazorat"))
-
-const permissionSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  description: { type: String, required: true },
-  isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-})
-
-const permissionGroupSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  description: { type: String, required: true },
-  permissions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Permission" }],
-  isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-})
-
-/** Tashkiliy bo‘lim (xodimlar guruhlari) — pullik “Zallar” yoki huquq guruhi bilan aloqador emas */
-const staffDepartmentSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true },
-)
-staffDepartmentSchema.index({ name: 1 }, { unique: true })
-
-/** Lavozim (xodim unvon / toifa ro‘yxati) */
-const staffPositionSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    isActive: { type: Boolean, default: true },
-    sortOrder: { type: Number, default: 1 },
-  },
-  { timestamps: true },
-)
-staffPositionSchema.index({ name: 1 }, { unique: true })
-
-const userSchema = new mongoose.Schema({
-  nickname: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  firstname: { type: String, required: true },
-  lastname: { type: String, required: true },
-  position: { type: String },
-  level: { type: String, required: true, default: "expert" },
-  language: { type: String, required: true, default: "uz" },
-  /** @deprecated bir nechta uchun permissionGroups ishlating; migratsiya uchun saqlanadi */
-  permissionGroup: { type: mongoose.Schema.Types.ObjectId, ref: "PermissionGroup" },
-  /** Bir yoki bir nechta huquq guruhi (ruxsatlar birlashmasi) */
-  permissionGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "PermissionGroup" }],
-  /** Tashkiliy bo‘lim (`StaffDepartment`); Zallar (`PaymentDepartment`) dan farq qiladi */
-  staffDepartment: { type: mongoose.Schema.Types.ObjectId, ref: "StaffDepartment", default: null },
-  /** Lavozim (`StaffPosition`); `position` matni bilan sinxron saqlanishi mumkin (legacy / qidiruv) */
-  staffPosition: { type: mongoose.Schema.Types.ObjectId, ref: "StaffPosition", default: null },
-  isActive: { type: Boolean, default: true },
-})
-
-const contestantSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  url: { type: String, required: true, unique: true },
-  libraryConfig: {
-    locationCode: { type: String },
-    locationName: { type: String },
-    region: { type: String },
-    apiEndpoint: { type: String },
-    isActive: { type: Boolean, default: false },
-  },
-  createdAt: { type: Date, default: Date.now },
-  lastEdited: { type: Date, default: Date.now },
-})
-
-const autoRatingSchema = new mongoose.Schema({
-  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Websites", required: true },
-  month: { type: Number, required: true },
-  year: { type: Number, required: true },
-  metrics: {
-    visitCount: { type: Number, default: 0 },
-    pageVisits: { type: Number, default: 0 },
-    interactiveServiceUsage: { type: Number, default: 0 },
-    personalAccountCount: { type: Number, default: 0 },
-    electronicResourceCount: { type: Number, default: 0 },
-    newsViewCount: { type: Number, default: 0 },
-    electronicResourceUsage: { type: Number, default: 0 },
-  },
-  totalScore: { type: Number, default: 0 },
-  source: { type: String, enum: ["manual", "plausible", "comprehensive"], default: "manual" },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-})
-
-const documentSchema = new mongoose.Schema(
-  {
-    uuid: { type: String, required: true, unique: true },
-    is_deleted: { type: Number, default: 0 },
-    owner_id: { type: Number, required: true },
-    type: { type: String, required: true },
-    title: { type: String, required: true },
-    author: { type: String, required: true },
-    code: { type: String, required: true },
-    udk_bbk: { type: String },
-    place: { type: String },
-    collective: { type: String },
-    devision: { type: String, default: "" },
-    year: { type: String },
-    approved_date: { type: Date },
-    language: { type: String, default: "uz" },
-    additional: { type: String },
-    soha_kodi: { type: String },
-    ilmiy_rahbar: { type: String },
-    annotation: { type: String, default: "" },
-    ashyo: { type: String },
-    srn: { type: String },
-    mtt: { type: String },
-    volume: { type: String },
-    filename: { type: String },
-    size: { type: Number, default: 0 },
-    category_id: { type: Number, required: true },
-    added_date: { type: Date, default: Date.now },
-    modified_date: { type: Date },
-    level: { type: String, required: true },
-  },
-  { timestamps: true },
-)
-
-const razdelSchema = new mongoose.Schema(
-  {
-    name: String,
-    razdel_id: Number,
-  },
-  { collection: "razdel" },
-)
-
-// Legacy secondary collection for dissertation categories (Kategoriya)
-const razdelsSchema = new mongoose.Schema(
-  {
-    name: String,
-    razdel_id: Number,
-  },
-  { collection: "razdels" },
-)
-
-const levelSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  mark: { type: String, required: true, unique: true },
-  isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-})
-
-const languageSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  code: { type: String, required: true, unique: true },
-  aliases: { type: [String], default: [] },
-  isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-})
-
-const fieldSchema = new mongoose.Schema({
-  code: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-}, { collection: 'fields' })
-
-const libraryUserSchema = new mongoose.Schema(
-  {
-    passport: { type: String, required: true, unique: true },
-    fullname: { type: String, required: true },
-    ticketId: { type: String, required: true, unique: true },
-    globalTicketNumber: { type: Number, required: true, unique: true },
-    ticketHistory: [
-      {
-        date: { type: Date, required: true },
-        dailyOrderNumber: { type: Number, required: true },
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
-  },
-  { timestamps: true },
-)
-
-const ticketSchema = new mongoose.Schema(
-  {
-    ticketId: { type: String, required: true },
-    passport: { type: String, required: true },
-    fullname: { type: String, required: true },
-    date: { type: Date, required: true },
-    dailyOrderNumber: { type: Number, required: true },
-    globalTicketNumber: { type: Number, required: true },
-    isUpdate: { type: Boolean, default: false },
-    nameChanged: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
-  },
-  { timestamps: true },
-)
-
-const paymentAccountSchema = new mongoose.Schema(
-  {
-    userNo: { type: String, required: true, unique: true, index: true },
-    balance: { type: Number, default: 0 },
-    status: { type: String, default: "active" },
-    meta: { type: mongoose.Schema.Types.Mixed, default: {} },
-  },
-  { timestamps: true },
-)
-
-const paymentTransactionSchema = new mongoose.Schema(
-  {
-    userNo: { type: String, required: true, index: true },
-    type: {
-      type: String,
-      enum: ["top_up", "spend", "adjustment", "migration"],
-      required: true,
-    },
-    amount: { type: Number, required: true, min: 0 },
-    direction: { type: String, enum: ["in", "out"], required: true },
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", default: null },
-    serviceName: { type: String, default: "" },
-    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", default: null },
-    source: { type: String, enum: ["manual", "migration", "service"], default: "manual" },
-    comment: { type: String, default: "" },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  },
-  { timestamps: true },
-)
-paymentTransactionSchema.index({ userNo: 1, createdAt: -1 })
-
-const paymentServiceSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    code: { type: String, default: "" },
-    price: { type: Number, required: true, min: 0, default: 0 },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true },
-)
-
-const paymentDepartmentSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    code: { type: String, default: "" },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true },
-)
-
-const userDepartmentSchema = new mongoose.Schema(
-  {
-    expertId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", required: true },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true },
-)
-userDepartmentSchema.index({ expertId: 1, departmentId: 1 }, { unique: true })
-
-/** Singleton-style document (first row): runtime flags for the whole app */
-const systemSettingsSchema = new mongoose.Schema(
-  {
-    paymentRequireZalForServiceProvision: { type: Boolean, default: false },
-  },
-  { timestamps: true },
-)
-
-const paymentServiceProvisionSchema = new mongoose.Schema(
-  {
-    userNo: { type: String, required: true, index: true },
-    departmentId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentDepartment", default: null },
-    items: [
-      {
-        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "PaymentService", default: null },
-        serviceName: { type: String, required: true },
-        quantity: { type: Number, required: true, min: 1 },
-        unitPrice: { type: Number, required: true, min: 0 },
-        totalPrice: { type: Number, required: true, min: 0 },
-      },
-    ],
-    totalAmount: { type: Number, required: true, min: 0 },
-    comment: { type: String, default: "" },
-    status: { type: String, enum: ["active", "cancelled"], default: "active" },
-    providedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    cancelledReason: { type: String, default: "" },
-    cancelledAt: { type: Date, default: null },
-  },
-  { timestamps: true },
-)
-
-const Documents = yoqlama.model("Document", documentSchema)
-const Categories = yoqlama.model("Razdel", razdelSchema)
-const Razdels = yoqlama.model("Razdels", razdelsSchema)
-const Levels = yoqlama.model("Level", levelSchema)
-const Languages = yoqlama.model("Language", languageSchema)
-const Fields = yoqlama.model("Field", fieldSchema)
-const LibraryUsers = nazorat.model("LibraryUser", libraryUserSchema)
-const Tickets = nazorat.model("Ticket", ticketSchema)
-const PaymentAccount = vakolat.model("PaymentAccount", paymentAccountSchema)
-const PaymentTransaction = vakolat.model("PaymentTransaction", paymentTransactionSchema)
-const PaymentService = vakolat.model("PaymentService", paymentServiceSchema)
-const PaymentDepartment = vakolat.model("PaymentDepartment", paymentDepartmentSchema)
-const UserDepartment = vakolat.model("UserDepartment", userDepartmentSchema)
-const PaymentServiceProvision = vakolat.model("PaymentServiceProvision", paymentServiceProvisionSchema)
-const SystemSettings = vakolat.model("SystemSettings", systemSettingsSchema)
-
-const ratingModel = require("./src/model/rating.model")
-const userRatingModel = require("./src/model/user-rating.model")
-const surveyVoteModel = require("./src/model/survey-vote.model")
-const plausibleCacheModel = require("./src/model/plausible-cache.model")
-const auditLogModel = require("./src/model/audit-log.model")
-const { attachApiAudit } = require("./src/services/audit.service")
-
-const Permission = vakolat.model("Permission", permissionSchema)
-const PermissionGroup = vakolat.model("PermissionGroup", permissionGroupSchema)
-const Contestant = vakolat.model("Websites", contestantSchema)
-const StaffDepartment = vakolat.model("StaffDepartment", staffDepartmentSchema)
-const StaffPosition = vakolat.model("StaffPosition", staffPositionSchema)
-const User = vakolat.model("User", userSchema)
-const AuditLog = vakolat.model("AuditLog", auditLogModel.auditLogSchema)
-const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
-const WebsiteRating = vakolat.model("WebsiteRating", ratingModel.websiteRatingSchema)
-const AutoRating = vakolat.model("AutoRating", autoRatingSchema)
-const UserRating = vakolat.model("UserRating", userRatingModel.userRatingSchema)
-const SurveyVote = vakolat.model("SurveyVote", surveyVoteModel.surveyVoteSchema)
-const PlausibleCache = vakolat.model("PlausibleCache", plausibleCacheModel.plausibleCacheSchema)
-
-app.locals.User = User
-app.locals.StaffDepartment = StaffDepartment
-app.locals.StaffPosition = StaffPosition
-app.locals.Permission = Permission
-app.locals.PermissionGroup = PermissionGroup
-app.locals.AuditLog = AuditLog
-app.locals.PaymentAccount = PaymentAccount
-app.locals.PaymentTransaction = PaymentTransaction
-app.locals.PaymentService = PaymentService
-app.locals.PaymentDepartment = PaymentDepartment
-app.locals.UserDepartment = UserDepartment
-app.locals.PaymentServiceProvision = PaymentServiceProvision
+const { vakolat, yoqlama, nazorat } = createDbConnections()
+const models = registerModels({ vakolat, yoqlama, nazorat })
+const {
+  Documents,
+  Categories,
+  Razdels,
+  Levels,
+  Languages,
+  Fields,
+  LibraryUsers,
+  Tickets,
+  Permission,
+  PermissionGroup,
+  Contestant,
+  StaffDepartment,
+  StaffPosition,
+  User,
+  WebsiteRating,
+  AutoRating,
+  UserRating,
+  SurveyVote,
+  PlausibleCache,
+} = models
+attachCoreModelsToAppLocals(app, models)
 
 const uploadsDir = path.resolve(process.cwd(), "uploads")
 const storage = multer.diskStorage({
@@ -460,97 +136,9 @@ app.get("/api/admin/test-permissions", [verifyToken, checkPermissions(["manage_u
   res.json({ message: "You have manage_users permission!" })
 })
 
-// ─── Seed all permissions and default permission groups ───────────────────────
-const ALL_PERMISSIONS = [
-  // Dissertatsiya – hujjatlar
-  { name: "view_dissertations",    description: "Dissertatsiyalar ro'yxatini ko'rish" },
-  { name: "add_dissertation",      description: "Yangi dissertatsiya qo'shish" },
-  { name: "edit_dissertation",     description: "Dissertatsiyani tahrirlash" },
-  { name: "delete_dissertation",   description: "Dissertatsiyani yashirish / o'chirish" },
-  { name: "download_dissertation", description: "Dissertatsiya to'liq matnini yuklab olish" },
-  // Dissertatsiya – qo'shimcha ma'lumotlar
-  { name: "manage_diss_languages", description: "Tillarni boshqarish (qo'shish, tahrirlash, o'chirish)" },
-  { name: "manage_diss_levels",    description: "Akademik darajalarni boshqarish" },
-  { name: "manage_diss_fields",    description: "Soha kodlarini boshqarish" },
-  { name: "manage_diss_categories",description: "Kategoriyalarni (razdel) boshqarish" },
-  // IP ruxsat
-  { name: "manage_ip_access",      description: "To'liq matnga IP ruxsatlarni boshqarish" },
-  // Statistika / tashriflar
-  { name: "view_statistics",       description: "Statistika va tashriflarni ko'rish" },
-  { name: "view_members",          description: "A'zo bo'lganlar ro'yxatini ko'rish" },
-  // Foydalanuvchilar
-  { name: "manage_users",          description: "Foydalanuvchilar (xodimlar) boshqaruvi" },
-  { name: "view_tickets",          description: "Bir martalik chiptalar ro'yxatini ko'rish" },
-  { name: "create_tickets",        description: "Bir martalik chiptalar yaratish" },
-  { name: "payment_topup_user", description: "Foydalanuvchi balansini qo'lda to'ldirish" },
-  { name: "payment_withdraw_user", description: "Foydalanuvchi balansidan qo'lda mablag' yechish" },
-  { name: "payment_list_accounts", description: "Foydalanuvchi balanslari ro'yxati va qidiruv" },
-  { name: "payment_read_account", description: "Bitta foydalanuvchi balansini ko'rish (ID bo'yicha)" },
-  { name: "payment_view_transactions", description: "Pullik to'lovlar tarixi (tranzaksiyalar)" },
-  { name: "payment_view_overview_stats", description: "Pullik umumiy statistikasi (jami balanslar, xarajatlar)" },
-  { name: "payment_manage_services", description: "Pullik xizmatlar ro'yxatini boshqarish (CRUD)" },
-  { name: "payment_manage_departments", description: "Zallarni boshqarish (CRUD)" },
-  { name: "payment_manage_user_departments", description: "Xodim–zal biriktirishlari (legacy API)" },
-  { name: "payment_provide_service", description: "Pullik xizmat ko'rsatish (balansdan yechish)" },
-  { name: "payment_cancel_provided_service", description: "Ko'rsatilgan pullik xizmatni bekor qilish (refund)" },
-  // Tizim
-  { name: "system_manage", description: "Tizim boshqaruvi (umumiy sozlamalar)" },
-  // Huquqlar
-  { name: "manage_permissions",    description: "Huquqlar va huquq guruhlarini boshqarish" },
-]
-
-const seedPermissionsAndGroups = async () => {
-  // Upsert each permission (insert if not exists)
-  for (const perm of ALL_PERMISSIONS) {
-    const exists = await Permission.findOne({ name: perm.name })
-    if (!exists) {
-      await Permission.create({ ...perm, isActive: true })
-      console.log("Seeded permission:", perm.name)
-    }
-  }
-
-  // Build name→_id map
-  const allPerms = await Permission.find({ isActive: true }).lean()
-  const permMap = {}
-  for (const p of allPerms) permMap[p.name] = p._id
-
-  // Helper: resolve names to IDs
-  const ids = (names) => names.filter((n) => permMap[n]).map((n) => permMap[n])
-
-  // Default groups
-  const defaultGroups = [
-    {
-      name: "Admin",
-      description: "Barcha huquqlarga ega administrator",
-      permissions: ids(ALL_PERMISSIONS.map((p) => p.name)),
-    },
-    {
-      name: "Dissertatsiya mutaxassisi",
-      description: "Dissertatsiyalarni ko'rish, qo'shish va tahrirlash",
-      permissions: ids([
-        "view_dissertations", "add_dissertation", "edit_dissertation",
-        "download_dissertation", "view_statistics",
-      ]),
-    },
-    {
-      name: "Kuzatuvchi",
-      description: "Faqat ko'rish huquqlari",
-      permissions: ids(["view_dissertations", "view_statistics", "view_members"]),
-    },
-  ]
-
-  for (const group of defaultGroups) {
-    const exists = await PermissionGroup.findOne({ name: group.name })
-    if (!exists) {
-      await PermissionGroup.create({ ...group, isActive: true })
-      console.log("Seeded permission group:", group.name)
-    }
-  }
-}
-
-// Run seed on startup (non-blocking)
-seedPermissionsAndGroups().catch((e) => console.error("Permission seed error:", e))
-// ──────────────────────────────────────────────────────────────────────────────
+seedPermissionsAndGroups({ Permission, PermissionGroup }).catch((e) =>
+  console.error("Permission seed error:", e),
+)
 
 // Seed default categories (razdel) if none exist; each doc must have razdel_id (Number) and name
 const seedCatsIfEmpty = async () => {
@@ -1484,8 +1072,8 @@ app.post("/api/public/check-ticket", async (req, res) => {
     })
   }
 })
-//process.env.npm_lifecycle_event === "start"
-if (true) {
+const isProduction = process.env.NODE_ENV === "production" || process.env.npm_lifecycle_event === "start"
+if (isProduction) {
   console.log("PRODUCTION")
   const distPath = path.join(__dirname, "dist")
   app.use(express.static(distPath))
@@ -1495,54 +1083,16 @@ if (true) {
   })
 } else {
   console.log("LOCAL")
-  app.use("/", createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true }))
-}
-
-async function ensureDefaultStaffDepartment() {
-  await StaffDepartment.updateOne(
-    { name: DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME },
-    { $setOnInsert: { name: DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME, isActive: true } },
-    { upsert: true },
-  )
-}
-
-async function ensureStaffPositionsSeed() {
-  const DEFAULTS = [
-    "Rahbariyat",
-    "Xizmat rahbari",
-    "Bosh mutaxassis",
-    "Yetakchi Mutaxassis",
-    "I-toifali mutaxassis",
-    "II-toifali mutaxassis",
-  ]
-  const count = await StaffPosition.countDocuments()
-  if (count > 0) {
-    return
-  }
-  await StaffPosition.insertMany(
-    DEFAULTS.map((name, i) => ({ name, isActive: true, sortOrder: i + 1 })),
-  )
-  console.log("[seed] StaffPosition: inserted", DEFAULTS.length, "defaults")
-}
-
-/** Eski 0-based tartiblarni 1-based qilib yangilash (bir marta, kerak bo‘lsa) */
-async function migrateStaffPositionSortOrderToOneBased() {
-  const hasZero = await StaffPosition.exists({ sortOrder: 0 })
-  if (!hasZero) {
-    return
-  }
-  const rows = await StaffPosition.find({}).sort({ sortOrder: 1, name: 1 }).select("_id").lean()
-  if (!rows.length) {
-    return
-  }
-  const ops = rows.map((r, i) => ({
-    updateOne: {
-      filter: { _id: r._id },
-      update: { $set: { sortOrder: i + 1 } },
-    },
-  }))
-  await StaffPosition.bulkWrite(ops)
-  console.log("[migrate] StaffPosition sortOrder: 0-based → 1-based,", rows.length, "rows")
+  const devProxy = createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true })
+  app.use("/", (req, res, next) => {
+    const p = req.path || ""
+    const isBackendRoute =
+      p.startsWith("/api") || p.startsWith("/auth") || p.startsWith("/survey") || p.startsWith("/rolik")
+    if (isBackendRoute) {
+      return next()
+    }
+    return devProxy(req, res, next)
+  })
 }
 
 const PORT = Number(process.env.PORT) || 7070
@@ -1550,9 +1100,9 @@ const PORT = Number(process.env.PORT) || 7070
 app.listen(PORT, async () => {
   console.log(`Server is running on \x1b[34mhttp://localhost:${PORT}\x1b[0m`)
   try {
-    await ensureDefaultStaffDepartment()
-    await ensureStaffPositionsSeed()
-    await migrateStaffPositionSortOrderToOneBased()
+    await ensureDefaultStaffDepartment({ StaffDepartment })
+    await ensureStaffPositionsSeed({ StaffPosition })
+    await migrateStaffPositionSortOrderToOneBased({ StaffPosition })
   } catch (e) {
     console.error("DB seed (staff department / positions):", e)
   }

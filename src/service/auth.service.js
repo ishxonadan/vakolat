@@ -1,6 +1,6 @@
 import { jwtDecode } from "jwt-decode"
 
-const API_BASE_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:7777"
+const API_BASE_URL = ""
 
 class AuthService {
   constructor() {
@@ -266,7 +266,7 @@ class AuthService {
     try {
       const token = this.getToken()
       if (token) {
-        const API_BASE_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:7777"
+        const API_BASE_URL = ""
         await fetch(`${API_BASE_URL}/api/auth/logout`, {
           method: "POST",
           headers: {
