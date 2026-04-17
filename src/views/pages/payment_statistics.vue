@@ -512,7 +512,7 @@ const onSectionTabChange = (event) => {
                 </Column>
                 <Column header="To'ldirib bergan xodim">
                   <template #body="detailsSlotProps">
-                    {{ detailsSlotProps.data.createdBy?.nickname || "-" }}
+                    {{ detailsSlotProps.data.createdBy?.nickname || (detailsSlotProps.data.source === "payme" ? "Payme" : "-") }}
                   </template>
                 </Column>
               </DataTable>

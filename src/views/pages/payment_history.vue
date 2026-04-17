@@ -39,6 +39,22 @@ const loadTransactions = async () => {
 }
 const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 
+const getServiceLabel = (row) => {
+  if (row?.source === "payme") return "Payme"
+  return row?.serviceId?.name || row?.serviceName || "-"
+}
+
+const getCommentLabel = (row) => {
+  if (row?.source === "payme") {
+    const paymeId = row?.meta?.providerTxId || row?.meta?.paymeId || ""
+    const baseComment = String(row?.comment || "").trim()
+    const idPart = paymeId ? `Payme ID: ${paymeId}` : ""
+    if (baseComment && idPart) return `${idPart} — ${baseComment}`
+    return idPart || baseComment || "-"
+  }
+  return row?.comment || "-"
+}
+
 const onPage = (event) => {
   if (event.rows != null && event.rows !== pageSize.value) {
     pageSize.value = event.rows
@@ -136,7 +152,7 @@ onMounted(loadTransactions)
       </Column>
       <Column header="Xizmat">
         <template #body="slotProps">
-          {{ slotProps.data.serviceId?.name || slotProps.data.serviceName || "-" }}
+          {{ getServiceLabel(slotProps.data) }}
         </template>
       </Column>
       <Column header="Bo'lim">
@@ -144,7 +160,11 @@ onMounted(loadTransactions)
           {{ slotProps.data.departmentId?.name || "-" }}
         </template>
       </Column>
-      <Column field="comment" header="Izoh" />
+      <Column header="Izoh">
+        <template #body="slotProps">
+          {{ getCommentLabel(slotProps.data) }}
+        </template>
+      </Column>
     </DataTable>
   </div>
 </template>

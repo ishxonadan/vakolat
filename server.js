@@ -1072,9 +1072,19 @@ app.post("/api/public/check-ticket", async (req, res) => {
     })
   }
 })
-const isProduction = process.env.NODE_ENV === "production" || process.env.npm_lifecycle_event === "start"
-if (isProduction) {
-  console.log("PRODUCTION")
+const APP_ENV_ALIASES = {
+  production: "prod",
+  prod: "prod",
+  preview: "preview",
+  development: "dev",
+  dev: "dev",
+}
+const appEnvRaw = String(process.env.APP_ENV || process.env.NODE_ENV || "dev").trim().toLowerCase()
+const appEnv = APP_ENV_ALIASES[appEnvRaw] || "dev"
+const serveBuiltClient = appEnv === "prod" || appEnv === "preview"
+
+if (serveBuiltClient) {
+  console.log(appEnv === "prod" ? "PROD" : "PREVIEW")
   const distPath = path.join(__dirname, "dist")
   app.use(express.static(distPath))
 
@@ -1082,7 +1092,7 @@ if (isProduction) {
     res.sendFile(path.join(distPath, "index.html"))
   })
 } else {
-  console.log("LOCAL")
+  console.log("DEV")
   const devProxy = createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true })
   app.use("/", (req, res, next) => {
     const p = req.path || ""
