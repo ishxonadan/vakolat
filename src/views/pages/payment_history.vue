@@ -46,9 +46,9 @@ const getServiceLabel = (row) => {
 
 const getCommentLabel = (row) => {
   if (row?.source === "payme") {
-    const paymeId = row?.meta?.providerTxId || row?.meta?.paymeId || ""
+    const transactionId = String(row?.transaction || "").trim()
     const baseComment = String(row?.comment || "").trim()
-    const idPart = paymeId ? `Payme ID: ${paymeId}` : ""
+    const idPart = transactionId ? `Transaction ID: ${transactionId}` : ""
     if (baseComment && idPart) return `${idPart} — ${baseComment}`
     return idPart || baseComment || "-"
   }

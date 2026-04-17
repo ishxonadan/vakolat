@@ -87,7 +87,7 @@ const menuItems = [
             label: "Statistika",
             icon: 'pi pi-fw pi-chart-line',
             to: '/payment/statistics',
-            requiredPermissions: ['payment_view_transactions'],
+            requiredPermissions: ['payment_view_payment_statistics'],
           },
         ]
       },

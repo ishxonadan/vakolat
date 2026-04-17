@@ -670,7 +670,7 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  router.get("/statistics", verifyToken, checkPermissions(["payment_view_transactions"]), async (req, res) => {
+  router.get("/statistics", verifyToken, checkPermissions(["payment_view_payment_statistics"]), async (req, res) => {
     try {
       const { rangeStart, rangeEnd } = resolveStatisticsDateRange({ from: req.query.from, to: req.query.to })
       const dateMatch = { createdAt: { $gte: rangeStart, $lte: rangeEnd } }

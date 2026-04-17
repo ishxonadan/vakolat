@@ -23,6 +23,8 @@ const dayDetailsLoading = ref(false)
 const selectedDetailDate = ref("")
 const selectedDayTransactions = ref([])
 const expandedTopupRows = ref({})
+const detailSortField = ref("createdAt")
+const detailSortOrder = ref(-1)
 const stats = ref({
   year: new Date().getFullYear(),
   from: null,
@@ -475,37 +477,41 @@ const onSectionTabChange = (event) => {
               <DataTable
                 :value="selectedDetailDate === slotProps.data.date ? selectedDayTransactions : []"
                 :loading="dayDetailsLoading && selectedDetailDate === slotProps.data.date"
+                v-model:sortField="detailSortField"
+                v-model:sortOrder="detailSortOrder"
+                sortMode="single"
+                removableSort
                 responsiveLayout="scroll"
                 stripedRows
                 showGridlines
               >
-                <Column field="createdAt" header="Sana va vaqt">
+                <Column field="createdAt" header="Sana va vaqt" sortable>
                   <template #body="detailsSlotProps">
                     {{ formatDateTimeDisplay(detailsSlotProps.data.createdAt) }}
                   </template>
                 </Column>
-                <Column field="userNo" header="ID karta raqami" />
-                <Column field="userName" header="F.I.Sh">
+                <Column field="userNo" header="ID karta raqami" sortable />
+                <Column field="userName" header="F.I.Sh" sortable>
                   <template #body="detailsSlotProps">
                     {{ detailsSlotProps.data.userName || "-" }}
                   </template>
                 </Column>
-                <Column field="type" header="Amal turi">
+                <Column field="type" header="Amal turi" sortable>
                   <template #body="detailsSlotProps">
                     {{ paymentTransactionTypeLabel(detailsSlotProps.data.type) }}
                   </template>
                 </Column>
-                <Column field="direction" header="Yo'nalish">
+                <Column field="direction" header="Yo'nalish" sortable>
                   <template #body="detailsSlotProps">
                     {{ paymentTransactionDirectionLabel(detailsSlotProps.data.direction) }}
                   </template>
                 </Column>
-                <Column field="amount" header="Miqdor">
+                <Column field="amount" header="Miqdor" sortable>
                   <template #body="detailsSlotProps">
                     {{ formatMoney(detailsSlotProps.data.amount) }}
                   </template>
                 </Column>
-                <Column field="balanceBefore" header="Amalgacha balans">
+                <Column field="balanceBefore" header="Amalgacha balans" sortable>
                   <template #body="detailsSlotProps">
                     {{ formatMoney(detailsSlotProps.data.balanceBefore) }}
                   </template>

@@ -19,6 +19,7 @@ const ALL_PERMISSIONS = [
   { name: "payment_list_accounts", description: "Foydalanuvchi balanslari ro'yxati va qidiruv" },
   { name: "payment_read_account", description: "Bitta foydalanuvchi balansini ko'rish (ID bo'yicha)" },
   { name: "payment_view_transactions", description: "Pullik to'lovlar tarixi (tranzaksiyalar)" },
+  { name: "payment_view_payment_statistics", description: "Pullik xizmatlar statistikasi sahifasini ko'rish" },
   { name: "payment_view_overview_stats", description: "Pullik umumiy statistikasi (jami balanslar, xarajatlar)" },
   { name: "payment_manage_services", description: "Pullik xizmatlar ro'yxatini boshqarish (CRUD)" },
   { name: "payment_manage_departments", description: "Zallarni boshqarish (CRUD)" },

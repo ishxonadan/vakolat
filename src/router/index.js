@@ -195,7 +195,7 @@ const router = createRouter({
           component: () => import("@/views/pages/payment_statistics.vue"),
           meta: {
             requiresAuth: true,
-            permission: "payment_view_transactions",
+            permission: "payment_view_payment_statistics",
           },
         },
         {
