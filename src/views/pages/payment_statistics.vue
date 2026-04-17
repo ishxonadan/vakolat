@@ -485,6 +485,11 @@ const onSectionTabChange = (event) => {
                   </template>
                 </Column>
                 <Column field="userNo" header="ID karta raqami" />
+                <Column field="userName" header="F.I.Sh">
+                  <template #body="detailsSlotProps">
+                    {{ detailsSlotProps.data.userName || "-" }}
+                  </template>
+                </Column>
                 <Column field="type" header="Amal turi">
                   <template #body="detailsSlotProps">
                     {{ paymentTransactionTypeLabel(detailsSlotProps.data.type) }}
@@ -498,6 +503,11 @@ const onSectionTabChange = (event) => {
                 <Column field="amount" header="Miqdor">
                   <template #body="detailsSlotProps">
                     {{ formatMoney(detailsSlotProps.data.amount) }}
+                  </template>
+                </Column>
+                <Column field="balanceBefore" header="Amalgacha balans">
+                  <template #body="detailsSlotProps">
+                    {{ formatMoney(detailsSlotProps.data.balanceBefore) }}
                   </template>
                 </Column>
                 <Column header="To'ldirib bergan xodim">

@@ -224,6 +224,9 @@ function registerModels({ vakolat, yoqlama, nazorat }) {
       source: { type: String, enum: ["manual", "migration", "service"], default: "manual" },
       comment: { type: String, default: "" },
       createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      memberNameSnapshot: { type: String, default: "" },
+      balanceBefore: { type: Number, default: null },
+      balanceAfter: { type: Number, default: null },
     },
     { timestamps: true },
   )

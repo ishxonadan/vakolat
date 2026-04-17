@@ -37,6 +37,7 @@ const loadTransactions = async () => {
     loading.value = false
   }
 }
+const formatMoney = (value) => `${Math.trunc(Number(value || 0)).toLocaleString("uz-UZ")} so'm`
 
 const onPage = (event) => {
   if (event.rows != null && event.rows !== pageSize.value) {
@@ -107,6 +108,11 @@ onMounted(loadTransactions)
         </template>
       </Column>
       <Column field="userNo" header="ID karta raqami" />
+      <Column field="userName" header="F.I.Sh">
+        <template #body="slotProps">
+          {{ slotProps.data.userName || "-" }}
+        </template>
+      </Column>
       <Column field="type" header="Amal turi">
         <template #body="slotProps">
           {{ paymentTransactionTypeLabel(slotProps.data.type) }}
@@ -118,6 +124,16 @@ onMounted(loadTransactions)
         </template>
       </Column>
       <Column field="amount" header="Miqdor" />
+      <Column field="balanceBefore" header="Amalgacha balans">
+        <template #body="slotProps">
+          {{ formatMoney(slotProps.data.balanceBefore) }}
+        </template>
+      </Column>
+      <Column field="balanceAfter" header="Amaldan keyin balans">
+        <template #body="slotProps">
+          {{ formatMoney(slotProps.data.balanceAfter) }}
+        </template>
+      </Column>
       <Column header="Xizmat">
         <template #body="slotProps">
           {{ slotProps.data.serviceId?.name || slotProps.data.serviceName || "-" }}

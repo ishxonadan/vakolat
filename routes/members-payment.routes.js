@@ -92,6 +92,12 @@ module.exports = (nazorat, vakolat) => {
     if (/^\d{9}$/.test(raw)) return `AAA${raw}`
     return raw
   }
+  const resolveMemberNameByUserNo = async (userNo) => {
+    const normalized = String(userNo || "").trim()
+    if (!normalized) return ""
+    const member = await CacheUser.findOne({ USER_NO: normalized }).select("USER_NAME").lean()
+    return String(member?.USER_NAME || "").trim()
+  }
   const isTransactionUnsupportedError = (error) => {
     const message = String(error?.message || "")
     return (
@@ -415,6 +421,7 @@ module.exports = (nazorat, vakolat) => {
       const comment = String(req.body.comment || "")
       const serviceId = req.body.serviceId || null
       const departmentId = req.body.departmentId || null
+      const memberNameSnapshot = await resolveMemberNameByUserNo(userNo)
 
       if (!userNo || !amount) {
         return res.status(400).json({ error: "userNo va amount talab qilinadi" })
@@ -429,6 +436,8 @@ module.exports = (nazorat, vakolat) => {
           { $inc: { balance: amount }, $setOnInsert: { status: "active", meta: {} } },
           { new: true, upsert: true, ...(session ? { session } : {}) },
         )
+        const balanceAfter = Number(account?.balance || 0)
+        const balanceBefore = balanceAfter - amount
 
         const [created] = await PaymentTransaction.create(
           [
@@ -443,6 +452,9 @@ module.exports = (nazorat, vakolat) => {
               source: "manual",
               comment,
               createdBy: req.user.id,
+              memberNameSnapshot,
+              balanceBefore,
+              balanceAfter,
             },
           ],
           session ? { session } : {},
@@ -464,6 +476,7 @@ module.exports = (nazorat, vakolat) => {
       const comment = String(req.body.comment || "")
       const serviceId = req.body.serviceId || null
       const departmentId = req.body.departmentId || null
+      const memberNameSnapshot = await resolveMemberNameByUserNo(userNo)
 
       if (!userNo || !amount) {
         return res.status(400).json({ error: "userNo va amount talab qilinadi" })
@@ -487,7 +500,9 @@ module.exports = (nazorat, vakolat) => {
           throw new Error("INSUFFICIENT_BALANCE")
         }
 
-        account.balance = Number(account.balance || 0) - amount
+        const balanceBefore = Number(account.balance || 0)
+        const balanceAfter = balanceBefore - amount
+        account.balance = balanceAfter
         await account.save(session ? { session } : {})
 
         const [created] = await PaymentTransaction.create(
@@ -503,6 +518,9 @@ module.exports = (nazorat, vakolat) => {
               source: "manual",
               comment,
               createdBy: req.user.id,
+              memberNameSnapshot,
+              balanceBefore,
+              balanceAfter,
             },
           ],
           session ? { session } : {},
@@ -549,10 +567,98 @@ module.exports = (nazorat, vakolat) => {
         PaymentTransaction.countDocuments(filter),
       ])
 
+      const userNos = [...new Set(items.map((item) => String(item?.userNo || "").trim()).filter(Boolean))]
+      const members = userNos.length
+        ? await CacheUser.find({ USER_NO: { $in: userNos } }).select("USER_NO USER_NAME").lean()
+        : []
+      const memberMap = new Map(members.map((item) => [String(item?.USER_NO || ""), String(item?.USER_NAME || "")]))
+
+      const perUserItemsMap = new Map()
+      for (const item of items) {
+        const userNo = String(item?.userNo || "").trim()
+        if (!userNo) continue
+        if (!perUserItemsMap.has(userNo)) perUserItemsMap.set(userNo, [])
+        perUserItemsMap.get(userNo).push(item)
+      }
+
+      const balanceMap = new Map()
+      await Promise.all(
+        [...perUserItemsMap.entries()].map(async ([userNo, userItems]) => {
+          const sortedMarkers = [...userItems].sort((a, b) => {
+            const timeDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            if (timeDiff !== 0) return timeDiff
+            return String(a._id).localeCompare(String(b._id))
+          })
+          if (!sortedMarkers.length) return
+
+          const firstMarker = sortedMarkers[0]
+          const firstMarkerDate = new Date(firstMarker.createdAt)
+          const firstMarkerId = firstMarker._id
+          const lastMarkerDate = new Date(sortedMarkers[sortedMarkers.length - 1].createdAt)
+          const markerIds = new Set(sortedMarkers.map((row) => String(row._id)))
+
+          const [baseRow, rangeRows] = await Promise.all([
+            PaymentTransaction.aggregate([
+              {
+                $match: {
+                  userNo,
+                  $or: [
+                    { createdAt: { $lt: firstMarkerDate } },
+                    { createdAt: firstMarkerDate, _id: { $lt: firstMarkerId } },
+                  ],
+                },
+              },
+              {
+                $project: {
+                  signedAmount: {
+                    $cond: [
+                      { $eq: ["$direction", "out"] },
+                      { $multiply: [-1, { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } }] },
+                      { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } },
+                    ],
+                  },
+                },
+              },
+              { $group: { _id: null, total: { $sum: "$signedAmount" } } },
+            ]),
+            PaymentTransaction.find({
+              userNo,
+              createdAt: { $gte: firstMarkerDate, $lte: lastMarkerDate },
+            })
+              .sort({ createdAt: 1, _id: 1 })
+              .select("_id createdAt amount direction")
+              .lean(),
+          ])
+
+          let runningBalance = Number(baseRow?.[0]?.total || 0)
+          for (const row of rangeRows) {
+            const amount = Number(row?.amount || 0)
+            const signedAmount = row?.direction === "out" ? -amount : amount
+            const before = runningBalance
+            const after = before + signedAmount
+            const rowId = String(row?._id || "")
+            if (markerIds.has(rowId)) {
+              balanceMap.set(rowId, {
+                balanceBefore: before,
+                balanceAfter: after,
+              })
+            }
+            runningBalance = after
+          }
+        }),
+      )
+
       res.json({
         items: items.map((item) => ({
           ...item,
           serviceName: String(item?.serviceId?.name || item?.serviceName || "").trim(),
+          userName: String(item?.memberNameSnapshot || "").trim() || memberMap.get(String(item?.userNo || "").trim()) || "",
+          balanceBefore: item?.balanceBefore != null && Number.isFinite(Number(item.balanceBefore))
+            ? Number(item.balanceBefore)
+            : Number(balanceMap.get(String(item?._id || ""))?.balanceBefore || 0),
+          balanceAfter: item?.balanceAfter != null && Number.isFinite(Number(item.balanceAfter))
+            ? Number(item.balanceAfter)
+            : Number(balanceMap.get(String(item?._id || ""))?.balanceAfter || 0),
         })),
         total,
         page,
@@ -882,6 +988,7 @@ module.exports = (nazorat, vakolat) => {
         if (totalAmount <= 0) {
           return res.status(400).json({ error: "Xizmatlar umumiy summasi 0 dan katta bo'lishi kerak" })
         }
+        const memberNameSnapshot = await resolveMemberNameByUserNo(userNo)
 
         let account
         let provision
@@ -920,17 +1027,27 @@ module.exports = (nazorat, vakolat) => {
           )
           provision = createdProvision
 
-          const txDocs = provisionItems.map((item) => ({
-            userNo,
-            type: "spend",
-            amount: item.totalPrice,
-            direction: "out",
-            serviceId: item.serviceId || null,
-            serviceName: item.serviceName,
-            source: "service",
-            comment: `${comment || ""} [xizmat:${item.serviceName}; soni:${item.quantity}]`.trim(),
-            createdBy: req.user.id,
-          }))
+          let runningBalance = balance
+          const txDocs = provisionItems.map((item) => {
+            const itemAmount = Number(item.totalPrice || 0)
+            const balanceBefore = runningBalance
+            const balanceAfter = balanceBefore - itemAmount
+            runningBalance = balanceAfter
+            return {
+              userNo,
+              type: "spend",
+              amount: itemAmount,
+              direction: "out",
+              serviceId: item.serviceId || null,
+              serviceName: item.serviceName,
+              source: "service",
+              comment: `${comment || ""} [xizmat:${item.serviceName}; soni:${item.quantity}]`.trim(),
+              createdBy: req.user.id,
+              memberNameSnapshot,
+              balanceBefore,
+              balanceAfter,
+            }
+          })
           await PaymentTransaction.create(txDocs, session ? { session } : {})
         })
 
@@ -987,17 +1104,24 @@ module.exports = (nazorat, vakolat) => {
             { $inc: { balance: Number(provision.totalAmount || 0) }, $setOnInsert: { status: "active", meta: {} } },
             { new: true, upsert: true, ...(session ? { session } : {}) },
           )
+          const refundAmount = Number(provision.totalAmount || 0)
+          const balanceAfter = Number(account?.balance || 0)
+          const balanceBefore = balanceAfter - refundAmount
+          const memberNameSnapshot = await resolveMemberNameByUserNo(provision.userNo)
 
           const [refundTx] = await PaymentTransaction.create(
             [
               {
                 userNo: provision.userNo,
                 type: "adjustment",
-                amount: Number(provision.totalAmount || 0),
+                amount: refundAmount,
                 direction: "in",
                 source: "service",
                 comment: `Xizmat bekor qilindi${reason ? `: ${reason}` : ""}`,
                 createdBy: req.user.id,
+                memberNameSnapshot,
+                balanceBefore,
+                balanceAfter,
               },
             ],
             session ? { session } : {},
