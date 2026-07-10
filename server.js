@@ -963,6 +963,7 @@ const membersRoutes = require("./routes/members.routes")(nazorat)
 const membersPaymentRoutes = require("./routes/members-payment.routes")(nazorat, vakolat)
 const systemRoutes = require("./routes/system.routes")(vakolat)
 const ipAccessRoutes = require("./routes/ip-access.routes")(yoqlama)
+const dissStatisticsRoutes = require("./routes/diss-statistics.routes")(yoqlama, { Documents, Fields })
 
 app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
@@ -982,6 +983,7 @@ app.use("/api/members", membersRoutes)
 app.use("/api/members/payment", membersPaymentRoutes)
 app.use("/api/system", systemRoutes)
 app.use("/api/ip-access", ipAccessRoutes)
+app.use("/api/diss/statistics", dissStatisticsRoutes)
 
 app.use(
   "/rolik",

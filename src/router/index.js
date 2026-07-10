@@ -58,6 +58,15 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "diss/statistics",
+          name: "diss_statistics",
+          component: () => import("@/views/pages/diss_statistics.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "view_statistics",
+          },
+        },
+        {
           path: "/xodimlar",
           name: "xodimlar",
           component: () => import("@/views/pages/vakillar.vue"),

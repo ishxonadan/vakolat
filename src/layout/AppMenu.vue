@@ -101,6 +101,12 @@ const menuItems = [
             to: '/diss',
             requiredPermissions: ['view_dissertations']
           },
+          {
+            label: 'Statistika',
+            icon: 'pi pi-fw pi-chart-bar',
+            to: '/diss/statistics',
+            requiredPermissions: ['view_statistics'],
+          },
           { 
             label: 'Tillar', 
             icon: 'pi pi-fw pi-language', 
