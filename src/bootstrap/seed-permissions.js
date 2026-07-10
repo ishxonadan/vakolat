@@ -9,6 +9,7 @@ const ALL_PERMISSIONS = [
   { name: "manage_diss_fields", description: "Soha kodlarini boshqarish" },
   { name: "manage_diss_categories", description: "Kategoriyalarni (razdel) boshqarish" },
   { name: "manage_ip_access", description: "To'liq matnga IP ruxsatlarni boshqarish" },
+  { name: "view_diss_statistics", description: "Dissertatsiya statistikasi sahifasini ko'rish" },
   { name: "view_statistics", description: "Statistika va tashriflarni ko'rish" },
   { name: "view_members", description: "A'zo bo'lganlar ro'yxatini ko'rish" },
   { name: "manage_users", description: "Foydalanuvchilar (xodimlar) boshqaruvi" },
@@ -54,12 +55,12 @@ async function seedPermissionsAndGroups({ Permission, PermissionGroup }) {
     {
       name: "Dissertatsiya mutaxassisi",
       description: "Dissertatsiyalarni ko'rish, qo'shish va tahrirlash",
-      permissions: ids(["view_dissertations", "add_dissertation", "edit_dissertation", "download_dissertation", "view_statistics"]),
+      permissions: ids(["view_dissertations", "add_dissertation", "edit_dissertation", "download_dissertation", "view_diss_statistics", "view_statistics"]),
     },
     {
       name: "Kuzatuvchi",
       description: "Faqat ko'rish huquqlari",
-      permissions: ids(["view_dissertations", "view_statistics", "view_members"]),
+      permissions: ids(["view_dissertations", "view_diss_statistics", "view_statistics", "view_members"]),
     },
   ]
 

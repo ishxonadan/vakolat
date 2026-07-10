@@ -105,7 +105,7 @@ const menuItems = [
             label: 'Statistika',
             icon: 'pi pi-fw pi-chart-bar',
             to: '/diss/statistics',
-            requiredPermissions: ['view_statistics'],
+            requiredPermissions: ['view_diss_statistics'],
           },
           { 
             label: 'Tillar', 

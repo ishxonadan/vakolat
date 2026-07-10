@@ -63,7 +63,7 @@ const router = createRouter({
           component: () => import("@/views/pages/diss_statistics.vue"),
           meta: {
             requiresAuth: true,
-            permission: "view_statistics",
+            permission: "view_diss_statistics",
           },
         },
         {

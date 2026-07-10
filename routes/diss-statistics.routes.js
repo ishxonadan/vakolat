@@ -1,8 +1,15 @@
-module.exports = (yoqlama, { Documents, Fields }) => {
+module.exports = (yoqlama, { Documents }) => {
   const express = require("express")
   const router = express.Router()
   const mongoose = require("mongoose")
   const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+
+  const PUBLISHED_DOC_FILTER = {
+    filename: { $exists: true, $ne: "" },
+    is_deleted: { $ne: 1 },
+  }
+
+  const DIRECTIONS_COUNT = 24
 
   const readmarkSchema = new mongoose.Schema(
     {
@@ -33,6 +40,7 @@ module.exports = (yoqlama, { Documents, Fields }) => {
       username: String,
       uid: String,
       role: String,
+      isDeleted: Boolean,
     },
     { collection: "users" },
   )
@@ -86,7 +94,7 @@ module.exports = (yoqlama, { Documents, Fields }) => {
     timestamp: { $gte: rangeStart, $lte: rangeEnd },
   })
 
-  router.get("/", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+  router.get("/", verifyToken, checkPermissions(["view_diss_statistics"]), async (req, res) => {
     try {
       const { rangeStart, rangeEnd } = resolveStatisticsDateRange({
         from: req.query.from,
@@ -101,17 +109,15 @@ module.exports = (yoqlama, { Documents, Fields }) => {
         dissertatsiyaCount,
         avtoreferatCount,
         registeredUsers,
-        directionsCount,
         pageViews,
         searchQueries,
         downloads,
       ] = await Promise.all([
         Documents.countDocuments(),
-        Documents.countDocuments({ is_deleted: 0 }),
-        Documents.countDocuments({ type: "Dissertatsiya" }),
-        Documents.countDocuments({ type: "Avtoreferat" }),
-        DissUser.countDocuments(),
-        Fields.countDocuments({ code: { $regex: /^\d{2}\.00\.00$/ } }),
+        Documents.countDocuments(PUBLISHED_DOC_FILTER),
+        Documents.countDocuments({ ...PUBLISHED_DOC_FILTER, type: "Dissertatsiya" }),
+        Documents.countDocuments({ ...PUBLISHED_DOC_FILTER, type: "Avtoreferat" }),
+        DissUser.countDocuments({ isDeleted: { $ne: true } }),
         Readmark.countDocuments({
           ...activityFilter,
           isDownload: false,
@@ -133,7 +139,7 @@ module.exports = (yoqlama, { Documents, Fields }) => {
           dissertatsiyaCount,
           avtoreferatCount,
           registeredUsers,
-          directionsCount,
+          directionsCount: DIRECTIONS_COUNT,
           pageViews,
           searchQueries,
           downloads,
