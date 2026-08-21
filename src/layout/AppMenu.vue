@@ -47,6 +47,12 @@ const menuItems = [
             to: '/azo-bolganlar',
             requiredPermissions: ['view_members']
           },
+          {
+            label: "Onlayn ro'yxatdan o'tganlar",
+            icon: 'pi pi-fw pi-globe',
+            to: '/onlayn-royxatdan-otganlar',
+            requiredPermissions: ['view_members']
+          },
         ]
       },
       {

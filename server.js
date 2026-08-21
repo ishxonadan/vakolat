@@ -960,6 +960,7 @@ const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
 const membersRoutes = require("./routes/members.routes")(nazorat)
+const onlineRegistrantsRoutes = require("./routes/online-registrants.routes")(vakolat, nazorat)
 const membersPaymentRoutes = require("./routes/members-payment.routes")(nazorat, vakolat)
 const systemRoutes = require("./routes/system.routes")(vakolat)
 const ipAccessRoutes = require("./routes/ip-access.routes")(yoqlama)
@@ -980,6 +981,7 @@ app.use("/api/videos", videoRoutes)
 app.use("/api/tickets", createTicketsRoutes())
 app.use("/api/visits", visitsRoutes)
 app.use("/api/members", membersRoutes)
+app.use("/api/online-registrants", onlineRegistrantsRoutes)
 app.use("/api/members/payment", membersPaymentRoutes)
 app.use("/api/system", systemRoutes)
 app.use("/api/ip-access", ipAccessRoutes)
@@ -1012,6 +1014,33 @@ app.use(
     },
   }),
 )
+
+app.post("/api/public/online-registrants", async (req, res) => {
+  try {
+    const secret = req.body?.secret || req.headers["x-api-key"]
+    const expectedSecret = process.env.ONLINE_REGISTRATION_SECRET
+
+    if (!expectedSecret || !secret || secret !== expectedSecret) {
+      console.log(`🚫 UNAUTHORIZED ONLINE REGISTRANT ATTEMPT: ${req.ip}`)
+      return res.status(401).json({
+        error: "Ruxsat berilmagan",
+        message: "Unauthorized access. Invalid or missing secret key.",
+      })
+    }
+
+    const payload = { ...req.body }
+    delete payload.secret
+
+    const { member } = await onlineRegistrantsRoutes.createOnlineRegistrant(payload)
+    res.status(201).json({ success: true, member })
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.error || error.message })
+    }
+    console.error("Error creating online registrant via public API:", error)
+    res.status(500).json({ error: "Error creating online registrant", details: error.message })
+  }
+})
 
 app.post("/api/public/check-ticket", async (req, res) => {
   try {

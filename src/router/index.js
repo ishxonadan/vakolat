@@ -190,6 +190,15 @@ const router = createRouter({
           },
         },
         {
+          path: "/onlayn-royxatdan-otganlar",
+          name: "onlayn-royxatdan-otganlar",
+          component: () => import("@/views/pages/onlayn-royxatdan-otganlar.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "view_members",
+          },
+        },
+        {
           path: "/payment/history",
           name: "payment_history",
           component: () => import("@/views/pages/payment_history.vue"),

@@ -1,7 +1,7 @@
 <template>
   <div class="card">
     <div class="flex justify-content-between align-items-center mb-4">
-      <h2 class="text-2xl font-bold m-0">A'zo bo'lganlar</h2>
+      <h2 class="text-2xl font-bold m-0">{{ title }}</h2>
       <Button
         label="Yangi a'zo qo'shish"
         icon="pi pi-plus"
@@ -124,6 +124,10 @@ import InputText from 'primevue/inputtext'
 import { ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 
 const props = defineProps({
+  title: {
+    type: String,
+    default: "A'zo bo'lganlar"
+  },
   members: {
     type: Array,
     required: true
