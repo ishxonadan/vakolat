@@ -66,14 +66,35 @@ module.exports = (vakolat, nazorat) => {
     nazorat.models.CacheUser ||
     nazorat.model("CacheUser", new mongoose.Schema(memberFields, { collection: "cache" }))
 
-  function generateUserNo() {
-    const now = new Date()
-    const pad = (n, len = 2) => String(n).padStart(len, "0")
-    const stamp =
-      `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
-      `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}` +
-      `${pad(now.getMilliseconds(), 3)}`
-    return `OL${stamp}`
+  const USER_NO_PREFIX = "RRR"
+  const USER_NO_DIGITS = 6
+  const USER_NO_REGEX = /^RRR\d{6}$/
+
+  function formatUserNo(n) {
+    return `${USER_NO_PREFIX}${String(n).padStart(USER_NO_DIGITS, "0")}`
+  }
+
+  function parseUserNo(userNo) {
+    if (!userNo || !USER_NO_REGEX.test(userNo)) return 0
+    return Number.parseInt(userNo.slice(USER_NO_PREFIX.length), 10) || 0
+  }
+
+  async function generateNextUserNo() {
+    const [latestOnline, latestCache] = await Promise.all([
+      OnlineRegistrant.findOne({ USER_NO: { $regex: USER_NO_REGEX } })
+        .sort({ USER_NO: -1 })
+        .select("USER_NO")
+        .lean(),
+      CacheUser.findOne({ USER_NO: { $regex: USER_NO_REGEX } })
+        .sort({ USER_NO: -1 })
+        .select("USER_NO")
+        .lean(),
+    ])
+
+    const next =
+      Math.max(parseUserNo(latestOnline?.USER_NO), parseUserNo(latestCache?.USER_NO)) + 1
+
+    return formatUserNo(next)
   }
 
   function sanitizePayload(raw = {}) {
@@ -81,13 +102,13 @@ module.exports = (vakolat, nazorat) => {
     delete data._id
     delete data.__v
     delete data.secret
+    // USER_NO is always server-assigned (RRR000001, …)
+    delete data.USER_NO
     return data
   }
 
-  function applyCreateDefaults(data) {
-    if (!data.USER_NO) {
-      data.USER_NO = generateUserNo()
-    }
+  async function applyCreateDefaults(data) {
+    data.USER_NO = await generateNextUserNo()
     if (!data.INSERT_DATE) {
       data.INSERT_DATE = new Date().toISOString().split("T")[0].replace(/-/g, "")
     }
@@ -99,6 +120,8 @@ module.exports = (vakolat, nazorat) => {
 
   async function syncToCache(data) {
     const cachePayload = sanitizePayload(data)
+    // restore USER_NO after sanitize (create/update always have it)
+    cachePayload.USER_NO = data.USER_NO
     delete cachePayload._id
     await CacheUser.findOneAndUpdate(
       { USER_NO: cachePayload.USER_NO },
@@ -109,31 +132,49 @@ module.exports = (vakolat, nazorat) => {
 
   /**
    * Create online registrant and upsert into nazorat.cache.
+   * Always assigns USER_NO as RRR###### and returns it on member.
    * @returns {{ member: object }}
    * @throws {{ status: number, error: string }}
    */
   async function createOnlineRegistrant(rawData) {
-    const data = applyCreateDefaults(sanitizePayload(rawData))
+    const payload = sanitizePayload(rawData)
 
-    if (!data.USER_NAME || !String(data.USER_NAME).trim()) {
+    if (!payload.USER_NAME || !String(payload.USER_NAME).trim()) {
       const err = new Error("USER_NAME is required")
       err.status = 400
       err.error = "USER_NAME is required"
       throw err
     }
 
-    const existing = await OnlineRegistrant.findOne({ USER_NO: data.USER_NO }).lean()
-    if (existing) {
-      const err = new Error("USER_NO already exists")
-      err.status = 409
-      err.error = "USER_NO already exists"
-      throw err
+    const maxAttempts = 5
+    let lastError = null
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const data = await applyCreateDefaults({ ...payload })
+
+        const existingOnline = await OnlineRegistrant.findOne({ USER_NO: data.USER_NO }).lean()
+        if (existingOnline) {
+          continue
+        }
+
+        const savedMember = await new OnlineRegistrant(data).save()
+        await syncToCache(savedMember.toObject ? savedMember.toObject() : savedMember)
+
+        return { member: savedMember }
+      } catch (error) {
+        lastError = error
+        if (error.code === 11000) {
+          continue
+        }
+        throw error
+      }
     }
 
-    const savedMember = await new OnlineRegistrant(data).save()
-    await syncToCache(savedMember.toObject ? savedMember.toObject() : savedMember)
-
-    return { member: savedMember }
+    const err = new Error(lastError?.message || "Could not allocate USER_NO")
+    err.status = 409
+    err.error = "Could not allocate unique USER_NO"
+    throw err
   }
 
   router.createOnlineRegistrant = createOnlineRegistrant
