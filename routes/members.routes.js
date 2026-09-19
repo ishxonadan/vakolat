@@ -3,6 +3,15 @@ module.exports = (nazorat) => {
   const router = express.Router()
   const mongoose = require("mongoose") // Import mongoose to use Schema
   const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+  const {
+    buildMemberSearchFilter,
+    parseLimit,
+    parsePage,
+    parseSort,
+  } = require("../src/utils/memberSearchFilter")
+  const { fetchNextUserMaskId, registerUznelUser } = require("../src/services/uznel.service")
+
+  const LIST_SELECT = { PHOTO: 0, PASSWORD: 0 }
 
   const cacheSchema = new mongoose.Schema(
     {
@@ -56,11 +65,33 @@ module.exports = (nazorat) => {
       EMAIL: String,
       PASSPORT_SERIES: String,
       PASSPORT_NUMBER: String,
+      PINFL: String,
+      NATIONALITY: String,
     },
     { collection: "cache" },
   )
 
   const CacheUser = nazorat.model("CacheUser", cacheSchema)
+
+  router.post("/uznel-id", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+    try {
+      const userNo = await fetchNextUserMaskId()
+      res.json({ success: true, USER_NO: userNo })
+    } catch (error) {
+      console.error("Uznel ID error:", error.message)
+      res.status(502).json({ error: error.message || "Uznel ID olinmadi" })
+    }
+  })
+
+  router.post("/uznel-sync", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+    try {
+      const result = await registerUznelUser(req.body || {})
+      res.json({ success: true, ...result })
+    } catch (error) {
+      console.error("Uznel sync error:", error.message)
+      res.status(502).json({ error: error.message || "Uznelga sinxronizatsiya muvaffaqiyatsiz" })
+    }
+  })
 
   // Get all members with pagination, filtering, and sorting
   router.get("/", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
@@ -147,28 +178,14 @@ module.exports = (nazorat) => {
   // Search members with complex filter data in request body
   router.post("/search", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
     try {
-      const page = Number.parseInt(req.body.page) || 1
-      const limit = Number.parseInt(req.body.limit) || 50
+      const page = parsePage(req.body)
+      const limit = parseLimit(req.body, { max: req.body.export ? 5000 : 500 })
       const skip = (page - 1) * limit
-
-      const filter = {}
-
-      // Handle multi-field search from request body
-      if (req.body.filters && Array.isArray(req.body.filters) && req.body.filters.length > 0) {
-        filter.$and = req.body.filters.map((f) => {
-          const searchRegex = new RegExp(f.value, "i")
-          return { [f.field]: searchRegex }
-        })
-      }
-
-      // Build sort query
-      let sort = { INSERT_DATE: -1 } // Default sort by insert date descending
-      if (req.body.sortField) {
-        sort = { [req.body.sortField]: req.body.sortOrder === "asc" ? 1 : -1 }
-      }
+      const filter = buildMemberSearchFilter(req.body)
+      const sort = parseSort(req.body)
 
       const [members, total] = await Promise.all([
-        CacheUser.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+        CacheUser.find(filter).select(LIST_SELECT).sort(sort).skip(skip).limit(limit).lean(),
         CacheUser.countDocuments(filter),
       ])
 

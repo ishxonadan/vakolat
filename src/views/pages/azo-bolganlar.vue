@@ -14,10 +14,15 @@ import { pageSize } from '@/service/pagination.service'
 const router = useRouter()
 const toast = useToast()
 
+const memberListRef = ref()
 const members = ref([])
 const loading = ref(false)
+const exporting = ref(false)
 const totalRecords = ref(0)
 const currentPage = ref(1)
+const searchQuery = ref('')
+const sortField = ref('INSERT_DATE')
+const sortOrder = ref(-1)
 
 const showDialog = ref(false)
 const selectedMember = ref(null)
@@ -25,36 +30,21 @@ const activeTab = ref(0)
 const userVisits = ref([])
 const loadingVisits = ref(false)
 const isEditMode = ref(false)
+const uznelSyncEnabled = ref(false)
 
-const searchFilters = ref([
-  { field: 'USER_NAME', value: '' }
-])
-
-const searchFields = [
-  { label: 'Ism', value: 'USER_NAME' },
-  { label: 'Foydalanuvchi raqami', value: 'USER_NO' },
-  { label: 'Karta raqami', value: 'CARD_NO' },
-  { label: "Tug'ilgan sana", value: 'BIRTHDAY' },
-  { label: 'Telefon', value: 'TEL_NO' },
-  { label: 'Manzil', value: 'ADDRS' },
-  { label: 'Lavozim', value: 'USER_POSITION' },
-  { label: "Ro'yxatdan o'tgan sana", value: 'INSERT_DATE' }
-]
-
-
+const buildSearchBody = ({ page = currentPage.value, limit = pageSize.value, exportMode = false } = {}) => ({
+  page,
+  limit,
+  search: searchQuery.value,
+  sortField: sortField.value,
+  sortOrder: sortOrder.value === 1 ? 'asc' : 'desc',
+  export: exportMode || undefined,
+})
 
 const fetchMembers = async () => {
   try {
     loading.value = true
-    
-    const activeFilters = searchFilters.value.filter(f => f.value.trim() !== '')
-    const requestBody = {
-      page: currentPage.value,
-      limit: pageSize.value,
-      filters: activeFilters
-    }
-
-    const response = await apiService.post('/members/search', requestBody)
+    const response = await apiService.post('/members/search', buildSearchBody())
     members.value = response.members
     totalRecords.value = response.total
   } catch (error) {
@@ -70,21 +60,56 @@ const fetchMembers = async () => {
   }
 }
 
+const applySearch = () => {
+  currentPage.value = 1
+  fetchMembers()
+}
+
+const exportExcel = async () => {
+  try {
+    exporting.value = true
+    const response = await apiService.post('/members/search', buildSearchBody({ page: 1, limit: 5000, exportMode: true }))
+    const result = memberListRef.value?.downloadCsv(response.members || [], response.total)
+    const exported = result?.exported || 0
+    toast.add({
+      severity: 'success',
+      summary: 'Eksport',
+      detail: exported < (response.total || 0)
+        ? `${exported} ta yozuv eksport qilindi (jami ${response.total})`
+        : `${exported} ta yozuv eksport qilindi`,
+      life: 3000
+    })
+  } catch (error) {
+    console.error('Error exporting members:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Xatolik',
+      detail: 'Excelga eksport qilib bo\'lmadi',
+      life: 3000
+    })
+  } finally {
+    exporting.value = false
+  }
+}
+
 
 
 const openMemberDialog = async (member) => {
   selectedMember.value = { ...member }
   isEditMode.value = true
+  uznelSyncEnabled.value = false
   activeTab.value = 0
   showDialog.value = true
-  
-  if (member.PHOTO) {
-    memberImagePreview.value = member.PHOTO
-  } else {
-    memberImagePreview.value = null
-  }
-  
+  memberImagePreview.value = member.PHOTO || null
+
   if (member.USER_NO) {
+    try {
+      const full = await apiService.get(`/members/by-user-no/${member.USER_NO}`)
+      selectedMember.value = { ...full }
+      memberImagePreview.value = full.PHOTO || null
+    } catch (error) {
+      console.error('Error fetching member details:', error)
+    }
     await fetchUserVisits(member.USER_NO)
   }
 }
@@ -94,17 +119,23 @@ const openAddMemberDialog = () => {
     USER_NO: '',
     USER_NAME: '',
     USER_POSITION: '',
-    CARD_NO: '',
+    PINFL: '',
     TEL_NO: '',
     BIRTHDAY: null,
     ADDRS: '',
     EMAIL: '',
     PASSPORT_SERIES: '',
     PASSPORT_NUMBER: '',
-    INSERT_DATE: new Date().toISOString().split('T')[0].replace(/-/g, ''),
+    SEX: '',
+    NATIONALITY: 'UZB',
+    INSERT_DATE: (() => {
+      const now = new Date()
+      return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+    })(),
     ZIP_CODE: ''
   }
   isEditMode.value = false
+  uznelSyncEnabled.value = false
   activeTab.value = 0
   showDialog.value = true
   memberImagePreview.value = null
@@ -173,12 +204,14 @@ const saveMember = async (updatedMember) => {
       toast.add({
         severity: 'success',
         summary: 'Muvaffaqiyatli',
-        detail: "Yangi a'zo qo'shildi",
-        life: 3000
+        detail: "Yangi a'zo qo'shildi. Endi Uznelga sinxronizatsiya qilishingiz mumkin",
+        life: 3500
       })
+      isEditMode.value = true
     }
 
-    showDialog.value = false
+    selectedMember.value = { ...updatedMember }
+    uznelSyncEnabled.value = true
     fetchMembers()
   } catch (error) {
     console.error('Error saving member:', error)
@@ -197,6 +230,7 @@ const closeDialog = () => {
   userVisits.value = []
   memberImagePreview.value = null
   memberImage.value = null
+  uznelSyncEnabled.value = false
 }
 
 const imageSource = computed(() => {
@@ -231,18 +265,26 @@ onMounted(() => {
 <template>
   <div>
     <MemberList
+      ref="memberListRef"
+      title="A'zo bo'lganlar"
       :members="members"
       :loading="loading"
+      :exporting="exporting"
       :total-records="totalRecords"
       :current-page="currentPage"
       :rows-per-page="pageSize"
-      :search-filters="searchFilters"
-      :search-fields="searchFields"
+      v-model:searchQuery="searchQuery"
+      v-model:sortField="sortField"
+      v-model:sortOrder="sortOrder"
+      storage-key="azo-bolganlar"
+      export-file-name="azo-bolganlar"
       @add-member="openAddMemberDialog"
       @update:current-page="onUpdateCurrentPage"
       @update:rows-per-page="onUpdateRowsPerPage"
-      @apply-search="() => { currentPage = 1; fetchMembers() }"
-      @row-dblclick="(member) => openMemberDialog(member)"
+      @apply-search="applySearch"
+      @refresh="fetchMembers"
+      @export-excel="exportExcel"
+      @row-dblclick="openMemberDialog"
     />
 
     <Dialog
@@ -250,29 +292,46 @@ onMounted(() => {
       :header="isEditMode ? 'Foydalanuvchi ma\'lumotlari' : 'Yangi foydalanuvchi'"
       :modal="true"
       :closable="true"
-      :style="{ width: '90vw', maxWidth: '1400px' }"
+      :style="{ width: 'min(1240px, 96vw)' }"
+      :breakpoints="{ '960px': '96vw' }"
+      class="member-record-dialog"
       @hide="closeDialog"
     >
-      <TabView v-model:activeIndex="activeTab">
+      <TabView v-if="isEditMode && selectedMember" v-model:activeIndex="activeTab">
         <TabPanel header="Ma'lumotlar">
           <MemberForm
             :selected-member="selectedMember"
             :categories="categories"
             :image-source="imageSource"
+            :is-edit-mode="true"
+            :can-generate-uznel-id="true"
+            :uznel-sync-enabled="uznelSyncEnabled"
             @close-dialog="closeDialog"
             @save-member="saveMember"
             @image-select="onImageSelect"
             @delete-image="deleteImage"
           />
         </TabPanel>
-
-        <TabPanel v-if="isEditMode" header="Tashriflar tarixi">
+        <TabPanel header="Tashriflar tarixi">
           <VisitHistory
             :user-visits="userVisits"
             :loading-visits="loadingVisits"
           />
         </TabPanel>
       </TabView>
+      <MemberForm
+        v-else-if="selectedMember"
+        :selected-member="selectedMember"
+        :categories="categories"
+        :image-source="imageSource"
+        :is-edit-mode="false"
+        :can-generate-uznel-id="true"
+        :uznel-sync-enabled="uznelSyncEnabled"
+        @close-dialog="closeDialog"
+        @save-member="saveMember"
+        @image-select="onImageSelect"
+        @delete-image="deleteImage"
+      />
     </Dialog>
   </div>
 </template>

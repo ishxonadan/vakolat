@@ -8,7 +8,8 @@
     "start": "node server",
     "build": "vite build",
     "test": "mocha --require test/setup.js test/**/*.test.js --timeout 10000",
-    "migrate:pullik": "node scripts/migrate-pullik.js"
+    "migrate:pullik": "node scripts/migrate-pullik.js",
+    "graph": "node scripts/update-graph.js"
   },
   "keywords": [],
   "author": "",
@@ -37,6 +38,8 @@
     "primevue": "^4.0.0",
     "qrcode": "^1.5.4",
     "sortablejs": "^1.15.7",
+    "stream-chain": "^4.2.2",
+    "stream-json": "^1.9.1",
     "uuid": "^11.0.3",
     "vue": "^3.4.34",
     "vue-router": "^4.4.0"

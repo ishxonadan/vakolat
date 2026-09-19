@@ -17,3 +17,5 @@ api-generator/typedoc.json
 /goal
 /public/rolik
 /tolov
+graphify-out/cost.json
+graphify-out/.graphify_python

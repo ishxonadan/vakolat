@@ -3,6 +3,14 @@ module.exports = (vakolat, nazorat) => {
   const router = express.Router()
   const mongoose = require("mongoose")
   const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+  const {
+    buildMemberSearchFilter,
+    parseLimit,
+    parsePage,
+    parseSort,
+  } = require("../src/utils/memberSearchFilter")
+
+  const LIST_SELECT = { PHOTO: 0, PASSWORD: 0 }
 
   const memberFields = {
     USER_NO: String,
@@ -55,6 +63,8 @@ module.exports = (vakolat, nazorat) => {
     EMAIL: String,
     PASSPORT_SERIES: String,
     PASSPORT_NUMBER: String,
+    PINFL: String,
+    NATIONALITY: String,
   }
 
   const OnlineRegistrant = vakolat.model(
@@ -181,25 +191,14 @@ module.exports = (vakolat, nazorat) => {
 
   router.post("/search", verifyToken, checkPermissions(["view_members"]), async (req, res) => {
     try {
-      const page = Number.parseInt(req.body.page) || 1
-      const limit = Number.parseInt(req.body.limit) || 50
+      const page = parsePage(req.body)
+      const limit = parseLimit(req.body, { max: req.body.export ? 5000 : 500 })
       const skip = (page - 1) * limit
-
-      const filter = {}
-      if (req.body.filters && Array.isArray(req.body.filters) && req.body.filters.length > 0) {
-        filter.$and = req.body.filters.map((f) => {
-          const searchRegex = new RegExp(f.value, "i")
-          return { [f.field]: searchRegex }
-        })
-      }
-
-      let sort = { INSERT_DATE: -1 }
-      if (req.body.sortField) {
-        sort = { [req.body.sortField]: req.body.sortOrder === "asc" ? 1 : -1 }
-      }
+      const filter = buildMemberSearchFilter(req.body)
+      const sort = parseSort(req.body)
 
       const [members, total] = await Promise.all([
-        OnlineRegistrant.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+        OnlineRegistrant.find(filter).select(LIST_SELECT).sort(sort).skip(skip).limit(limit).lean(),
         OnlineRegistrant.countDocuments(filter),
       ])
 
