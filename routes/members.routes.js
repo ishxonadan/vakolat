@@ -67,6 +67,9 @@ module.exports = (nazorat) => {
       PASSPORT_NUMBER: String,
       PINFL: String,
       NATIONALITY: String,
+      UZNEL_SYNCED: Boolean,
+      UZNEL_SYNCED_AT: String,
+      UZNEL_ORG_ROW: mongoose.Schema.Types.Mixed,
     },
     { collection: "cache" },
   )
@@ -85,7 +88,32 @@ module.exports = (nazorat) => {
 
   router.post("/uznel-sync", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
     try {
-      const result = await registerUznelUser(req.body || {})
+      const body = req.body || {}
+      const userNo = String(body.USER_NO || body.USER_ID || "").trim()
+      const existing = userNo ? await CacheUser.findOne({ USER_NO: userNo }).lean() : null
+      const member = {
+        ...body,
+        USER_SEQ_NO: body.USER_SEQ_NO || existing?.USER_SEQ_NO || existing?.SEQUENCE_NO,
+        SEQUENCE_NO: body.SEQUENCE_NO || existing?.SEQUENCE_NO || existing?.USER_SEQ_NO,
+        UZNEL_SYNCED: body.UZNEL_SYNCED || existing?.UZNEL_SYNCED,
+        UZNEL_ORG_ROW: body.UZNEL_ORG_ROW || existing?.UZNEL_ORG_ROW,
+      }
+      const result = await registerUznelUser(member)
+      if (result?.USER_NO && (result.USER_SEQ_NO || result.SEQUENCE_NO)) {
+        await CacheUser.findOneAndUpdate(
+          { USER_NO: result.USER_NO },
+          {
+            $set: {
+              USER_SEQ_NO: result.USER_SEQ_NO,
+              SEQUENCE_NO: result.SEQUENCE_NO || result.USER_SEQ_NO,
+              UZNEL_SYNCED: true,
+              UZNEL_SYNCED_AT: new Date().toISOString(),
+              UZNEL_ORG_ROW: result.UZNEL_ORG_ROW,
+              LIB_USE_LDATE: result.LIB_USE_LDATE,
+            },
+          },
+        )
+      }
       res.json({ success: true, ...result })
     } catch (error) {
       console.error("Uznel sync error:", error.message)

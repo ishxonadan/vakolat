@@ -339,6 +339,165 @@ function normalizePhoto(photo) {
   return { base64: raw, fileSize: String(buffer.length) }
 }
 
+const STUSER_MOD_COLUMNS = `		<ColumnInfo>
+			<Column id="SEQUENCE_NO" type="string" size="39"  />
+			<Column id="USER_ID" type="string" size="20"  />
+			<Column id="USER_NO" type="string" size="20"  />
+			<Column id="WEB_ID" type="string" size="20"  />
+			<Column id="USER_NAME" type="string" size="200"  />
+			<Column id="FAMILY_ID" type="string" size="39"  />
+			<Column id="BIRTHDAY" type="string" size="8"  />
+			<Column id="SEX" type="string" size="4"  />
+			<Column id="TEMPLATE_CODE" type="string" size="8"  />
+			<Column id="USER_POSITION" type="string" size="4"  />
+			<Column id="GRADE_CODE" type="string" size="4"  />
+			<Column id="STATUS_CODE" type="string" size="4"  />
+			<Column id="LOAN_CHECK" type="string" size="4"  />
+			<Column id="EMAIL" type="string" size="4000"  />
+			<Column id="MOBILE_NO" type="string" size="4000"  />
+			<Column id="TEL_NO" type="string" size="4000"  />
+			<Column id="ZIP_CODE" type="string" size="4000"  />
+			<Column id="ADDRS" type="string" size="4000"  />
+			<Column id="LOCATION" type="string" size="12"  />
+			<Column id="INSERT_DATE" type="string" size="14"  />
+			<Column id="UPDATE_DATE" type="string" size="14"  />
+			<Column id="PROCESS_USER_ID" type="string" size="20"  />
+			<Column id="REMARK" type="string" size="4000"  />
+			<Column id="RES_REG_NO" type="string" size="0"  />
+			<Column id="PASSWORD" type="string" size="200"  />
+			<Column id="CMPNY_CODE" type="string" size="8"  />
+			<Column id="DEPT_CODE" type="string" size="8"  />
+			<Column id="FULL_CODE" type="string" size="16"  />
+			<Column id="SMS_CHECK" type="string" size="1"  />
+			<Column id="MAIL_CHECK" type="string" size="1"  />
+			<Column id="CLASS_CODE" type="string" size="4"  />
+			<Column id="LIB_USE_LDATE" type="string" size="8"  />
+			<Column id="LOGIN_DATE" type="string" size="14"  />
+			<Column id="UN_AGREE_DATE" type="string" size="14"  />
+			<Column id="UN_AGREE_FLAG" type="string" size="4"  />
+			<Column id="DUPINFO" type="string" size="64"  />
+			<Column id="CONN_INFO" type="string" size="200"  />
+		</ColumnInfo>`
+
+const MOD_ROW_FIELDS = [
+  "SEQUENCE_NO",
+  "USER_ID",
+  "USER_NO",
+  "USER_NAME",
+  "BIRTHDAY",
+  "SEX",
+  "TEMPLATE_CODE",
+  "USER_POSITION",
+  "GRADE_CODE",
+  "STATUS_CODE",
+  "LOAN_CHECK",
+  "TEL_NO",
+  "ZIP_CODE",
+  "ADDRS",
+  "LOCATION",
+  "INSERT_DATE",
+  "UPDATE_DATE",
+  "PROCESS_USER_ID",
+  "CMPNY_CODE",
+  "FULL_CODE",
+  "SMS_CHECK",
+  "MAIL_CHECK",
+  "CLASS_CODE",
+  "LIB_USE_LDATE",
+  "UN_AGREE_FLAG",
+]
+
+function snapshotModFields(member, userSeqNo) {
+  const userNo = resolveMemberMaskId(member)
+  const userId = process.env.UZNEL_USERID || DEFAULT_USERID
+  const location = process.env.UZNEL_LOCATION || DEFAULT_LOCATION
+  const cmpny = member.CMPNY_CODE || process.env.UZNEL_CMPNY_CODE || DEFAULT_CMPNY
+  return {
+    SEQUENCE_NO: String(userSeqNo || member.SEQUENCE_NO || member.USER_SEQ_NO || ""),
+    USER_ID: userNo,
+    USER_NO: userNo,
+    USER_NAME: String(member.USER_NAME || ""),
+    BIRTHDAY: toYyyymmdd(member.BIRTHDAY),
+    SEX: mapSex(member.SEX) || "0001",
+    TEMPLATE_CODE: member.TEMPLATE_CODE || process.env.UZNEL_TEMPLATE_CODE || DEFAULT_TEMPLATE,
+    USER_POSITION: mapPosition(member.USER_POSITION),
+    GRADE_CODE: member.GRADE_CODE || process.env.UZNEL_GRADE_CODE || DEFAULT_GRADE,
+    STATUS_CODE: member.STATUS_CODE || DEFAULT_STATUS,
+    LOAN_CHECK: member.LOAN_CHECK || DEFAULT_LOAN_CHECK,
+    TEL_NO: mapTelNo(member.TEL_NO),
+    ZIP_CODE: String(member.ZIP_CODE || "").trim().toUpperCase(),
+    ADDRS: String(member.ADDRS || ""),
+    LOCATION: member.LOCATION || location,
+    INSERT_DATE: toYyyymmdd(member.INSERT_DATE) || todayYyyymmdd(),
+    UPDATE_DATE: todayYyyymmdd(),
+    PROCESS_USER_ID: userId,
+    CMPNY_CODE: cmpny,
+    FULL_CODE: member.FULL_CODE || cmpny,
+    SMS_CHECK: member.SMS_CHECK || "Y",
+    MAIL_CHECK: member.MAIL_CHECK || "Y",
+    CLASS_CODE: member.CLASS_CODE || process.env.UZNEL_CLASS_CODE || DEFAULT_CLASS,
+    LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
+    UN_AGREE_FLAG: member.UN_AGREE_FLAG || "9999",
+  }
+}
+
+function xmlColsFromSnapshot(snapshot, indent = "\t\t\t\t") {
+  return MOD_ROW_FIELDS.map((id) => `${indent}<Col id="${id}">${xmlEscape(snapshot[id] ?? "")}</Col>\n`).join("")
+}
+
+function isUznelSynced(member) {
+  return Boolean(
+    member?.UZNEL_SYNCED
+    || String(member?.USER_SEQ_NO || "").trim()
+    || String(member?.SEQUENCE_NO || "").trim(),
+  )
+}
+
+function resolveStoredSeqNo(member) {
+  return String(member?.USER_SEQ_NO || member?.SEQUENCE_NO || "").trim()
+}
+
+function buildInfoModXml(member, userSeqNo) {
+  const userId = process.env.UZNEL_USERID || DEFAULT_USERID
+  const location = process.env.UZNEL_LOCATION || DEFAULT_LOCATION
+  const userNo = resolveMemberMaskId(member)
+  const nextRow = snapshotModFields(member, userSeqNo)
+  const orgSource = member?.UZNEL_ORG_ROW && typeof member.UZNEL_ORG_ROW === "object"
+    ? { ...snapshotModFields(member, userSeqNo), ...member.UZNEL_ORG_ROW, SEQUENCE_NO: userSeqNo }
+    : nextRow
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.nexacroplatform.com/platform/dataset">
+	<Parameters>
+		<Parameter id="USERID">${xmlEscape(userId)}</Parameter>
+		<Parameter id="className">action.set.user.SetUserInfoMod</Parameter>
+		<Parameter id="vLocation">${xmlEscape(location)}</Parameter>
+		<Parameter id="vUserSeqNo">${xmlEscape(userSeqNo)}</Parameter>
+		<Parameter id="vCheckYn">N</Parameter>
+		<Parameter id="vCheckType">UPDATE</Parameter>
+		<Parameter id="vCardPw" />
+		<Parameter id="vTargetUserId">${xmlEscape(userNo)}</Parameter>
+		<Parameter id="vWorkDiv">LAS</Parameter>
+		<Parameter id="HistRemark">${xmlEscape(userNo)}</Parameter>
+		<Parameter id="HistAdminIp">${xmlEscape(histAdminIp())}</Parameter>
+		<Parameter id="HistDispId">lon.formUserInfoDP</Parameter>
+	</Parameters>
+	<Dataset id="inds_stuser">
+${STUSER_MOD_COLUMNS}
+		<Rows>
+			<Row type="update">
+${xmlColsFromSnapshot(nextRow)}				<OrgRow>
+${xmlColsFromSnapshot(orgSource, "\t\t\t\t\t")}				</OrgRow>
+			</Row>
+		</Rows>
+	</Dataset>
+	<Dataset id="inds_userNotice">
+		<ColumnInfo />
+		<Rows>
+		</Rows>
+	</Dataset>
+</Root>`
+}
+
 function buildImageRegXml(member, userSeqNo, photo) {
   const userId = process.env.UZNEL_USERID || DEFAULT_USERID
   const location = process.env.UZNEL_LOCATION || DEFAULT_LOCATION
@@ -353,22 +512,34 @@ function buildImageRegXml(member, userSeqNo, photo) {
 	</Parameters>
 	<Dataset id="inds_temp">
 		<ColumnInfo>
-			<Column id="PHOTO" type="BLOB" size="256" prop="default" />
-			<Column id="USER_ID" type="STRING" size="256" prop="default" />
-			<Column id="FILE_SIZE" type="STRING" size="256" prop="default" />
-			<Column id="LOCA" type="STRING" size="256" prop="default" />
-			<Column id="USER_SEQ_NO" type="STRING" size="256"  />
+			<Column id="USER_ID" type="STRING" size="20"  />
+			<Column id="PHOTO" type="BLOB" size="4000"  />
+			<Column id="FILE_SIZE" type="STRING" size="15"  />
+			<Column id="LOCA" type="STRING" size="12"  />
+			<Column id="USER_SEQ_NO" type="STRING" size="39"  />
 		</ColumnInfo>
 		<Rows>
 			<Row type="insert">
-				<Col id="PHOTO">${photo.base64}</Col>
 				<Col id="USER_ID">${xmlEscape(userNo)}</Col>
+				<Col id="PHOTO">${photo.base64}</Col>
 				<Col id="FILE_SIZE">${xmlEscape(photo.fileSize)}</Col>
 				<Col id="LOCA">${xmlEscape(location)}</Col>
 			</Row>
 		</Rows>
 	</Dataset>
 </Root>`
+}
+
+async function syncPhoto(payload, userSeqNo) {
+  const photo = normalizePhoto(payload.PHOTO)
+  if (!photo) return { photoSynced: false }
+  if (!userSeqNo) {
+    throw new Error("Foydalanuvchi yozildi, lekin rasm uchun USER_SEQ_NO topilmadi")
+  }
+  await delay(SYNC_DELAY_MS)
+  const imageResult = await postUznelXml(buildImageRegXml(payload, userSeqNo, photo))
+  assertUznelOk(imageResult, "Uznelga rasm yozish muvaffaqiyatsiz")
+  return { photoSynced: true }
 }
 
 async function registerUznelUser(member) {
@@ -384,6 +555,33 @@ async function registerUznelUser(member) {
     INSERT_DATE: toYyyymmdd(member?.INSERT_DATE) || todayYyyymmdd(),
   }
 
+  const existingSeq = resolveStoredSeqNo(payload)
+  if (isUznelSynced(payload) && !existingSeq) {
+    throw new Error("Bu foydalanuvchi Uznelga yozilgan, lekin SEQUENCE_NO saqlanmagan")
+  }
+  if (existingSeq) {
+    const updated = await postUznelXml(buildInfoModXml(payload, existingSeq))
+    assertUznelOk(updated, "Uznelda yangilash muvaffaqiyatsiz")
+    let photoSynced = false
+    let photoError = null
+    try {
+      photoSynced = (await syncPhoto(payload, existingSeq)).photoSynced
+    } catch (error) {
+      photoError = error.message
+    }
+    return {
+      USER_NO: userNo,
+      USER_SEQ_NO: existingSeq,
+      SEQUENCE_NO: existingSeq,
+      UZNEL_SYNCED: true,
+      UZNEL_ORG_ROW: snapshotModFields(payload, existingSeq),
+      LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
+      updated: true,
+      photoSynced,
+      photoError,
+    }
+  }
+
   const dup = await postUznelXml(buildDupChkXml(payload))
   assertUznelOk(dup, "Uznel dublikat tekshiruvi muvaffaqiyatsiz")
 
@@ -392,22 +590,24 @@ async function registerUznelUser(member) {
   const registered = await postUznelXml(buildInfoRegXml(payload))
   assertUznelOk(registered, "Uznelga yozish muvaffaqiyatsiz")
   const userSeqNo = parseUserSeqNo(registered.xml) || parseUserSeqNo(dup.xml)
-
-  const photo = normalizePhoto(payload.PHOTO)
-  if (photo) {
-    if (!userSeqNo) {
-      throw new Error("Foydalanuvchi yozildi, lekin rasm uchun USER_SEQ_NO topilmadi")
-    }
-    await delay(SYNC_DELAY_MS)
-    const imageResult = await postUznelXml(buildImageRegXml(payload, userSeqNo, photo))
-    assertUznelOk(imageResult, "Uznelga rasm yozish muvaffaqiyatsiz")
+  let photoSynced = false
+  let photoError = null
+  try {
+    photoSynced = (await syncPhoto(payload, userSeqNo)).photoSynced
+  } catch (error) {
+    photoError = error.message
   }
 
   return {
     USER_NO: userNo,
     USER_SEQ_NO: userSeqNo || "",
+    SEQUENCE_NO: userSeqNo || "",
+    UZNEL_SYNCED: Boolean(userSeqNo),
+    UZNEL_ORG_ROW: snapshotModFields(payload, userSeqNo),
     LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
-    photoSynced: Boolean(photo),
+    updated: false,
+    photoSynced,
+    photoError,
   }
 }
 
@@ -417,6 +617,8 @@ module.exports = {
   postUznelXml,
   buildDupChkXml,
   buildInfoRegXml,
+  buildInfoModXml,
+  isUznelSynced,
   toYyyymmdd,
   addYearsYyyymmdd,
   mapSex,

@@ -94,10 +94,14 @@ const exportExcel = async () => {
 
 
 
+function memberIsUznelSynced(member) {
+  return Boolean(member?.UZNEL_SYNCED || member?.USER_SEQ_NO || member?.SEQUENCE_NO)
+}
+
 const openMemberDialog = async (member) => {
   selectedMember.value = { ...member }
   isEditMode.value = true
-  uznelSyncEnabled.value = false
+  uznelSyncEnabled.value = memberIsUznelSynced(member)
   activeTab.value = 0
   showDialog.value = true
   memberImagePreview.value = member.PHOTO || null
@@ -107,6 +111,7 @@ const openMemberDialog = async (member) => {
       const full = await apiService.get(`/members/by-user-no/${member.USER_NO}`)
       selectedMember.value = { ...full }
       memberImagePreview.value = full.PHOTO || null
+      uznelSyncEnabled.value = memberIsUznelSynced(full)
     } catch (error) {
       console.error('Error fetching member details:', error)
     }
@@ -224,6 +229,11 @@ const saveMember = async (updatedMember) => {
   }
 }
 
+const onUznelSynced = (member) => {
+  selectedMember.value = { ...selectedMember.value, ...member }
+  uznelSyncEnabled.value = true
+}
+
 const closeDialog = () => {
   showDialog.value = false
   selectedMember.value = null
@@ -308,6 +318,7 @@ onMounted(() => {
             :uznel-sync-enabled="uznelSyncEnabled"
             @close-dialog="closeDialog"
             @save-member="saveMember"
+            @uznel-synced="onUznelSynced"
             @image-select="onImageSelect"
             @delete-image="deleteImage"
           />
@@ -329,6 +340,7 @@ onMounted(() => {
         :uznel-sync-enabled="uznelSyncEnabled"
         @close-dialog="closeDialog"
         @save-member="saveMember"
+        @uznel-synced="onUznelSynced"
         @image-select="onImageSelect"
         @delete-image="deleteImage"
       />

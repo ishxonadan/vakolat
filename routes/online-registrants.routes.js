@@ -65,6 +65,9 @@ module.exports = (vakolat, nazorat) => {
     PASSPORT_NUMBER: String,
     PINFL: String,
     NATIONALITY: String,
+    UZNEL_SYNCED: Boolean,
+    UZNEL_SYNCED_AT: String,
+    UZNEL_ORG_ROW: mongoose.Schema.Types.Mixed,
   }
 
   const OnlineRegistrant = vakolat.model(

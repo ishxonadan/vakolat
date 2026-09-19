@@ -12,18 +12,16 @@
           type="button"
           label="Ustunlar"
           icon="pi pi-table"
-          outlined
-          rounded
-          severity="success"
+          severity="secondary"
+          class="member-action-btn"
           @click="toggleColumns"
         />
         <Button
           type="button"
           label="Excelga eksport"
           icon="pi pi-file-excel"
-          outlined
-          rounded
-          severity="success"
+          severity="secondary"
+          class="member-action-btn"
           :loading="exporting"
           @click="$emit('export-excel')"
         />
@@ -31,9 +29,8 @@
           type="button"
           label="Yangilash"
           icon="pi pi-refresh"
-          outlined
-          rounded
-          severity="success"
+          severity="secondary"
+          class="member-action-btn"
           :loading="loading"
           @click="$emit('refresh')"
         />
@@ -42,8 +39,7 @@
           type="button"
           :label="addLabel"
           icon="pi pi-plus"
-          rounded
-          severity="success"
+          class="member-action-btn member-action-btn-primary"
           @click="$emit('add-member')"
         />
       </div>
@@ -145,7 +141,6 @@
       >
         <template #body="{ data }">
           <button type="button" class="member-cell-link" @click.stop="$emit('row-dblclick', data)">
-            <i class="pi pi-pencil" />
             <span class="font-semibold">{{ displayValue(data.USER_NO) }}</span>
           </button>
         </template>
@@ -165,7 +160,6 @@
       >
         <template #body="{ data }">
           <button type="button" class="member-cell-link" @click.stop="$emit('row-dblclick', data)">
-            <i class="pi pi-pencil" />
             <span>{{ displayValue(data.USER_NAME) }}</span>
           </button>
         </template>
@@ -704,8 +698,25 @@ defineExpose({ downloadCsv })
 .member-registry-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.member-registry-actions :deep(.member-action-btn.p-button) {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.member-registry-actions :deep(.member-action-btn-primary.p-button) {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.12),
+    0 2px 8px color-mix(in srgb, var(--p-primary-color, var(--primary-color)) 28%, transparent);
 }
 
 .member-search {
@@ -779,7 +790,6 @@ defineExpose({ downloadCsv })
 .member-cell-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
   border: 0;
   background: transparent;
   color: inherit;
@@ -787,12 +797,6 @@ defineExpose({ downloadCsv })
   cursor: pointer;
   text-align: left;
   max-width: 100%;
-}
-
-.member-cell-link i {
-  font-size: 0.85rem;
-  color: var(--p-primary-color, var(--primary-color));
-  opacity: 0.85;
 }
 
 .member-cell-link span {

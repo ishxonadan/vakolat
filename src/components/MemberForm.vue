@@ -350,7 +350,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image'])
+const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced'])
 const toast = useToast()
 
 const fileInput = ref(null)
@@ -748,12 +748,23 @@ async function syncToUznel() {
   try {
     const payload = buildMemberPayload()
     const response = await apiService.post('/members/uznel-sync', payload)
+    emit('uznel-synced', {
+      ...payload,
+      USER_SEQ_NO: response?.USER_SEQ_NO || payload.USER_SEQ_NO,
+      SEQUENCE_NO: response?.SEQUENCE_NO || response?.USER_SEQ_NO || payload.SEQUENCE_NO,
+      UZNEL_SYNCED: Boolean(response?.USER_SEQ_NO || response?.SEQUENCE_NO),
+      UZNEL_ORG_ROW: response?.UZNEL_ORG_ROW || payload.UZNEL_ORG_ROW,
+      LIB_USE_LDATE: response?.LIB_USE_LDATE || payload.LIB_USE_LDATE,
+    })
+    const action = response?.updated ? 'yangilandi' : 'yozildi'
     toast.add({
-      severity: 'success',
+      severity: response?.photoError ? 'warn' : 'success',
       summary: 'Uznel',
-      detail: response?.photoSynced
-        ? `${payload.USER_NO} ma'lumotlari va rasm yuborildi`
-        : `${payload.USER_NO} ma'lumotlari yuborildi`,
+      detail: response?.photoError
+        ? `${payload.USER_NO} ma'lumotlari ${action}, lekin rasm: ${response.photoError}`
+        : response?.photoSynced
+          ? `${payload.USER_NO} ma'lumotlari va rasm ${action}`
+          : `${payload.USER_NO} ma'lumotlari ${action}`,
       life: 3500
     })
   } catch (error) {
