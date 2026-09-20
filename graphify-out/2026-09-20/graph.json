@@ -36,7 +36,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "auth",
       "source_file": "routes/auth.routes.js",
@@ -364,7 +364,7 @@
       "file_type": "code",
       "norm_label": "capphonelocal()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L453"
+      "source_location": "L451"
     },
     {
       "id": "src_components_memberform_displaydialcode",
@@ -376,7 +376,7 @@
       "file_type": "code",
       "norm_label": "displaydialcode()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L448"
+      "source_location": "L446"
     },
     {
       "id": "src_components_memberform_oncustomphonecodeinput",
@@ -388,7 +388,7 @@
       "file_type": "code",
       "norm_label": "oncustomphonecodeinput()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L468"
+      "source_location": "L466"
     },
     {
       "id": "src_components_memberform_onphonelocalinput",
@@ -400,7 +400,19 @@
       "file_type": "code",
       "norm_label": "onphonelocalinput()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L682"
+      "source_location": "L679"
+    },
+    {
+      "id": "src_utils_phonenumber_composephonenumber",
+      "label": "composePhoneNumber()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "phoneNumber.js",
+      "file_type": "code",
+      "norm_label": "composephonenumber()",
+      "source_file": "src/utils/phoneNumber.js",
+      "source_location": "L324"
     },
     {
       "id": "src_utils_phonenumber_digitsonly",
@@ -568,7 +580,7 @@
       "file_type": "code",
       "norm_label": "buildmemberpayload()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L690"
+      "source_location": "L687"
     },
     {
       "id": "src_components_memberform_onclosedialog",
@@ -580,7 +592,7 @@
       "file_type": "code",
       "norm_label": "onclosedialog()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L686"
+      "source_location": "L683"
     },
     {
       "id": "src_components_memberform_ondeleteimage",
@@ -592,7 +604,7 @@
       "file_type": "code",
       "norm_label": "ondeleteimage()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L644"
+      "source_location": "L641"
     },
     {
       "id": "src_components_memberform_onsavemember",
@@ -604,7 +616,7 @@
       "file_type": "code",
       "norm_label": "onsavemember()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L713"
+      "source_location": "L710"
     },
     {
       "id": "src_components_memberform_pad2",
@@ -616,7 +628,7 @@
       "file_type": "code",
       "norm_label": "pad2()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L596"
+      "source_location": "L593"
     },
     {
       "id": "src_components_memberform_parsebirthday",
@@ -628,7 +640,7 @@
       "file_type": "code",
       "norm_label": "parsebirthday()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L614"
+      "source_location": "L611"
     },
     {
       "id": "src_components_memberform_synctouznel",
@@ -640,7 +652,7 @@
       "file_type": "code",
       "norm_label": "synctouznel()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L738"
+      "source_location": "L734"
     },
     {
       "id": "src_components_memberform_tolocalyyyymmdd",
@@ -652,19 +664,79 @@
       "file_type": "code",
       "norm_label": "tolocalyyyymmdd()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L600"
+      "source_location": "L597"
     },
     {
-      "id": "src_utils_phonenumber_composephonenumber",
-      "label": "composePhoneNumber()",
+      "id": "src_views_pages_onlayn_royxatdan_otganlar_applysearch",
+      "label": "applySearch()",
       "_callable": true,
       "_origin": "ast",
-      "community": 104,
-      "community_name": "emit",
+      "community": 106,
+      "community_name": "fetchMembers",
       "file_type": "code",
-      "norm_label": "composephonenumber()",
-      "source_file": "src/utils/phoneNumber.js",
-      "source_location": "L324"
+      "norm_label": "applysearch()",
+      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
+      "source_location": "L60"
+    },
+    {
+      "id": "src_views_pages_onlayn_royxatdan_otganlar_buildsearchbody",
+      "label": "buildSearchBody()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "fetchMembers",
+      "file_type": "code",
+      "norm_label": "buildsearchbody()",
+      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
+      "source_location": "L32"
+    },
+    {
+      "id": "src_views_pages_onlayn_royxatdan_otganlar_exportexcel",
+      "label": "exportExcel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "fetchMembers",
+      "file_type": "code",
+      "norm_label": "exportexcel()",
+      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
+      "source_location": "L65"
+    },
+    {
+      "id": "src_views_pages_onlayn_royxatdan_otganlar_fetchmembers",
+      "label": "fetchMembers()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "fetchMembers",
+      "file_type": "code",
+      "norm_label": "fetchmembers()",
+      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
+      "source_location": "L41"
+    },
+    {
+      "id": "src_views_pages_onlayn_royxatdan_otganlar_onupdatecurrentpage",
+      "label": "onUpdateCurrentPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "fetchMembers",
+      "file_type": "code",
+      "norm_label": "onupdatecurrentpage()",
+      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
+      "source_location": "L241"
+    },
+    {
+      "id": "src_views_pages_onlayn_royxatdan_otganlar_savemember",
+      "label": "saveMember()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 106,
+      "community_name": "fetchMembers",
+      "file_type": "code",
+      "norm_label": "savemember()",
+      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
+      "source_location": "L185"
     },
     {
       "id": "src_components_webcamcapture_applycolorcorrection",
@@ -892,7 +964,7 @@
       "file_type": "code",
       "norm_label": "onpinflinput()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L674"
+      "source_location": "L671"
     },
     {
       "id": "src_utils_parseidmrz_compactmrz",
@@ -1051,18 +1123,6 @@
       "source_location": "L3"
     },
     {
-      "id": "src_bootstrap_seed_permissions_addmissingpermissionids",
-      "label": "addMissingPermissionIds()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "seed-permissions.js",
-      "file_type": "code",
-      "norm_label": "addmissingpermissionids()",
-      "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L37"
-    },
-    {
       "id": "src_bootstrap_seed_permissions_seedpermissionsandgroups",
       "label": "seedPermissionsAndGroups()",
       "_callable": true,
@@ -1072,7 +1132,7 @@
       "file_type": "code",
       "norm_label": "seedpermissionsandgroups()",
       "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L46"
+      "source_location": "L34"
     },
     {
       "id": "test_server_ticket_functions_test_generateticketid",
@@ -1147,6 +1207,102 @@
       "source_location": "L55"
     },
     {
+      "id": "src_views_pages_payment_statistics_applycustomrange",
+      "label": "applyCustomRange()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "applycustomrange()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L248"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_formatdatetoymd",
+      "label": "formatDateToYmd()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "formatdatetoymd()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L56"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_getpresetrange",
+      "label": "getPresetRange()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "getpresetrange()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L137"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_loadpresetstatistics",
+      "label": "loadPresetStatistics()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "loadpresetstatistics()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L243"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_loadstatistics",
+      "label": "loadStatistics()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "loadstatistics()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L187"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_normalizemonthbuckets",
+      "label": "normalizeMonthBuckets()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "normalizemonthbuckets()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L118"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_pad2",
+      "label": "pad2()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "pad2()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L55"
+    },
+    {
+      "id": "src_views_pages_payment_statistics_resolvemonthkeysinrange",
+      "label": "resolveMonthKeysInRange()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 118,
+      "community_name": "loadStatistics",
+      "file_type": "code",
+      "norm_label": "resolvemonthkeysinrange()",
+      "source_file": "src/views/pages/payment_statistics.vue",
+      "source_location": "L100"
+    },
+    {
       "id": "src_components_memberform_applyparsedid",
       "label": "applyParsedId()",
       "_callable": true,
@@ -1156,7 +1312,7 @@
       "file_type": "code",
       "norm_label": "applyparsedid()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L495"
+      "source_location": "L493"
     },
     {
       "id": "src_components_memberform_consumescanbuffer",
@@ -1168,7 +1324,7 @@
       "file_type": "code",
       "norm_label": "consumescanbuffer()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L538"
+      "source_location": "L536"
     },
     {
       "id": "src_components_memberform_ensurenationalityoption",
@@ -1180,7 +1336,7 @@
       "file_type": "code",
       "norm_label": "ensurenationalityoption()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L443"
+      "source_location": "L441"
     },
     {
       "id": "src_components_memberform_onscankeydown",
@@ -1192,7 +1348,7 @@
       "file_type": "code",
       "norm_label": "onscankeydown()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L553"
+      "source_location": "L551"
     },
     {
       "id": "src_components_memberform_onscanpaste",
@@ -1204,7 +1360,7 @@
       "file_type": "code",
       "norm_label": "onscanpaste()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L577"
+      "source_location": "L575"
     },
     {
       "id": "src_components_memberform_takescansnapshot",
@@ -1216,7 +1372,7 @@
       "file_type": "code",
       "norm_label": "takescansnapshot()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L480"
+      "source_location": "L478"
     },
     {
       "id": "src_utils_parseidmrz_ismrzcharsetkey",
@@ -1303,18 +1459,6 @@
       "source_location": "L49"
     },
     {
-      "id": "src_views_pages_payment_statistics_applycustomrange",
-      "label": "applyCustomRange()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
-      "file_type": "code",
-      "norm_label": "applycustomrange()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L248"
-    },
-    {
       "id": "src_views_pages_payment_statistics_formatdatedisplay",
       "label": "formatDateDisplay()",
       "_callable": true,
@@ -1337,18 +1481,6 @@
       "norm_label": "formatdatetimedisplay()",
       "source_file": "src/views/pages/payment_statistics.vue",
       "source_location": "L66"
-    },
-    {
-      "id": "src_views_pages_payment_statistics_formatdatetoymd",
-      "label": "formatDateToYmd()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
-      "file_type": "code",
-      "norm_label": "formatdatetoymd()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L56"
     },
     {
       "id": "src_views_pages_payment_statistics_formatmoney",
@@ -1399,18 +1531,6 @@
       "source_location": "L72"
     },
     {
-      "id": "src_views_pages_payment_statistics_getpresetrange",
-      "label": "getPresetRange()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
-      "file_type": "code",
-      "norm_label": "getpresetrange()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L137"
-    },
-    {
       "id": "src_views_pages_payment_statistics_isperiodoptiondisabled",
       "label": "isPeriodOptionDisabled()",
       "_callable": true,
@@ -1433,42 +1553,6 @@
       "norm_label": "loaddaydetails()",
       "source_file": "src/views/pages/payment_statistics.vue",
       "source_location": "L261"
-    },
-    {
-      "id": "src_views_pages_payment_statistics_loadpresetstatistics",
-      "label": "loadPresetStatistics()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
-      "file_type": "code",
-      "norm_label": "loadpresetstatistics()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L243"
-    },
-    {
-      "id": "src_views_pages_payment_statistics_loadstatistics",
-      "label": "loadStatistics()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
-      "file_type": "code",
-      "norm_label": "loadstatistics()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L187"
-    },
-    {
-      "id": "src_views_pages_payment_statistics_normalizemonthbuckets",
-      "label": "normalizeMonthBuckets()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
-      "file_type": "code",
-      "norm_label": "normalizemonthbuckets()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L118"
     },
     {
       "id": "src_views_pages_payment_statistics_onsectiontabchange",
@@ -1519,28 +1603,64 @@
       "source_location": "L292"
     },
     {
-      "id": "src_views_pages_payment_statistics_pad2",
-      "label": "pad2()",
+      "id": "src_components_memberlist_cellexportvalue",
+      "label": "cellExportValue()",
       "_callable": true,
       "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
+      "community": 130,
+      "community_name": "cellExportValue",
       "file_type": "code",
-      "norm_label": "pad2()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L55"
+      "norm_label": "cellexportvalue()",
+      "source_file": "src/components/MemberList.vue",
+      "source_location": "L636"
     },
     {
-      "id": "src_views_pages_payment_statistics_resolvemonthkeysinrange",
-      "label": "resolveMonthKeysInRange()",
+      "id": "src_components_memberlist_csvvalue",
+      "label": "csvValue()",
       "_callable": true,
       "_origin": "ast",
-      "community": 13,
-      "community_name": "payment_statistics.vue",
+      "community": 130,
+      "community_name": "cellExportValue",
       "file_type": "code",
-      "norm_label": "resolvemonthkeysinrange()",
-      "source_file": "src/views/pages/payment_statistics.vue",
-      "source_location": "L100"
+      "norm_label": "csvvalue()",
+      "source_file": "src/components/MemberList.vue",
+      "source_location": "L630"
+    },
+    {
+      "id": "src_components_memberlist_displaypassport",
+      "label": "displayPassport()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "cellExportValue",
+      "file_type": "code",
+      "norm_label": "displaypassport()",
+      "source_file": "src/components/MemberList.vue",
+      "source_location": "L485"
+    },
+    {
+      "id": "src_components_memberlist_downloadcsv",
+      "label": "downloadCsv()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "cellExportValue",
+      "file_type": "code",
+      "norm_label": "downloadcsv()",
+      "source_file": "src/components/MemberList.vue",
+      "source_location": "L646"
+    },
+    {
+      "id": "src_components_memberlist_formatdate",
+      "label": "formatDate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 130,
+      "community_name": "cellExportValue",
+      "file_type": "code",
+      "norm_label": "formatdate()",
+      "source_file": "src/components/MemberList.vue",
+      "source_location": "L600"
     },
     {
       "id": "src_views_uikit_filedoc_onupload",
@@ -1567,6 +1687,30 @@
       "source_location": "L8"
     },
     {
+      "id": "src_utils_paymentlabels_paymenttransactiondirectionlabel",
+      "label": "paymentTransactionDirectionLabel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 133,
+      "community_name": "paymentLabels.js",
+      "file_type": "code",
+      "norm_label": "paymenttransactiondirectionlabel()",
+      "source_file": "src/utils/paymentLabels.js",
+      "source_location": "L20"
+    },
+    {
+      "id": "src_utils_paymentlabels_paymenttransactiontypelabel",
+      "label": "paymentTransactionTypeLabel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 133,
+      "community_name": "paymentLabels.js",
+      "file_type": "code",
+      "norm_label": "paymenttransactiontypelabel()",
+      "source_file": "src/utils/paymentLabels.js",
+      "source_location": "L14"
+    },
+    {
       "id": "src_views_uikit_panelsdoc_toggle",
       "label": "toggle()",
       "_callable": true,
@@ -1577,6 +1721,42 @@
       "norm_label": "toggle()",
       "source_file": "src/views/uikit/PanelsDoc.vue",
       "source_location": "L29"
+    },
+    {
+      "id": "scripts_debug_pullik_service_pricing_source_inspectcollection",
+      "label": "inspectCollection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 136,
+      "community_name": "debug-pullik-service-pricing-source.js",
+      "file_type": "code",
+      "norm_label": "inspectcollection()",
+      "source_file": "scripts/debug-pullik-service-pricing-source.js",
+      "source_location": "L4"
+    },
+    {
+      "id": "scripts_debug_pullik_service_pricing_source_run",
+      "label": "run()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 136,
+      "community_name": "debug-pullik-service-pricing-source.js",
+      "file_type": "code",
+      "norm_label": "run()",
+      "source_file": "scripts/debug-pullik-service-pricing-source.js",
+      "source_location": "L10"
+    },
+    {
+      "id": "src_utils_logo_getlibrarylogosvg",
+      "label": "getLibraryLogoSvg()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "ticket_add.vue",
+      "file_type": "code",
+      "norm_label": "getlibrarylogosvg()",
+      "source_file": "src/utils/logo.js",
+      "source_location": "L1"
     },
     {
       "id": "src_views_pages_ticket_add_checkexistinguser",
@@ -1692,7 +1872,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "checkuserlevel()",
       "source_file": "src/middleware/auth.middleware.js",
@@ -2503,30 +2683,6 @@
       "source_location": "L4"
     },
     {
-      "id": "scripts_debug_pullik_service_pricing_source_inspectcollection",
-      "label": "inspectCollection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "mongoose",
-      "file_type": "code",
-      "norm_label": "inspectcollection()",
-      "source_file": "scripts/debug-pullik-service-pricing-source.js",
-      "source_location": "L4"
-    },
-    {
-      "id": "scripts_debug_pullik_service_pricing_source_run",
-      "label": "run()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "mongoose",
-      "file_type": "code",
-      "norm_label": "run()",
-      "source_file": "scripts/debug-pullik-service-pricing-source.js",
-      "source_location": "L10"
-    },
-    {
       "id": "scripts_debug_user_balance_run",
       "label": "run()",
       "_callable": true,
@@ -2549,6 +2705,30 @@
       "norm_label": "run()",
       "source_file": "scripts/inspect-pullik-sample.js",
       "source_location": "L4"
+    },
+    {
+      "id": "src_middleware_auth_middleware_checkpermissions",
+      "label": "checkPermissions()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "checkpermissions()",
+      "source_file": "src/middleware/auth.middleware.js",
+      "source_location": "L44"
+    },
+    {
+      "id": "src_middleware_auth_middleware_verifytoken",
+      "label": "verifyToken()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "verifytoken()",
+      "source_file": "src/middleware/auth.middleware.js",
+      "source_location": "L6"
     },
     {
       "id": "src_views_uikit_tabledoc_calculatecustomertotal",
@@ -4384,19 +4564,7 @@
       "file_type": "code",
       "norm_label": "applysearchnow()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L572"
-    },
-    {
-      "id": "src_components_memberlist_cellexportvalue",
-      "label": "cellExportValue()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "MemberList.vue",
-      "file_type": "code",
-      "norm_label": "cellexportvalue()",
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L638"
+      "source_location": "L570"
     },
     {
       "id": "src_components_memberlist_clearsearch",
@@ -4408,7 +4576,7 @@
       "file_type": "code",
       "norm_label": "clearsearch()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L577"
+      "source_location": "L575"
     },
     {
       "id": "src_components_memberlist_columnstyle",
@@ -4420,31 +4588,7 @@
       "file_type": "code",
       "norm_label": "columnstyle()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L509"
-    },
-    {
-      "id": "src_components_memberlist_csvvalue",
-      "label": "csvValue()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "MemberList.vue",
-      "file_type": "code",
-      "norm_label": "csvvalue()",
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L632"
-    },
-    {
-      "id": "src_components_memberlist_displaypassport",
-      "label": "displayPassport()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "MemberList.vue",
-      "file_type": "code",
-      "norm_label": "displaypassport()",
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L487"
+      "source_location": "L507"
     },
     {
       "id": "src_components_memberlist_displayvalue",
@@ -4456,31 +4600,7 @@
       "file_type": "code",
       "norm_label": "displayvalue()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L482"
-    },
-    {
-      "id": "src_components_memberlist_downloadcsv",
-      "label": "downloadCsv()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "MemberList.vue",
-      "file_type": "code",
-      "norm_label": "downloadcsv()",
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L648"
-    },
-    {
-      "id": "src_components_memberlist_formatdate",
-      "label": "formatDate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "MemberList.vue",
-      "file_type": "code",
-      "norm_label": "formatdate()",
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L602"
+      "source_location": "L480"
     },
     {
       "id": "src_components_memberlist_isvisible",
@@ -4492,7 +4612,7 @@
       "file_type": "code",
       "norm_label": "isvisible()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L478"
+      "source_location": "L476"
     },
     {
       "id": "src_components_memberlist_loadcolumnwidths",
@@ -4504,7 +4624,7 @@
       "file_type": "code",
       "norm_label": "loadcolumnwidths()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L528"
+      "source_location": "L526"
     },
     {
       "id": "src_components_memberlist_loadvisiblefields",
@@ -4516,7 +4636,7 @@
       "file_type": "code",
       "norm_label": "loadvisiblefields()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L549"
+      "source_location": "L547"
     },
     {
       "id": "src_components_memberlist_oncolumnresizeend",
@@ -4528,7 +4648,7 @@
       "file_type": "code",
       "norm_label": "oncolumnresizeend()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L539"
+      "source_location": "L537"
     },
     {
       "id": "src_components_memberlist_onpage",
@@ -4540,7 +4660,7 @@
       "file_type": "code",
       "norm_label": "onpage()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L589"
+      "source_location": "L587"
     },
     {
       "id": "src_components_memberlist_onrowclick",
@@ -4552,7 +4672,7 @@
       "file_type": "code",
       "norm_label": "onrowclick()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L594"
+      "source_location": "L592"
     },
     {
       "id": "src_components_memberlist_onsearchinput",
@@ -4564,7 +4684,7 @@
       "file_type": "code",
       "norm_label": "onsearchinput()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L564"
+      "source_location": "L562"
     },
     {
       "id": "src_components_memberlist_onsort",
@@ -4576,7 +4696,7 @@
       "file_type": "code",
       "norm_label": "onsort()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L583"
+      "source_location": "L581"
     },
     {
       "id": "src_components_memberlist_persistcolumnwidths",
@@ -4588,7 +4708,7 @@
       "file_type": "code",
       "norm_label": "persistcolumnwidths()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L517"
+      "source_location": "L515"
     },
     {
       "id": "src_components_memberlist_persistvisiblefields",
@@ -4600,7 +4720,7 @@
       "file_type": "code",
       "norm_label": "persistvisiblefields()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L498"
+      "source_location": "L496"
     },
     {
       "id": "src_components_memberlist_togglecolumns",
@@ -4612,31 +4732,7 @@
       "file_type": "code",
       "norm_label": "togglecolumns()",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L494"
-    },
-    {
-      "id": "src_utils_paymentlabels_paymenttransactiondirectionlabel",
-      "label": "paymentTransactionDirectionLabel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "payment_history.vue",
-      "file_type": "code",
-      "norm_label": "paymenttransactiondirectionlabel()",
-      "source_file": "src/utils/paymentLabels.js",
-      "source_location": "L20"
-    },
-    {
-      "id": "src_utils_paymentlabels_paymenttransactiontypelabel",
-      "label": "paymentTransactionTypeLabel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "payment_history.vue",
-      "file_type": "code",
-      "norm_label": "paymenttransactiontypelabel()",
-      "source_file": "src/utils/paymentLabels.js",
-      "source_location": "L14"
+      "source_location": "L492"
     },
     {
       "id": "src_views_pages_payment_history_formatmoney",
@@ -4920,7 +5016,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "generateticketid()",
       "source_file": "routes/tickets.routes.js",
@@ -4932,7 +5028,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "getnextdailyordernumber()",
       "source_file": "routes/tickets.routes.js",
@@ -4944,95 +5040,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "getnextglobalticketnumber()",
       "source_file": "routes/tickets.routes.js",
       "source_location": "L12"
-    },
-    {
-      "id": "server_createticketsroutes",
-      "label": "createTicketsRoutes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "createticketsroutes()",
-      "source_file": "server.js",
-      "source_location": "L673"
-    },
-    {
-      "id": "server_createticketsroutes_generateticketid",
-      "label": "generateTicketId()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "generateticketid()",
-      "source_file": "server.js",
-      "source_location": "L678"
-    },
-    {
-      "id": "server_createticketsroutes_getnextdailyordernumber",
-      "label": "getNextDailyOrderNumber()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "getnextdailyordernumber()",
-      "source_file": "server.js",
-      "source_location": "L725"
-    },
-    {
-      "id": "server_createticketsroutes_getnextglobalticketnumber",
-      "label": "getNextGlobalTicketNumber()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "getnextglobalticketnumber()",
-      "source_file": "server.js",
-      "source_location": "L682"
-    },
-    {
-      "id": "server_createticketsroutes_gettodaynormalized",
-      "label": "getTodayNormalized()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "gettodaynormalized()",
-      "source_file": "server.js",
-      "source_location": "L698"
-    },
-    {
-      "id": "server_createticketsroutes_hasticketfortoday",
-      "label": "hasTicketForToday()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "hasticketfortoday()",
-      "source_file": "server.js",
-      "source_location": "L702"
-    },
-    {
-      "id": "server_createticketsroutes_normalizetocalendarday",
-      "label": "normalizeToCalendarDay()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 52,
-      "community_name": "createTicketsRoutes",
-      "file_type": "code",
-      "norm_label": "normalizetocalendarday()",
-      "source_file": "server.js",
-      "source_location": "L692"
     },
     {
       "id": "src_views_dashboard_fetchtvstats",
@@ -5704,7 +5716,7 @@
       "file_type": "code",
       "norm_label": "applyparsedphone()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L457"
+      "source_location": "L455"
     },
     {
       "id": "src_components_memberform_dataurltofile",
@@ -5716,7 +5728,7 @@
       "file_type": "code",
       "norm_label": "dataurltofile()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L793"
+      "source_location": "L789"
     },
     {
       "id": "src_components_memberform_fetchuzneluserid",
@@ -5728,7 +5740,7 @@
       "file_type": "code",
       "norm_label": "fetchuzneluserid()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L648"
+      "source_location": "L645"
     },
     {
       "id": "src_components_memberform_onfilepicked",
@@ -5740,7 +5752,7 @@
       "file_type": "code",
       "norm_label": "onfilepicked()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L626"
+      "source_location": "L623"
     },
     {
       "id": "src_components_memberform_onimageselect",
@@ -5752,7 +5764,7 @@
       "file_type": "code",
       "norm_label": "onimageselect()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L622"
+      "source_location": "L619"
     },
     {
       "id": "src_components_memberform_onwebcamcapture",
@@ -5764,7 +5776,7 @@
       "file_type": "code",
       "norm_label": "onwebcamcapture()",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L786"
+      "source_location": "L782"
     },
     {
       "id": "routes_auth_routes_auth_authenticate",
@@ -5772,7 +5784,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": ".authenticate()",
       "source_file": "routes/auth.routes.js",
@@ -5784,7 +5796,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "routes/auth.routes.js",
@@ -5796,11 +5808,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": ".generateaccesstoken()",
       "source_file": "routes/auth.routes.js",
       "source_location": "L35"
+    },
+    {
+      "id": "src_middleware_auth_middleware_checkanypermissions",
+      "label": "checkAnyPermissions()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "auth.middleware.js",
+      "file_type": "code",
+      "norm_label": "checkanypermissions()",
+      "source_file": "src/middleware/auth.middleware.js",
+      "source_location": "L100"
     },
     {
       "id": "src_utils_userpermissionnames_collectpermissionnamesfrompopulateduser",
@@ -5808,7 +5832,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "collectpermissionnamesfrompopulateduser()",
       "source_file": "src/utils/userPermissionNames.js",
@@ -5820,7 +5844,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "mergelegacypermissiongroups()",
       "source_file": "src/utils/userPermissionNames.js",
@@ -5832,7 +5856,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "normalizepermissiongroupids()",
       "source_file": "src/utils/userPermissionNames.js",
@@ -6307,30 +6331,6 @@
       "source_location": "L24"
     },
     {
-      "id": "src_views_pages_onlayn_royxatdan_otganlar_applysearch",
-      "label": "applySearch()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "onlayn-royxatdan-otganlar.vue",
-      "file_type": "code",
-      "norm_label": "applysearch()",
-      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
-      "source_location": "L60"
-    },
-    {
-      "id": "src_views_pages_onlayn_royxatdan_otganlar_buildsearchbody",
-      "label": "buildSearchBody()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "onlayn-royxatdan-otganlar.vue",
-      "file_type": "code",
-      "norm_label": "buildsearchbody()",
-      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
-      "source_location": "L32"
-    },
-    {
       "id": "src_views_pages_onlayn_royxatdan_otganlar_closedialog",
       "label": "closeDialog()",
       "_callable": true,
@@ -6355,30 +6355,6 @@
       "source_location": "L161"
     },
     {
-      "id": "src_views_pages_onlayn_royxatdan_otganlar_exportexcel",
-      "label": "exportExcel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "onlayn-royxatdan-otganlar.vue",
-      "file_type": "code",
-      "norm_label": "exportexcel()",
-      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
-      "source_location": "L65"
-    },
-    {
-      "id": "src_views_pages_onlayn_royxatdan_otganlar_fetchmembers",
-      "label": "fetchMembers()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "onlayn-royxatdan-otganlar.vue",
-      "file_type": "code",
-      "norm_label": "fetchmembers()",
-      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
-      "source_location": "L41"
-    },
-    {
       "id": "src_views_pages_onlayn_royxatdan_otganlar_fetchuservisits",
       "label": "fetchUserVisits()",
       "_callable": true,
@@ -6401,18 +6377,6 @@
       "norm_label": "onimageselect()",
       "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
       "source_location": "L148"
-    },
-    {
-      "id": "src_views_pages_onlayn_royxatdan_otganlar_onupdatecurrentpage",
-      "label": "onUpdateCurrentPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "onlayn-royxatdan-otganlar.vue",
-      "file_type": "code",
-      "norm_label": "onupdatecurrentpage()",
-      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
-      "source_location": "L241"
     },
     {
       "id": "src_views_pages_onlayn_royxatdan_otganlar_onupdaterowsperpage",
@@ -6449,18 +6413,6 @@
       "norm_label": "openmemberdialog()",
       "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
       "source_location": "L92"
-    },
-    {
-      "id": "src_views_pages_onlayn_royxatdan_otganlar_savemember",
-      "label": "saveMember()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "onlayn-royxatdan-otganlar.vue",
-      "file_type": "code",
-      "norm_label": "savemember()",
-      "source_file": "src/views/pages/onlayn-royxatdan-otganlar.vue",
-      "source_location": "L185"
     },
     {
       "id": "routes_admin_routes_calculatesorovnomascore",
@@ -6943,40 +6895,88 @@
       "source_location": "L18"
     },
     {
-      "id": "src_middleware_auth_middleware_checkanypermissions",
-      "label": "checkAnyPermissions()",
+      "id": "server_createticketsroutes",
+      "label": "createTicketsRoutes()",
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "auth.middleware.js",
+      "community_name": "createTicketsRoutes",
       "file_type": "code",
-      "norm_label": "checkanypermissions()",
-      "source_file": "src/middleware/auth.middleware.js",
-      "source_location": "L100"
+      "norm_label": "createticketsroutes()",
+      "source_file": "server.js",
+      "source_location": "L673"
     },
     {
-      "id": "src_middleware_auth_middleware_checkpermissions",
-      "label": "checkPermissions()",
+      "id": "server_createticketsroutes_generateticketid",
+      "label": "generateTicketId()",
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "auth.middleware.js",
+      "community_name": "createTicketsRoutes",
       "file_type": "code",
-      "norm_label": "checkpermissions()",
-      "source_file": "src/middleware/auth.middleware.js",
-      "source_location": "L44"
+      "norm_label": "generateticketid()",
+      "source_file": "server.js",
+      "source_location": "L678"
     },
     {
-      "id": "src_middleware_auth_middleware_verifytoken",
-      "label": "verifyToken()",
+      "id": "server_createticketsroutes_getnextdailyordernumber",
+      "label": "getNextDailyOrderNumber()",
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "auth.middleware.js",
+      "community_name": "createTicketsRoutes",
       "file_type": "code",
-      "norm_label": "verifytoken()",
-      "source_file": "src/middleware/auth.middleware.js",
-      "source_location": "L6"
+      "norm_label": "getnextdailyordernumber()",
+      "source_file": "server.js",
+      "source_location": "L725"
+    },
+    {
+      "id": "server_createticketsroutes_getnextglobalticketnumber",
+      "label": "getNextGlobalTicketNumber()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "createTicketsRoutes",
+      "file_type": "code",
+      "norm_label": "getnextglobalticketnumber()",
+      "source_file": "server.js",
+      "source_location": "L682"
+    },
+    {
+      "id": "server_createticketsroutes_gettodaynormalized",
+      "label": "getTodayNormalized()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "createTicketsRoutes",
+      "file_type": "code",
+      "norm_label": "gettodaynormalized()",
+      "source_file": "server.js",
+      "source_location": "L698"
+    },
+    {
+      "id": "server_createticketsroutes_hasticketfortoday",
+      "label": "hasTicketForToday()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "createTicketsRoutes",
+      "file_type": "code",
+      "norm_label": "hasticketfortoday()",
+      "source_file": "server.js",
+      "source_location": "L702"
+    },
+    {
+      "id": "server_createticketsroutes_normalizetocalendarday",
+      "label": "normalizeToCalendarDay()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "createTicketsRoutes",
+      "file_type": "code",
+      "norm_label": "normalizetocalendarday()",
+      "source_file": "server.js",
+      "source_location": "L692"
     },
     {
       "id": "src_utils_barcode_generatebarcode",
@@ -7841,18 +7841,6 @@
       "norm_label": "migratestaffpositionsortordertoonebased()",
       "source_file": "src/bootstrap/seed-staff.js",
       "source_location": "L28"
-    },
-    {
-      "id": "src_utils_logo_getlibrarylogosvg",
-      "label": "getLibraryLogoSvg()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "logo.test.js",
-      "file_type": "code",
-      "norm_label": "getlibrarylogosvg()",
-      "source_file": "src/utils/logo.js",
-      "source_location": "L1"
     },
     {
       "id": "src_components_webcamcapture_capturephoto",
@@ -9195,7 +9183,7 @@
       "file_type": "code",
       "norm_label": "iscustomdialcode",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L407"
+      "source_location": "L405"
     },
     {
       "id": "src_components_memberform_phonelocaldisplay",
@@ -9206,7 +9194,7 @@
       "file_type": "code",
       "norm_label": "phonelocaldisplay",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L411"
+      "source_location": "L409"
     },
     {
       "id": "src_utils_phonenumber",
@@ -9360,7 +9348,7 @@
       "file_type": "code",
       "norm_label": "emit",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L354"
+      "source_location": "L353"
     },
     {
       "id": "jsconfig",
@@ -9790,17 +9778,6 @@
       "norm_label": "all_permissions",
       "source_file": "src/bootstrap/seed-permissions.js",
       "source_location": "L1"
-    },
-    {
-      "id": "src_bootstrap_seed_permissions_registrar_permissions",
-      "label": "REGISTRAR_PERMISSIONS",
-      "_origin": "ast",
-      "community": 112,
-      "community_name": "seed-permissions.js",
-      "file_type": "code",
-      "norm_label": "registrar_permissions",
-      "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L35"
     },
     {
       "id": "test_server_ticket_functions_test",
@@ -10806,6 +10783,39 @@
       "source_location": "L38"
     },
     {
+      "id": "src_utils_paymentlabels",
+      "label": "paymentLabels.js",
+      "_origin": "ast",
+      "community": 133,
+      "community_name": "paymentLabels.js",
+      "file_type": "code",
+      "norm_label": "paymentlabels.js",
+      "source_file": "src/utils/paymentLabels.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_utils_paymentlabels_tx_direction_labels",
+      "label": "TX_DIRECTION_LABELS",
+      "_origin": "ast",
+      "community": 133,
+      "community_name": "paymentLabels.js",
+      "file_type": "code",
+      "norm_label": "tx_direction_labels",
+      "source_file": "src/utils/paymentLabels.js",
+      "source_location": "L9"
+    },
+    {
+      "id": "src_utils_paymentlabels_tx_type_labels",
+      "label": "TX_TYPE_LABELS",
+      "_origin": "ast",
+      "community": 133,
+      "community_name": "paymentLabels.js",
+      "file_type": "code",
+      "norm_label": "tx_type_labels",
+      "source_file": "src/utils/paymentLabels.js",
+      "source_location": "L2"
+    },
+    {
       "id": "src_views_uikit_panelsdoc",
       "label": "PanelsDoc.vue",
       "_origin": "ast",
@@ -10848,6 +10858,28 @@
       "norm_label": "menuref",
       "source_file": "src/views/uikit/PanelsDoc.vue",
       "source_location": "L27"
+    },
+    {
+      "id": "scripts_debug_pullik_service_pricing_source",
+      "label": "debug-pullik-service-pricing-source.js",
+      "_origin": "ast",
+      "community": 136,
+      "community_name": "debug-pullik-service-pricing-source.js",
+      "file_type": "code",
+      "norm_label": "debug-pullik-service-pricing-source.js",
+      "source_file": "scripts/debug-pullik-service-pricing-source.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "scripts_debug_pullik_service_pricing_source_mongoose",
+      "label": "mongoose",
+      "_origin": "ast",
+      "community": 136,
+      "community_name": "debug-pullik-service-pricing-source.js",
+      "file_type": "code",
+      "norm_label": "mongoose",
+      "source_file": "scripts/debug-pullik-service-pricing-source.js",
+      "source_location": "L2"
     },
     {
       "id": "test_summary",
@@ -11529,6 +11561,17 @@
       "source_location": "L45"
     },
     {
+      "id": "src_utils_logo",
+      "label": "logo.js",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "ticket_add.vue",
+      "file_type": "code",
+      "norm_label": "logo.js",
+      "source_file": "src/utils/logo.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_views_pages_ticket_add",
       "label": "ticket_add.vue",
       "_origin": "ast",
@@ -11694,11 +11737,132 @@
       "source_location": "L178"
     },
     {
+      "id": "test_utils_logo_test",
+      "label": "logo.test.js",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "ticket_add.vue",
+      "file_type": "code",
+      "norm_label": "logo.test.js",
+      "source_file": "test/utils/logo.test.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "test_utils_logo_test_expect",
+      "label": "{ expect }",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "ticket_add.vue",
+      "file_type": "code",
+      "norm_label": "{ expect }",
+      "source_file": "test/utils/logo.test.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "test_utils_logo_test_getlibrarylogosvg",
+      "label": "{ getLibraryLogoSvg }",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "ticket_add.vue",
+      "file_type": "code",
+      "norm_label": "{ getlibrarylogosvg }",
+      "source_file": "test/utils/logo.test.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "routes_audit_routes",
+      "label": "audit.routes.js",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "audit.routes.js",
+      "source_file": "routes/audit.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_audit_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/audit.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_audit_routes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "routes/audit.routes.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "routes_audit_routes_verifytoken_checkuserlevel",
+      "label": "{ verifyToken, checkUserLevel }",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "{ verifytoken, checkuserlevel }",
+      "source_file": "routes/audit.routes.js",
+      "source_location": "L3"
+    },
+    {
+      "id": "routes_contestants_routes",
+      "label": "contestants.routes.js",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "contestants.routes.js",
+      "source_file": "routes/contestants.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_contestants_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/contestants.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_contestants_routes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "routes/contestants.routes.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "routes_contestants_routes_verifytoken_checkuserlevel",
+      "label": "{ verifyToken, checkUserLevel }",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "{ verifytoken, checkuserlevel }",
+      "source_file": "routes/contestants.routes.js",
+      "source_location": "L3"
+    },
+    {
       "id": "routes_library_locations_routes",
       "label": "library-locations.routes.js",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "library-locations.routes.js",
       "source_file": "routes/library-locations.routes.js",
@@ -11709,7 +11873,7 @@
       "label": "express",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "express",
       "source_file": "routes/library-locations.routes.js",
@@ -11720,7 +11884,7 @@
       "label": "router",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "routes/library-locations.routes.js",
@@ -11731,7 +11895,7 @@
       "label": "{ verifyToken, checkUserLevel }",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "{ verifytoken, checkuserlevel }",
       "source_file": "routes/library-locations.routes.js",
@@ -11742,7 +11906,7 @@
       "label": "permissions.routes.js",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "permissions.routes.js",
       "source_file": "routes/permissions.routes.js",
@@ -11753,7 +11917,7 @@
       "label": "express",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "express",
       "source_file": "routes/permissions.routes.js",
@@ -11764,7 +11928,7 @@
       "label": "mongoose",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "mongoose",
       "source_file": "routes/permissions.routes.js",
@@ -11775,7 +11939,7 @@
       "label": "router",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "routes/permissions.routes.js",
@@ -11786,84 +11950,18 @@
       "label": "{ verifyToken, checkUserLevel }",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "{ verifytoken, checkuserlevel }",
       "source_file": "routes/permissions.routes.js",
       "source_location": "L4"
     },
     {
-      "id": "routes_staff_departments_constants",
-      "label": "staff-departments.constants.js",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "checkUserLevel",
-      "file_type": "code",
-      "norm_label": "staff-departments.constants.js",
-      "source_file": "routes/staff-departments.constants.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_staff_departments_routes",
-      "label": "staff-departments.routes.js",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "checkUserLevel",
-      "file_type": "code",
-      "norm_label": "staff-departments.routes.js",
-      "source_file": "routes/staff-departments.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_staff_departments_routes_default_unassigned_staff_department_name",
-      "label": "{ DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME }",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "checkUserLevel",
-      "file_type": "code",
-      "norm_label": "{ default_unassigned_staff_department_name }",
-      "source_file": "routes/staff-departments.routes.js",
-      "source_location": "L4"
-    },
-    {
-      "id": "routes_staff_departments_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "checkUserLevel",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/staff-departments.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_staff_departments_routes_mongoose",
-      "label": "mongoose",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "checkUserLevel",
-      "file_type": "code",
-      "norm_label": "mongoose",
-      "source_file": "routes/staff-departments.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "routes_staff_departments_routes_verifytoken_checkuserlevel",
-      "label": "{ verifyToken, checkUserLevel }",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "checkUserLevel",
-      "file_type": "code",
-      "norm_label": "{ verifytoken, checkuserlevel }",
-      "source_file": "routes/staff-departments.routes.js",
-      "source_location": "L3"
-    },
-    {
       "id": "routes_staff_positions_routes",
       "label": "staff-positions.routes.js",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "staff-positions.routes.js",
       "source_file": "routes/staff-positions.routes.js",
@@ -11874,7 +11972,7 @@
       "label": "express",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "express",
       "source_file": "routes/staff-positions.routes.js",
@@ -11885,7 +11983,7 @@
       "label": "mongoose",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "mongoose",
       "source_file": "routes/staff-positions.routes.js",
@@ -11896,11 +11994,55 @@
       "label": "{ verifyToken, checkUserLevel }",
       "_origin": "ast",
       "community": 17,
-      "community_name": "checkUserLevel",
+      "community_name": "express",
       "file_type": "code",
       "norm_label": "{ verifytoken, checkuserlevel }",
       "source_file": "routes/staff-positions.routes.js",
       "source_location": "L3"
+    },
+    {
+      "id": "routes_visits_routes",
+      "label": "visits.routes.js",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "visits.routes.js",
+      "source_file": "routes/visits.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_visits_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/visits.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_visits_routes_verifytoken",
+      "label": "{ verifyToken }",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "code",
+      "norm_label": "{ verifytoken }",
+      "source_file": "routes/visits.routes.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "ref_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "express",
+      "file_type": "concept",
+      "norm_label": "express",
+      "source_file": "package.json",
+      "source_location": "L28"
     },
     {
       "id": "src_views_pages_ip_access",
@@ -13069,6 +13211,105 @@
       "source_location": "L234"
     },
     {
+      "id": "routes_diss_statistics_routes",
+      "label": "diss-statistics.routes.js",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "diss-statistics.routes.js",
+      "source_file": "routes/diss-statistics.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_ip_access_routes",
+      "label": "ip-access.routes.js",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "ip-access.routes.js",
+      "source_file": "routes/ip-access.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_members_payment_routes",
+      "label": "members-payment.routes.js",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "members-payment.routes.js",
+      "source_file": "routes/members-payment.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_members_payment_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/members-payment.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_members_payment_routes_mongoose",
+      "label": "mongoose",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "mongoose",
+      "source_file": "routes/members-payment.routes.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "routes_members_payment_routes_verifytoken_checkpermissions_checkanypermissions",
+      "label": "{ verifyToken, checkPermissions, checkAnyPermissions }",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "{ verifytoken, checkpermissions, checkanypermissions }",
+      "source_file": "routes/members-payment.routes.js",
+      "source_location": "L3"
+    },
+    {
+      "id": "routes_system_routes",
+      "label": "system.routes.js",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "system.routes.js",
+      "source_file": "routes/system.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_system_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/system.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_system_routes_verifytoken_checkpermissions",
+      "label": "{ verifyToken, checkPermissions }",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "mongoose",
+      "file_type": "code",
+      "norm_label": "{ verifytoken, checkpermissions }",
+      "source_file": "routes/system.routes.js",
+      "source_location": "L2"
+    },
+    {
       "id": "scripts_debug_pullik_keys",
       "label": "debug-pullik-keys.js",
       "_origin": "ast",
@@ -13110,28 +13351,6 @@
       "file_type": "code",
       "norm_label": "mongoose",
       "source_file": "scripts/debug-pullik-service-keys.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "scripts_debug_pullik_service_pricing_source",
-      "label": "debug-pullik-service-pricing-source.js",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "mongoose",
-      "file_type": "code",
-      "norm_label": "debug-pullik-service-pricing-source.js",
-      "source_file": "scripts/debug-pullik-service-pricing-source.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "scripts_debug_pullik_service_pricing_source_mongoose",
-      "label": "mongoose",
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "mongoose",
-      "file_type": "code",
-      "norm_label": "mongoose",
-      "source_file": "scripts/debug-pullik-service-pricing-source.js",
       "source_location": "L2"
     },
     {
@@ -13386,6 +13605,30 @@
       "norm_label": "statuses",
       "source_file": "src/views/uikit/TableDoc.vue",
       "source_location": "L15"
+    },
+    {
+      "id": "snapshot",
+      "label": "snapshot.md",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "AuthService",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "snapshot.md",
+      "source_file": "snapshot.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "snapshot_project_snapshot_technical_memory",
+      "label": "Project snapshot (technical memory)",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "AuthService",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "project snapshot (technical memory)",
+      "source_file": "snapshot.md",
+      "source_location": "L1"
     },
     {
       "id": "src_views_pages_diss",
@@ -17207,17 +17450,6 @@
       "file_type": "code",
       "norm_label": "allcolumns",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L372"
-    },
-    {
-      "id": "src_components_memberlist_canmanagemembers",
-      "label": "canManageMembers",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "MemberList.vue",
-      "file_type": "code",
-      "norm_label": "canmanagemembers",
-      "source_file": "src/components/MemberList.vue",
       "source_location": "L370"
     },
     {
@@ -17229,7 +17461,7 @@
       "file_type": "code",
       "norm_label": "columnspopover",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L466"
+      "source_location": "L464"
     },
     {
       "id": "src_components_memberlist_columnwidths",
@@ -17240,7 +17472,7 @@
       "file_type": "code",
       "norm_label": "columnwidths",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L469"
+      "source_location": "L467"
     },
     {
       "id": "src_components_memberlist_defaultvisiblefields",
@@ -17251,7 +17483,7 @@
       "file_type": "code",
       "norm_label": "defaultvisiblefields",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L386"
+      "source_location": "L384"
     },
     {
       "id": "src_components_memberlist_emit",
@@ -17262,7 +17494,7 @@
       "file_type": "code",
       "norm_label": "emit",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L453"
+      "source_location": "L451"
     },
     {
       "id": "src_components_memberlist_first",
@@ -17273,7 +17505,7 @@
       "file_type": "code",
       "norm_label": "first",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L472"
+      "source_location": "L470"
     },
     {
       "id": "src_components_memberlist_formattedtotal",
@@ -17284,7 +17516,7 @@
       "file_type": "code",
       "norm_label": "formattedtotal",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L474"
+      "source_location": "L472"
     },
     {
       "id": "src_components_memberlist_hasactivequery",
@@ -17295,7 +17527,7 @@
       "file_type": "code",
       "norm_label": "hasactivequery",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L476"
+      "source_location": "L474"
     },
     {
       "id": "src_components_memberlist_props",
@@ -17306,7 +17538,7 @@
       "file_type": "code",
       "norm_label": "props",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L390"
+      "source_location": "L388"
     },
     {
       "id": "src_components_memberlist_selectedrow",
@@ -17317,7 +17549,7 @@
       "file_type": "code",
       "norm_label": "selectedrow",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L467"
+      "source_location": "L465"
     },
     {
       "id": "src_components_memberlist_visiblefields",
@@ -17328,40 +17560,7 @@
       "file_type": "code",
       "norm_label": "visiblefields",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L468"
-    },
-    {
-      "id": "src_utils_paymentlabels",
-      "label": "paymentLabels.js",
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "payment_history.vue",
-      "file_type": "code",
-      "norm_label": "paymentlabels.js",
-      "source_file": "src/utils/paymentLabels.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_utils_paymentlabels_tx_direction_labels",
-      "label": "TX_DIRECTION_LABELS",
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "payment_history.vue",
-      "file_type": "code",
-      "norm_label": "tx_direction_labels",
-      "source_file": "src/utils/paymentLabels.js",
-      "source_location": "L9"
-    },
-    {
-      "id": "src_utils_paymentlabels_tx_type_labels",
-      "label": "TX_TYPE_LABELS",
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "payment_history.vue",
-      "file_type": "code",
-      "norm_label": "tx_type_labels",
-      "source_file": "src/utils/paymentLabels.js",
-      "source_location": "L2"
+      "source_location": "L466"
     },
     {
       "id": "src_views_pages_payment_history",
@@ -18430,7 +18629,7 @@
       "label": "tickets.routes.js",
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "tickets.routes.js",
       "source_file": "routes/tickets.routes.js",
@@ -18441,7 +18640,7 @@
       "label": "express",
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "express",
       "source_file": "routes/tickets.routes.js",
@@ -18452,7 +18651,7 @@
       "label": "QRCode",
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "qrcode",
       "source_file": "routes/tickets.routes.js",
@@ -18463,7 +18662,7 @@
       "label": "router",
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "routes/tickets.routes.js",
@@ -18474,7 +18673,7 @@
       "label": "qrcode",
       "_origin": "ast",
       "community": 52,
-      "community_name": "createTicketsRoutes",
+      "community_name": "tickets.routes.js",
       "file_type": "concept",
       "norm_label": "qrcode",
       "source_file": "package.json",
@@ -19864,7 +20063,7 @@
       "file_type": "code",
       "norm_label": "activedialcode",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L408"
+      "source_location": "L406"
     },
     {
       "id": "src_components_memberform_addrs",
@@ -19875,7 +20074,7 @@
       "file_type": "code",
       "norm_label": "addrs",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L399"
+      "source_location": "L397"
     },
     {
       "id": "src_components_memberform_birthday",
@@ -19886,18 +20085,7 @@
       "file_type": "code",
       "norm_label": "birthday",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L398"
-    },
-    {
-      "id": "src_components_memberform_canmanagemembers",
-      "label": "canManageMembers",
-      "_origin": "ast",
-      "community": 62,
-      "community_name": "MemberForm.vue",
-      "file_type": "code",
-      "norm_label": "canmanagemembers",
-      "source_file": "src/components/MemberForm.vue",
-      "source_location": "L356"
+      "source_location": "L396"
     },
     {
       "id": "src_components_memberform_customphonecode",
@@ -19908,7 +20096,7 @@
       "file_type": "code",
       "norm_label": "customphonecode",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L396"
+      "source_location": "L394"
     },
     {
       "id": "src_components_memberform_email",
@@ -19919,7 +20107,7 @@
       "file_type": "code",
       "norm_label": "email",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L400"
+      "source_location": "L398"
     },
     {
       "id": "src_components_memberform_fetchinguserno",
@@ -19930,7 +20118,7 @@
       "file_type": "code",
       "norm_label": "fetchinguserno",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L361"
+      "source_location": "L359"
     },
     {
       "id": "src_components_memberform_fileinput",
@@ -19941,7 +20129,7 @@
       "file_type": "code",
       "norm_label": "fileinput",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L358"
+      "source_location": "L356"
     },
     {
       "id": "src_components_memberform_nationality",
@@ -19952,7 +20140,7 @@
       "file_type": "code",
       "norm_label": "nationality",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L403"
+      "source_location": "L401"
     },
     {
       "id": "src_components_memberform_nationalityoptions",
@@ -19963,7 +20151,7 @@
       "file_type": "code",
       "norm_label": "nationalityoptions",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L369"
+      "source_location": "L367"
     },
     {
       "id": "src_components_memberform_phonecode",
@@ -19974,7 +20162,7 @@
       "file_type": "code",
       "norm_label": "phonecode",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L395"
+      "source_location": "L393"
     },
     {
       "id": "src_components_memberform_phonecodes",
@@ -19985,7 +20173,7 @@
       "file_type": "code",
       "norm_label": "phonecodes",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L389"
+      "source_location": "L387"
     },
     {
       "id": "src_components_memberform_phonelocal",
@@ -19996,7 +20184,7 @@
       "file_type": "code",
       "norm_label": "phonelocal",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L397"
+      "source_location": "L395"
     },
     {
       "id": "src_components_memberform_phonelocalplaceholder",
@@ -20007,7 +20195,7 @@
       "file_type": "code",
       "norm_label": "phonelocalplaceholder",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L412"
+      "source_location": "L410"
     },
     {
       "id": "src_components_memberform_pinfl",
@@ -20018,7 +20206,7 @@
       "file_type": "code",
       "norm_label": "pinfl",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L394"
+      "source_location": "L392"
     },
     {
       "id": "src_components_memberform_props",
@@ -20029,7 +20217,7 @@
       "file_type": "code",
       "norm_label": "props",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L327"
+      "source_location": "L326"
     },
     {
       "id": "src_components_memberform_scannedpassportnumber",
@@ -20040,7 +20228,7 @@
       "file_type": "code",
       "norm_label": "scannedpassportnumber",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L405"
+      "source_location": "L403"
     },
     {
       "id": "src_components_memberform_scannedpassportseries",
@@ -20051,7 +20239,7 @@
       "file_type": "code",
       "norm_label": "scannedpassportseries",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L404"
+      "source_location": "L402"
     },
     {
       "id": "src_components_memberform_sex",
@@ -20062,7 +20250,7 @@
       "file_type": "code",
       "norm_label": "sex",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L402"
+      "source_location": "L400"
     },
     {
       "id": "src_components_memberform_sexoptions",
@@ -20073,7 +20261,7 @@
       "file_type": "code",
       "norm_label": "sexoptions",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L364"
+      "source_location": "L362"
     },
     {
       "id": "src_components_memberform_showwebcamdialog",
@@ -20084,7 +20272,7 @@
       "file_type": "code",
       "norm_label": "showwebcamdialog",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L359"
+      "source_location": "L357"
     },
     {
       "id": "src_components_memberform_submitted",
@@ -20095,7 +20283,7 @@
       "file_type": "code",
       "norm_label": "submitted",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L360"
+      "source_location": "L358"
     },
     {
       "id": "src_components_memberform_syncinguznel",
@@ -20106,7 +20294,7 @@
       "file_type": "code",
       "norm_label": "syncinguznel",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L362"
+      "source_location": "L360"
     },
     {
       "id": "src_components_memberform_toast",
@@ -20117,7 +20305,7 @@
       "file_type": "code",
       "norm_label": "toast",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L355"
+      "source_location": "L354"
     },
     {
       "id": "src_components_memberform_username",
@@ -20128,7 +20316,7 @@
       "file_type": "code",
       "norm_label": "username",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L392"
+      "source_location": "L390"
     },
     {
       "id": "src_components_memberform_userno",
@@ -20139,7 +20327,7 @@
       "file_type": "code",
       "norm_label": "userno",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L391"
+      "source_location": "L389"
     },
     {
       "id": "src_components_memberform_userposition",
@@ -20150,7 +20338,7 @@
       "file_type": "code",
       "norm_label": "userposition",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L393"
+      "source_location": "L391"
     },
     {
       "id": "src_components_memberform_zipcode",
@@ -20161,14 +20349,14 @@
       "file_type": "code",
       "norm_label": "zipcode",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L401"
+      "source_location": "L399"
     },
     {
       "id": "routes_auth_routes",
       "label": "auth.routes.js",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "auth.routes.js",
       "source_file": "routes/auth.routes.js",
@@ -20179,7 +20367,7 @@
       "label": "bcrypt",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "bcrypt",
       "source_file": "routes/auth.routes.js",
@@ -20190,7 +20378,7 @@
       "label": "{\r\n  collectPermissionNamesFromPopulatedUser,\r\n  normalizePermissionGroupIds,\r\n}",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "{\r\n  collectpermissionnamesfrompopulateduser,\r\n  normalizepermissiongroupids,\r\n}",
       "source_file": "routes/auth.routes.js",
@@ -20201,7 +20389,7 @@
       "label": "express",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "express",
       "source_file": "routes/auth.routes.js",
@@ -20212,7 +20400,7 @@
       "label": "jwt",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "jwt",
       "source_file": "routes/auth.routes.js",
@@ -20223,7 +20411,7 @@
       "label": "mongoose",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "mongoose",
       "source_file": "routes/auth.routes.js",
@@ -20234,7 +20422,7 @@
       "label": "router",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "routes/auth.routes.js",
@@ -20245,7 +20433,7 @@
       "label": "{ verifyToken, checkUserLevel }",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "{ verifytoken, checkuserlevel }",
       "source_file": "routes/auth.routes.js",
@@ -20256,7 +20444,7 @@
       "label": "experts.routes.js",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "experts.routes.js",
       "source_file": "routes/experts.routes.js",
@@ -20267,7 +20455,7 @@
       "label": "bcrypt",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "bcrypt",
       "source_file": "routes/experts.routes.js",
@@ -20278,7 +20466,7 @@
       "label": "express",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "express",
       "source_file": "routes/experts.routes.js",
@@ -20289,7 +20477,7 @@
       "label": "jwt",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "jwt",
       "source_file": "routes/experts.routes.js",
@@ -20300,7 +20488,7 @@
       "label": "mongoose",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "mongoose",
       "source_file": "routes/experts.routes.js",
@@ -20311,7 +20499,7 @@
       "label": "{\n  normalizePermissionGroupIds,\n  mergeLegacyPermissionGroups,\n}",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "{\n  normalizepermissiongroupids,\n  mergelegacypermissiongroups,\n}",
       "source_file": "routes/experts.routes.js",
@@ -20322,7 +20510,7 @@
       "label": "router",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "router",
       "source_file": "routes/experts.routes.js",
@@ -20333,18 +20521,51 @@
       "label": "{ verifyToken, checkUserLevel }",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "{ verifytoken, checkuserlevel }",
       "source_file": "routes/experts.routes.js",
       "source_location": "L6"
     },
     {
+      "id": "src_middleware_auth_middleware",
+      "label": "auth.middleware.js",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "auth.middleware.js",
+      "file_type": "code",
+      "norm_label": "auth.middleware.js",
+      "source_file": "src/middleware/auth.middleware.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_middleware_auth_middleware_collectpermissionnamesfrompopulateduser",
+      "label": "{ collectPermissionNamesFromPopulatedUser }",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "auth.middleware.js",
+      "file_type": "code",
+      "norm_label": "{ collectpermissionnamesfrompopulateduser }",
+      "source_file": "src/middleware/auth.middleware.js",
+      "source_location": "L3"
+    },
+    {
+      "id": "src_middleware_auth_middleware_jwt",
+      "label": "jwt",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "auth.middleware.js",
+      "file_type": "code",
+      "norm_label": "jwt",
+      "source_file": "src/middleware/auth.middleware.js",
+      "source_location": "L1"
+    },
+    {
       "id": "src_utils_userpermissionnames",
       "label": "userPermissionNames.js",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "userpermissionnames.js",
       "source_file": "src/utils/userPermissionNames.js",
@@ -20355,7 +20576,7 @@
       "label": "mongoose",
       "_origin": "ast",
       "community": 63,
-      "community_name": "auth.routes.js",
+      "community_name": "auth.middleware.js",
       "file_type": "code",
       "norm_label": "mongoose",
       "source_file": "src/utils/userPermissionNames.js",
@@ -21053,6 +21274,50 @@
       "norm_label": "router",
       "source_file": "routes/admin.routes.js",
       "source_location": "L2"
+    },
+    {
+      "id": "routes_ratings_routes",
+      "label": "ratings.routes.js",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "survey.routes.js",
+      "file_type": "code",
+      "norm_label": "ratings.routes.js",
+      "source_file": "routes/ratings.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_ratings_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "survey.routes.js",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/ratings.routes.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "routes_ratings_routes_router",
+      "label": "router",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "survey.routes.js",
+      "file_type": "code",
+      "norm_label": "router",
+      "source_file": "routes/ratings.routes.js",
+      "source_location": "L2"
+    },
+    {
+      "id": "routes_ratings_routes_verifytoken",
+      "label": "{ verifyToken }",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "survey.routes.js",
+      "file_type": "code",
+      "norm_label": "{ verifytoken }",
+      "source_file": "routes/ratings.routes.js",
+      "source_location": "L3"
     },
     {
       "id": "routes_survey_routes",
@@ -22041,338 +22306,6 @@
       "norm_label": "username",
       "source_file": "src/views/uikit/MessagesDoc.vue",
       "source_location": "L7"
-    },
-    {
-      "id": "routes_audit_routes",
-      "label": "audit.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "audit.routes.js",
-      "source_file": "routes/audit.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_audit_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/audit.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_audit_routes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "routes/audit.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "routes_audit_routes_verifytoken_checkuserlevel",
-      "label": "{ verifyToken, checkUserLevel }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ verifytoken, checkuserlevel }",
-      "source_file": "routes/audit.routes.js",
-      "source_location": "L3"
-    },
-    {
-      "id": "routes_contestants_routes",
-      "label": "contestants.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "contestants.routes.js",
-      "source_file": "routes/contestants.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_contestants_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/contestants.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_contestants_routes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "routes/contestants.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "routes_contestants_routes_verifytoken_checkuserlevel",
-      "label": "{ verifyToken, checkUserLevel }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ verifytoken, checkuserlevel }",
-      "source_file": "routes/contestants.routes.js",
-      "source_location": "L3"
-    },
-    {
-      "id": "routes_diss_statistics_routes",
-      "label": "diss-statistics.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "diss-statistics.routes.js",
-      "source_file": "routes/diss-statistics.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_ip_access_routes",
-      "label": "ip-access.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "ip-access.routes.js",
-      "source_file": "routes/ip-access.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_members_payment_routes",
-      "label": "members-payment.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "members-payment.routes.js",
-      "source_file": "routes/members-payment.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_members_payment_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/members-payment.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_members_payment_routes_mongoose",
-      "label": "mongoose",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "mongoose",
-      "source_file": "routes/members-payment.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "routes_members_payment_routes_verifytoken_checkpermissions_checkanypermissions",
-      "label": "{ verifyToken, checkPermissions, checkAnyPermissions }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ verifytoken, checkpermissions, checkanypermissions }",
-      "source_file": "routes/members-payment.routes.js",
-      "source_location": "L3"
-    },
-    {
-      "id": "routes_ratings_routes",
-      "label": "ratings.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "ratings.routes.js",
-      "source_file": "routes/ratings.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_ratings_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/ratings.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_ratings_routes_router",
-      "label": "router",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "router",
-      "source_file": "routes/ratings.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "routes_ratings_routes_verifytoken",
-      "label": "{ verifyToken }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ verifytoken }",
-      "source_file": "routes/ratings.routes.js",
-      "source_location": "L3"
-    },
-    {
-      "id": "routes_system_routes",
-      "label": "system.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "system.routes.js",
-      "source_file": "routes/system.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_system_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/system.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_system_routes_verifytoken_checkpermissions",
-      "label": "{ verifyToken, checkPermissions }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ verifytoken, checkpermissions }",
-      "source_file": "routes/system.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "routes_visits_routes",
-      "label": "visits.routes.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "visits.routes.js",
-      "source_file": "routes/visits.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_visits_routes_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "express",
-      "source_file": "routes/visits.routes.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "routes_visits_routes_verifytoken",
-      "label": "{ verifyToken }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ verifytoken }",
-      "source_file": "routes/visits.routes.js",
-      "source_location": "L2"
-    },
-    {
-      "id": "src_middleware_auth_middleware",
-      "label": "auth.middleware.js",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "auth.middleware.js",
-      "source_file": "src/middleware/auth.middleware.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_middleware_auth_middleware_collectpermissionnamesfrompopulateduser",
-      "label": "{ collectPermissionNamesFromPopulatedUser }",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "{ collectpermissionnamesfrompopulateduser }",
-      "source_file": "src/middleware/auth.middleware.js",
-      "source_location": "L3"
-    },
-    {
-      "id": "src_middleware_auth_middleware_jwt",
-      "label": "jwt",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "code",
-      "norm_label": "jwt",
-      "source_file": "src/middleware/auth.middleware.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "ref_express",
-      "label": "express",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "concept",
-      "norm_label": "express",
-      "source_file": "package.json",
-      "source_location": "L28"
-    },
-    {
-      "id": "snapshot",
-      "label": "snapshot.md",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "snapshot.md",
-      "source_file": "snapshot.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "snapshot_project_snapshot_technical_memory",
-      "label": "Project snapshot (technical memory)",
-      "_origin": "ast",
-      "community": 81,
-      "community_name": "auth.middleware.js",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "project snapshot (technical memory)",
-      "source_file": "snapshot.md",
-      "source_location": "L1"
     },
     {
       "id": "src_app",
@@ -23475,48 +23408,70 @@
       "source_location": "L1"
     },
     {
-      "id": "src_utils_logo",
-      "label": "logo.js",
+      "id": "routes_staff_departments_constants",
+      "label": "staff-departments.constants.js",
       "_origin": "ast",
       "community": 97,
-      "community_name": "logo.test.js",
+      "community_name": "staff-departments.routes.js",
       "file_type": "code",
-      "norm_label": "logo.js",
-      "source_file": "src/utils/logo.js",
+      "norm_label": "staff-departments.constants.js",
+      "source_file": "routes/staff-departments.constants.js",
       "source_location": "L1"
     },
     {
-      "id": "test_utils_logo_test",
-      "label": "logo.test.js",
+      "id": "routes_staff_departments_routes",
+      "label": "staff-departments.routes.js",
       "_origin": "ast",
       "community": 97,
-      "community_name": "logo.test.js",
+      "community_name": "staff-departments.routes.js",
       "file_type": "code",
-      "norm_label": "logo.test.js",
-      "source_file": "test/utils/logo.test.js",
+      "norm_label": "staff-departments.routes.js",
+      "source_file": "routes/staff-departments.routes.js",
       "source_location": "L1"
     },
     {
-      "id": "test_utils_logo_test_expect",
-      "label": "{ expect }",
+      "id": "routes_staff_departments_routes_default_unassigned_staff_department_name",
+      "label": "{ DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME }",
       "_origin": "ast",
       "community": 97,
-      "community_name": "logo.test.js",
+      "community_name": "staff-departments.routes.js",
       "file_type": "code",
-      "norm_label": "{ expect }",
-      "source_file": "test/utils/logo.test.js",
+      "norm_label": "{ default_unassigned_staff_department_name }",
+      "source_file": "routes/staff-departments.routes.js",
+      "source_location": "L4"
+    },
+    {
+      "id": "routes_staff_departments_routes_express",
+      "label": "express",
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "staff-departments.routes.js",
+      "file_type": "code",
+      "norm_label": "express",
+      "source_file": "routes/staff-departments.routes.js",
       "source_location": "L1"
     },
     {
-      "id": "test_utils_logo_test_getlibrarylogosvg",
-      "label": "{ getLibraryLogoSvg }",
+      "id": "routes_staff_departments_routes_mongoose",
+      "label": "mongoose",
       "_origin": "ast",
       "community": 97,
-      "community_name": "logo.test.js",
+      "community_name": "staff-departments.routes.js",
       "file_type": "code",
-      "norm_label": "{ getlibrarylogosvg }",
-      "source_file": "test/utils/logo.test.js",
+      "norm_label": "mongoose",
+      "source_file": "routes/staff-departments.routes.js",
       "source_location": "L2"
+    },
+    {
+      "id": "routes_staff_departments_routes_verifytoken_checkuserlevel",
+      "label": "{ verifyToken, checkUserLevel }",
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "staff-departments.routes.js",
+      "file_type": "code",
+      "norm_label": "{ verifytoken, checkuserlevel }",
+      "source_file": "routes/staff-departments.routes.js",
+      "source_location": "L3"
     },
     {
       "id": "ref_primevue_core",
@@ -23989,18 +23944,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_bootstrap_seed_permissions_seedpermissionsandgroups",
-      "target": "src_bootstrap_seed_permissions_addmissingpermissionids",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L92",
-      "weight": 1.0
-    },
-    {
       "source": "src_components_memberform_applyparsedid",
       "target": "src_utils_parseidmrz_normalizesex",
       "relation": "calls",
@@ -24009,7 +23952,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L509",
+      "source_location": "L507",
       "weight": 1.0
     },
     {
@@ -24021,7 +23964,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L514",
+      "source_location": "L512",
       "weight": 1.0
     },
     {
@@ -24033,7 +23976,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L699",
+      "source_location": "L696",
       "weight": 1.0
     },
     {
@@ -24045,7 +23988,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L700",
+      "source_location": "L697",
       "weight": 1.0
     },
     {
@@ -24057,7 +24000,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L454",
+      "source_location": "L452",
       "weight": 1.0
     },
     {
@@ -24069,7 +24012,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L539",
+      "source_location": "L537",
       "weight": 1.0
     },
     {
@@ -24081,7 +24024,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L548",
+      "source_location": "L546",
       "weight": 1.0
     },
     {
@@ -24093,7 +24036,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L449",
+      "source_location": "L447",
       "weight": 1.0
     },
     {
@@ -24105,7 +24048,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L407",
+      "source_location": "L405",
       "weight": 1.0
     },
     {
@@ -24117,7 +24060,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L687",
+      "source_location": "L684",
       "weight": 1.0
     },
     {
@@ -24129,7 +24072,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L469",
+      "source_location": "L467",
       "weight": 1.0
     },
     {
@@ -24141,7 +24084,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L471",
+      "source_location": "L469",
       "weight": 1.0
     },
     {
@@ -24153,7 +24096,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L477",
+      "source_location": "L475",
       "weight": 1.0
     },
     {
@@ -24165,7 +24108,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L645",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -24177,7 +24120,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L640",
+      "source_location": "L637",
       "weight": 1.0
     },
     {
@@ -24189,7 +24132,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L623",
+      "source_location": "L620",
       "weight": 1.0
     },
     {
@@ -24201,7 +24144,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L683",
+      "source_location": "L680",
       "weight": 1.0
     },
     {
@@ -24213,7 +24156,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L677",
+      "source_location": "L674",
       "weight": 1.0
     },
     {
@@ -24225,7 +24168,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L735",
+      "source_location": "L731",
       "weight": 1.0
     },
     {
@@ -24237,7 +24180,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L735",
+      "source_location": "L731",
       "weight": 1.0
     },
     {
@@ -24249,7 +24192,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L563",
+      "source_location": "L561",
       "weight": 1.0
     },
     {
@@ -24261,7 +24204,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L571",
+      "source_location": "L569",
       "weight": 1.0
     },
     {
@@ -24273,7 +24216,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L572",
+      "source_location": "L570",
       "weight": 1.0
     },
     {
@@ -24285,7 +24228,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L580",
+      "source_location": "L577",
       "weight": 1.0
     },
     {
@@ -24297,7 +24240,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L583",
+      "source_location": "L580",
       "weight": 1.0
     },
     {
@@ -24309,7 +24252,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L584",
+      "source_location": "L581",
       "weight": 1.0
     },
     {
@@ -24321,7 +24264,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L787",
+      "source_location": "L783",
       "weight": 1.0
     },
     {
@@ -24333,7 +24276,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L788",
+      "source_location": "L784",
       "weight": 1.0
     },
     {
@@ -24345,7 +24288,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L617",
+      "source_location": "L614",
       "weight": 1.0
     },
     {
@@ -24357,7 +24300,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L411",
+      "source_location": "L409",
       "weight": 1.0
     },
     {
@@ -24369,7 +24312,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L741",
+      "source_location": "L737",
       "weight": 1.0
     },
     {
@@ -24381,7 +24324,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L753",
+      "source_location": "L749",
       "weight": 1.0
     },
     {
@@ -24393,7 +24336,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L755",
+      "source_location": "L751",
       "weight": 1.0
     },
     {
@@ -24405,7 +24348,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L603",
+      "source_location": "L600",
       "weight": 1.0
     },
     {
@@ -24417,7 +24360,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L574",
+      "source_location": "L572",
       "weight": 1.0
     },
     {
@@ -24429,7 +24372,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L639",
+      "source_location": "L637",
       "weight": 1.0
     },
     {
@@ -24441,7 +24384,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L641",
+      "source_location": "L639",
       "weight": 1.0
     },
     {
@@ -24453,7 +24396,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L579",
+      "source_location": "L577",
       "weight": 1.0
     },
     {
@@ -24465,7 +24408,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L650",
+      "source_location": "L648",
       "weight": 1.0
     },
     {
@@ -24477,7 +24420,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L651",
+      "source_location": "L649",
       "weight": 1.0
     },
     {
@@ -24489,7 +24432,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L546",
+      "source_location": "L544",
       "weight": 1.0
     },
     {
@@ -24501,7 +24444,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L590",
+      "source_location": "L588",
       "weight": 1.0
     },
     {
@@ -24513,7 +24456,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L599",
+      "source_location": "L597",
       "weight": 1.0
     },
     {
@@ -24525,7 +24468,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L565",
+      "source_location": "L563",
       "weight": 1.0
     },
     {
@@ -24537,7 +24480,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L584",
+      "source_location": "L582",
       "weight": 1.0
     },
     {
@@ -29457,7 +29400,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L443",
+      "source_location": "L441",
       "weight": 1.0
     },
     {
@@ -29469,7 +29412,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L453",
+      "source_location": "L451",
       "weight": 1.0
     },
     {
@@ -29481,7 +29424,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L457",
+      "source_location": "L455",
       "weight": 1.0
     },
     {
@@ -29493,7 +29436,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L614",
+      "source_location": "L611",
       "weight": 1.0
     },
     {
@@ -29505,7 +29448,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L528",
+      "source_location": "L526",
       "weight": 1.0
     },
     {
@@ -29517,7 +29460,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L549",
+      "source_location": "L547",
       "weight": 1.0
     },
     {
@@ -31741,18 +31684,6 @@
     },
     {
       "source": "routes_members_routes",
-      "target": "src_middleware_auth_middleware_checkanypermissions",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "routes/members.routes.js",
-      "source_location": "L5",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_members_routes",
       "target": "src_middleware_auth_middleware_checkpermissions",
       "relation": "imports",
       "_origin": "ast",
@@ -31821,18 +31752,6 @@
       "context": "import",
       "source_file": "routes/members.routes.js",
       "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "routes_online_registrants_routes",
-      "target": "src_middleware_auth_middleware_checkanypermissions",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "routes/online-registrants.routes.js",
-      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -32216,7 +32135,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L315",
+      "source_location": "L314",
       "weight": 1.0
     },
     {
@@ -32228,7 +32147,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L315",
+      "source_location": "L314",
       "weight": 1.0
     },
     {
@@ -32240,7 +32159,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L315",
+      "source_location": "L314",
       "weight": 1.0
     },
     {
@@ -32252,7 +32171,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L315",
+      "source_location": "L314",
       "weight": 1.0
     },
     {
@@ -32264,7 +32183,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32276,7 +32195,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32288,7 +32207,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32300,7 +32219,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32312,7 +32231,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32324,7 +32243,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32336,7 +32255,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -32348,7 +32267,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -34717,7 +34636,7 @@
     },
     {
       "source": "src_components_memberform",
-      "target": "src_service_auth_service",
+      "target": "src_utils_parseidmrz",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34729,18 +34648,6 @@
     },
     {
       "source": "src_components_memberform",
-      "target": "src_utils_parseidmrz",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src/components/MemberForm.vue",
-      "source_location": "L315",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_memberform",
       "target": "src_utils_phonenumber",
       "relation": "imports_from",
       "_origin": "ast",
@@ -34748,7 +34655,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -34785,18 +34692,6 @@
       "context": "import",
       "source_file": "src/components/MemberList.vue",
       "source_location": "L366",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_memberlist",
-      "target": "src_service_auth_service",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L367",
       "weight": 1.0
     },
     {
@@ -41546,28 +41441,6 @@
       "weight": 1.0
     },
     {
-      "source": "src_bootstrap_seed_permissions",
-      "target": "src_bootstrap_seed_permissions_registrar_permissions",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L35",
-      "weight": 1.0
-    },
-    {
-      "source": "src_bootstrap_seed_permissions",
-      "target": "src_bootstrap_seed_permissions_addmissingpermissionids",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L37",
-      "weight": 1.0
-    },
-    {
       "source": "src_bootstrap_seed_staff",
       "target": "src_bootstrap_seed_staff_default_unassigned_staff_department_name",
       "relation": "contains",
@@ -41597,7 +41470,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L327",
+      "source_location": "L326",
       "weight": 1.0
     },
     {
@@ -41608,7 +41481,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L354",
+      "source_location": "L353",
       "weight": 1.0
     },
     {
@@ -41619,18 +41492,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L355",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_memberform",
-      "target": "src_components_memberform_canmanagemembers",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/components/MemberForm.vue",
-      "source_location": "L356",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -41641,7 +41503,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L358",
+      "source_location": "L356",
       "weight": 1.0
     },
     {
@@ -41652,7 +41514,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L359",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
@@ -41663,7 +41525,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L360",
+      "source_location": "L358",
       "weight": 1.0
     },
     {
@@ -41674,7 +41536,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L361",
+      "source_location": "L359",
       "weight": 1.0
     },
     {
@@ -41685,7 +41547,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L362",
+      "source_location": "L360",
       "weight": 1.0
     },
     {
@@ -41696,7 +41558,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L364",
+      "source_location": "L362",
       "weight": 1.0
     },
     {
@@ -41707,7 +41569,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L369",
+      "source_location": "L367",
       "weight": 1.0
     },
     {
@@ -41718,7 +41580,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L389",
+      "source_location": "L387",
       "weight": 1.0
     },
     {
@@ -41729,7 +41591,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L391",
+      "source_location": "L389",
       "weight": 1.0
     },
     {
@@ -41740,7 +41602,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L392",
+      "source_location": "L390",
       "weight": 1.0
     },
     {
@@ -41751,7 +41613,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L393",
+      "source_location": "L391",
       "weight": 1.0
     },
     {
@@ -41762,7 +41624,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L394",
+      "source_location": "L392",
       "weight": 1.0
     },
     {
@@ -41773,7 +41635,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L395",
+      "source_location": "L393",
       "weight": 1.0
     },
     {
@@ -41784,7 +41646,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L396",
+      "source_location": "L394",
       "weight": 1.0
     },
     {
@@ -41795,7 +41657,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L397",
+      "source_location": "L395",
       "weight": 1.0
     },
     {
@@ -41806,7 +41668,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L398",
+      "source_location": "L396",
       "weight": 1.0
     },
     {
@@ -41817,7 +41679,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L399",
+      "source_location": "L397",
       "weight": 1.0
     },
     {
@@ -41828,7 +41690,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L400",
+      "source_location": "L398",
       "weight": 1.0
     },
     {
@@ -41839,7 +41701,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L401",
+      "source_location": "L399",
       "weight": 1.0
     },
     {
@@ -41850,7 +41712,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L402",
+      "source_location": "L400",
       "weight": 1.0
     },
     {
@@ -41861,7 +41723,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L403",
+      "source_location": "L401",
       "weight": 1.0
     },
     {
@@ -41872,7 +41734,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L404",
+      "source_location": "L402",
       "weight": 1.0
     },
     {
@@ -41883,7 +41745,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L405",
+      "source_location": "L403",
       "weight": 1.0
     },
     {
@@ -41894,7 +41756,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L407",
+      "source_location": "L405",
       "weight": 1.0
     },
     {
@@ -41905,7 +41767,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L408",
+      "source_location": "L406",
       "weight": 1.0
     },
     {
@@ -41916,7 +41778,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L411",
+      "source_location": "L409",
       "weight": 1.0
     },
     {
@@ -41927,7 +41789,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L412",
+      "source_location": "L410",
       "weight": 1.0
     },
     {
@@ -41938,7 +41800,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L448",
+      "source_location": "L446",
       "weight": 1.0
     },
     {
@@ -41949,7 +41811,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L468",
+      "source_location": "L466",
       "weight": 1.0
     },
     {
@@ -41960,7 +41822,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L480",
+      "source_location": "L478",
       "weight": 1.0
     },
     {
@@ -41971,7 +41833,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L495",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -41982,7 +41844,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L538",
+      "source_location": "L536",
       "weight": 1.0
     },
     {
@@ -41993,7 +41855,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L577",
+      "source_location": "L575",
       "weight": 1.0
     },
     {
@@ -42004,7 +41866,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L596",
+      "source_location": "L593",
       "weight": 1.0
     },
     {
@@ -42015,7 +41877,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L600",
+      "source_location": "L597",
       "weight": 1.0
     },
     {
@@ -42026,7 +41888,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L622",
+      "source_location": "L619",
       "weight": 1.0
     },
     {
@@ -42037,7 +41899,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L626",
+      "source_location": "L623",
       "weight": 1.0
     },
     {
@@ -42048,7 +41910,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L644",
+      "source_location": "L641",
       "weight": 1.0
     },
     {
@@ -42059,7 +41921,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L648",
+      "source_location": "L645",
       "weight": 1.0
     },
     {
@@ -42070,7 +41932,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L674",
+      "source_location": "L671",
       "weight": 1.0
     },
     {
@@ -42081,7 +41943,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L682",
+      "source_location": "L679",
       "weight": 1.0
     },
     {
@@ -42092,7 +41954,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L686",
+      "source_location": "L683",
       "weight": 1.0
     },
     {
@@ -42103,7 +41965,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L690",
+      "source_location": "L687",
       "weight": 1.0
     },
     {
@@ -42114,7 +41976,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L713",
+      "source_location": "L710",
       "weight": 1.0
     },
     {
@@ -42125,7 +41987,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L738",
+      "source_location": "L734",
       "weight": 1.0
     },
     {
@@ -42136,7 +41998,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L786",
+      "source_location": "L782",
       "weight": 1.0
     },
     {
@@ -42147,18 +42009,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L793",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_memberlist",
-      "target": "src_components_memberlist_canmanagemembers",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/components/MemberList.vue",
-      "source_location": "L370",
+      "source_location": "L789",
       "weight": 1.0
     },
     {
@@ -42169,7 +42020,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L372",
+      "source_location": "L370",
       "weight": 1.0
     },
     {
@@ -42180,7 +42031,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L386",
+      "source_location": "L384",
       "weight": 1.0
     },
     {
@@ -42191,7 +42042,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L390",
+      "source_location": "L388",
       "weight": 1.0
     },
     {
@@ -42202,7 +42053,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L453",
+      "source_location": "L451",
       "weight": 1.0
     },
     {
@@ -42213,7 +42064,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L466",
+      "source_location": "L464",
       "weight": 1.0
     },
     {
@@ -42224,7 +42075,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L467",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
@@ -42235,7 +42086,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L468",
+      "source_location": "L466",
       "weight": 1.0
     },
     {
@@ -42246,7 +42097,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L469",
+      "source_location": "L467",
       "weight": 1.0
     },
     {
@@ -42257,7 +42108,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L472",
+      "source_location": "L470",
       "weight": 1.0
     },
     {
@@ -42268,7 +42119,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L474",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -42279,7 +42130,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L476",
+      "source_location": "L474",
       "weight": 1.0
     },
     {
@@ -42290,7 +42141,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L478",
+      "source_location": "L476",
       "weight": 1.0
     },
     {
@@ -42301,7 +42152,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L482",
+      "source_location": "L480",
       "weight": 1.0
     },
     {
@@ -42312,7 +42163,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L487",
+      "source_location": "L485",
       "weight": 1.0
     },
     {
@@ -42323,7 +42174,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L494",
+      "source_location": "L492",
       "weight": 1.0
     },
     {
@@ -42334,7 +42185,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L498",
+      "source_location": "L496",
       "weight": 1.0
     },
     {
@@ -42345,7 +42196,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L509",
+      "source_location": "L507",
       "weight": 1.0
     },
     {
@@ -42356,7 +42207,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L517",
+      "source_location": "L515",
       "weight": 1.0
     },
     {
@@ -42367,7 +42218,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L539",
+      "source_location": "L537",
       "weight": 1.0
     },
     {
@@ -42378,7 +42229,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L564",
+      "source_location": "L562",
       "weight": 1.0
     },
     {
@@ -42389,7 +42240,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L572",
+      "source_location": "L570",
       "weight": 1.0
     },
     {
@@ -42400,7 +42251,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L577",
+      "source_location": "L575",
       "weight": 1.0
     },
     {
@@ -42411,7 +42262,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L583",
+      "source_location": "L581",
       "weight": 1.0
     },
     {
@@ -42422,7 +42273,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L589",
+      "source_location": "L587",
       "weight": 1.0
     },
     {
@@ -42433,7 +42284,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L594",
+      "source_location": "L592",
       "weight": 1.0
     },
     {
@@ -42444,7 +42295,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L602",
+      "source_location": "L600",
       "weight": 1.0
     },
     {
@@ -42455,7 +42306,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L632",
+      "source_location": "L630",
       "weight": 1.0
     },
     {
@@ -42466,7 +42317,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L638",
+      "source_location": "L636",
       "weight": 1.0
     },
     {
@@ -57465,7 +57316,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/components/MemberForm.vue",
-      "source_location": "L589",
+      "source_location": "L586",
       "weight": 1.0
     },
     {
@@ -57669,7 +57520,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/bootstrap/seed-permissions.js",
-      "source_location": "L102",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -57717,7 +57568,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/components/MemberList.vue",
-      "source_location": "L670",
+      "source_location": "L668",
       "weight": 1.0
     },
     {
@@ -58214,5 +58065,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d6329f70d319bf1e2e4b55ddb994972ba528ca90"
+  "built_at_commit": "142e7f77ac6eca560cf0f925e60065b1132fb9f5"
 }

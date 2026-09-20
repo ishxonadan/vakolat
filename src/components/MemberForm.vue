@@ -15,7 +15,7 @@
             <span>Rasm yo'q</span>
           </div>
         </div>
-        <div class="photo-buttons">
+        <div v-if="canManageMembers" class="photo-buttons">
           <Button
             type="button"
             icon="pi pi-camera"
@@ -73,7 +73,7 @@
                   autocomplete="off"
                 />
                 <Button
-                  v-if="canGenerateUznelId && !isEditMode"
+                  v-if="canGenerateUznelId && canManageMembers && !isEditMode"
                   type="button"
                   icon="pi pi-search"
                   class="id-lookup-search"
@@ -279,9 +279,9 @@
         severity="secondary"
         @click="onCloseDialog"
       />
-      <Button type="submit" label="Saqlash" icon="pi pi-check" severity="success" />
+      <Button type="submit" v-if="canManageMembers" label="Saqlash" icon="pi pi-check" severity="success" />
       <Button
-        v-if="canGenerateUznelId"
+        v-if="canGenerateUznelId && canManageMembers"
         type="button"
         label="Uznelga sinxronizatsiya"
         icon="pi pi-cloud-upload"
@@ -311,6 +311,7 @@ import Textarea from 'primevue/textarea'
 import InputText from 'primevue/inputtext'
 import WebcamCapture from './WebcamCapture.vue'
 import apiService from '@/service/api.service'
+import authService from '@/service/auth.service'
 import { isMrzCharsetKey, normalizeSex, parseIdMrz, sexFromPinfl } from '@/utils/parseIdMrz'
 import {
   CUSTOM_PHONE_CODE,
@@ -352,6 +353,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced'])
 const toast = useToast()
+const canManageMembers = computed(() => authService.hasPermission('manage_members'))
 
 const fileInput = ref(null)
 const showWebcamDialog = ref(false)
@@ -549,7 +551,7 @@ function consumeScanBuffer(event) {
 }
 
 function onScanKeydown(event) {
-  if (showWebcamDialog.value) return
+  if (!canManageMembers.value || showWebcamDialog.value) return
 
   const now = Date.now()
   if (now - scanLastAt > SCAN_GAP_MS) {
@@ -573,6 +575,7 @@ function onScanKeydown(event) {
 }
 
 function onScanPaste(event) {
+  if (!canManageMembers.value) return
   const text = event.clipboardData?.getData('text') || ''
   const parsed = parseIdMrz(text)
   if (!parsed) return
@@ -643,7 +646,7 @@ const onDeleteImage = () => {
 }
 
 async function fetchUznelUserId() {
-  if (props.isEditMode || fetchingUserNo.value) return
+  if (!canManageMembers.value || props.isEditMode || fetchingUserNo.value) return
   fetchingUserNo.value = true
   try {
     const response = await apiService.post('/members/uznel-id', {})
@@ -708,6 +711,7 @@ function buildMemberPayload() {
 }
 
 const onSaveMember = () => {
+  if (!canManageMembers.value) return
   submitted.value = true
   if (!userName.value.trim() || !userPosition.value) {
     toast.add({
@@ -732,7 +736,7 @@ const onSaveMember = () => {
 }
 
 async function syncToUznel() {
-  if (!props.uznelSyncEnabled || syncingUznel.value) return
+  if (!canManageMembers.value || !props.uznelSyncEnabled || syncingUznel.value) return
   submitted.value = true
   if (!userNo.value.trim() || !userName.value.trim() || !userPosition.value || !toLocalYyyymmdd(birthday.value)) {
     toast.add({

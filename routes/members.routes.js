@@ -2,7 +2,7 @@ module.exports = (nazorat) => {
   const express = require("express")
   const router = express.Router()
   const mongoose = require("mongoose") // Import mongoose to use Schema
-  const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+  const { verifyToken, checkPermissions, checkAnyPermissions } = require("../src/middleware/auth.middleware")
   const {
     buildMemberSearchFilter,
     parseLimit,
@@ -76,7 +76,7 @@ module.exports = (nazorat) => {
 
   const CacheUser = nazorat.model("CacheUser", cacheSchema)
 
-  router.post("/uznel-id", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+  router.post("/uznel-id", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const userNo = await fetchNextUserMaskId()
       res.json({ success: true, USER_NO: userNo })
@@ -86,7 +86,7 @@ module.exports = (nazorat) => {
     }
   })
 
-  router.post("/uznel-sync", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+  router.post("/uznel-sync", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const body = req.body || {}
       const userNo = String(body.USER_NO || body.USER_ID || "").trim()
@@ -122,7 +122,7 @@ module.exports = (nazorat) => {
   })
 
   // Get all members with pagination, filtering, and sorting
-  router.get("/", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+  router.get("/", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const page = Number.parseInt(req.query.page) || 1
       const limit = Number.parseInt(req.query.limit) || 50
@@ -169,7 +169,7 @@ module.exports = (nazorat) => {
   })
 
   // Get single member by ID
-  router.get("/:id", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+  router.get("/:id", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const member = await CacheUser.findById(req.params.id)
       if (!member) {
@@ -183,7 +183,7 @@ module.exports = (nazorat) => {
   })
 
   // Get statistics
-  router.get("/stats/summary", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+  router.get("/stats/summary", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const total = await CacheUser.countDocuments()
       const active = await CacheUser.countDocuments({ STATUS_CODE: "0001" })
@@ -204,7 +204,7 @@ module.exports = (nazorat) => {
   })
 
   // Search members with complex filter data in request body
-  router.post("/search", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+  router.post("/search", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const page = parsePage(req.body)
       const limit = parseLimit(req.body, { max: req.body.export ? 5000 : 500 })
@@ -230,7 +230,7 @@ module.exports = (nazorat) => {
   })
 
   // Update member
-  router.put("/:userNo", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+  router.put("/:userNo", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const { userNo } = req.params
       const updateData = req.body
@@ -257,7 +257,7 @@ module.exports = (nazorat) => {
   })
 
   // Create new member
-  router.post("/", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+  router.post("/", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const newMember = new CacheUser(req.body)
       const savedMember = await newMember.save()
@@ -269,7 +269,7 @@ module.exports = (nazorat) => {
   })
 
   // Get member by USER_NO
-  router.get("/by-user-no/:userNo", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+  router.get("/by-user-no/:userNo", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const member = await CacheUser.findOne({ USER_NO: req.params.userNo })
       if (!member) {

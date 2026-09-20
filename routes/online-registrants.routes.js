@@ -2,7 +2,7 @@ module.exports = (vakolat, nazorat) => {
   const express = require("express")
   const router = express.Router()
   const mongoose = require("mongoose")
-  const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+  const { verifyToken, checkPermissions, checkAnyPermissions } = require("../src/middleware/auth.middleware")
   const {
     buildMemberSearchFilter,
     parseLimit,
@@ -192,7 +192,7 @@ module.exports = (vakolat, nazorat) => {
 
   router.createOnlineRegistrant = createOnlineRegistrant
 
-  router.post("/search", verifyToken, checkPermissions(["view_members"]), async (req, res) => {
+  router.post("/search", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const page = parsePage(req.body)
       const limit = parseLimit(req.body, { max: req.body.export ? 5000 : 500 })
@@ -217,7 +217,7 @@ module.exports = (vakolat, nazorat) => {
     }
   })
 
-  router.get("/by-user-no/:userNo", verifyToken, checkPermissions(["view_members"]), async (req, res) => {
+  router.get("/by-user-no/:userNo", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const member = await OnlineRegistrant.findOne({ USER_NO: req.params.userNo })
       if (!member) {
@@ -230,7 +230,7 @@ module.exports = (vakolat, nazorat) => {
     }
   })
 
-  router.get("/:id", verifyToken, checkPermissions(["view_members"]), async (req, res) => {
+  router.get("/:id", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const member = await OnlineRegistrant.findById(req.params.id)
       if (!member) {
@@ -243,7 +243,7 @@ module.exports = (vakolat, nazorat) => {
     }
   })
 
-  router.post("/", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+  router.post("/", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const { member } = await createOnlineRegistrant(req.body)
       res.status(201).json({ success: true, member })
@@ -256,7 +256,7 @@ module.exports = (vakolat, nazorat) => {
     }
   })
 
-  router.put("/:userNo", verifyToken, checkPermissions(["manage_users"]), async (req, res) => {
+  router.put("/:userNo", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const { userNo } = req.params
       const updateData = sanitizePayload(req.body)

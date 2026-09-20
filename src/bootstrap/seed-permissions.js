@@ -11,7 +11,8 @@ const ALL_PERMISSIONS = [
   { name: "manage_ip_access", description: "To'liq matnga IP ruxsatlarni boshqarish" },
   { name: "view_diss_statistics", description: "Dissertatsiya statistikasi sahifasini ko'rish" },
   { name: "view_statistics", description: "Statistika va tashriflarni ko'rish" },
-  { name: "view_members", description: "A'zo bo'lganlar ro'yxatini ko'rish" },
+  { name: "view_members", description: "A'zo bo'lganlar va onlayn ro'yxatdan o'tganlar ro'yxatini ko'rish" },
+  { name: "manage_members", description: "A'zolarni ro'yxatga olish, tahrirlash va Uznelga sinxronlash" },
   { name: "manage_users", description: "Foydalanuvchilar (xodimlar) boshqaruvi" },
   { name: "view_tickets", description: "Bir martalik chiptalar ro'yxatini ko'rish" },
   { name: "create_tickets", description: "Bir martalik chiptalar yaratish" },
@@ -30,6 +31,17 @@ const ALL_PERMISSIONS = [
   { name: "system_manage", description: "Tizim boshqaruvi (umumiy sozlamalar)" },
   { name: "manage_permissions", description: "Huquqlar va huquq guruhlarini boshqarish" },
 ]
+
+const REGISTRAR_PERMISSIONS = ["view_members", "manage_members"]
+
+async function addMissingPermissionIds(group, permissionIds) {
+  const have = new Set((group.permissions || []).map((id) => String(id)))
+  const missing = permissionIds.filter((id) => id && !have.has(String(id)))
+  if (!missing.length) return 0
+  group.permissions = [...(group.permissions || []), ...missing]
+  await group.save()
+  return missing.length
+}
 
 async function seedPermissionsAndGroups({ Permission, PermissionGroup }) {
   for (const perm of ALL_PERMISSIONS) {
@@ -53,6 +65,11 @@ async function seedPermissionsAndGroups({ Permission, PermissionGroup }) {
       permissions: ids(ALL_PERMISSIONS.map((p) => p.name)),
     },
     {
+      name: "Ro'yxatga oluvchi",
+      description: "Kutubxona a'zolarini ko'rish, ro'yxatga olish va Uznelga sinxronlash",
+      permissions: ids(REGISTRAR_PERMISSIONS),
+    },
+    {
       name: "Dissertatsiya mutaxassisi",
       description: "Dissertatsiyalarni ko'rish, qo'shish va tahrirlash",
       permissions: ids(["view_dissertations", "add_dissertation", "edit_dissertation", "download_dissertation", "view_diss_statistics", "view_statistics"]),
@@ -69,11 +86,18 @@ async function seedPermissionsAndGroups({ Permission, PermissionGroup }) {
     if (!exists) {
       await PermissionGroup.create({ ...group, isActive: true })
       console.log("Seeded permission group:", group.name)
+      continue
+    }
+
+    const added = await addMissingPermissionIds(exists, group.permissions)
+    if (added) {
+      console.log("Updated permission group:", group.name, "+", added, "permissions")
     }
   }
 }
 
 module.exports = {
   ALL_PERMISSIONS,
+  REGISTRAR_PERMISSIONS,
   seedPermissionsAndGroups,
 }

@@ -35,7 +35,7 @@
           @click="$emit('refresh')"
         />
         <Button
-          v-if="showAddButton"
+          v-if="showAddButton && canManageMembers"
           type="button"
           :label="addLabel"
           icon="pi pi-plus"
@@ -364,8 +364,10 @@ import DataTable from 'primevue/datatable'
 import InputText from 'primevue/inputtext'
 import Popover from 'primevue/popover'
 import { ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
+import authService from '@/service/auth.service'
 
 const EMPTY = '—'
+const canManageMembers = computed(() => authService.hasPermission('manage_members'))
 
 const allColumns = [
   { field: 'USER_NO', header: 'ID', always: true },

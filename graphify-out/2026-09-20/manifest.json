@@ -180,15 +180,15 @@
     "semantic_hash": ""
   },
   "routes/members.routes.js": {
-    "mtime": 1789879811.0878966,
-    "seen": 1789879888.8972504,
-    "ast_hash": "11672022bd509332655f522af2fee0b9",
+    "mtime": 1789820305.9825373,
+    "seen": 1789820323.4781878,
+    "ast_hash": "702b44d567dc7698508d20b3cc8ca1d5",
     "semantic_hash": ""
   },
   "routes/online-registrants.routes.js": {
-    "mtime": 1789879815.990978,
-    "seen": 1789879888.8972526,
-    "ast_hash": "0d33f7eba9940c496735153ba5c6b4c4",
+    "mtime": 1789820266.3670413,
+    "seen": 1789820323.4781897,
+    "ast_hash": "e8f918bd0f2936d47b0edfc74eea06cc",
     "semantic_hash": ""
   },
   "routes/permissions.routes.js": {
@@ -342,9 +342,9 @@
     "semantic_hash": ""
   },
   "src/bootstrap/seed-permissions.js": {
-    "mtime": 1789879798.6403425,
-    "seen": 1789879888.8972943,
-    "ast_hash": "ee9cbf3fe01ea71bcbba1f5e22aed179",
+    "mtime": 1787306140.0067253,
+    "seen": 1789809656.9358277,
+    "ast_hash": "b2dff7cf79f2cdf62911dfbdd24235df",
     "semantic_hash": ""
   },
   "src/bootstrap/seed-staff.js": {
@@ -366,15 +366,15 @@
     "semantic_hash": ""
   },
   "src/components/MemberForm.vue": {
-    "mtime": 1789879873.3492725,
-    "seen": 1789879888.8973007,
-    "ast_hash": "86214f7aea718cc148586850125c088b",
+    "mtime": 1789820316.4411218,
+    "seen": 1789820323.4782214,
+    "ast_hash": "f029cbcc49b20f4453318bd8e766fc3b",
     "semantic_hash": ""
   },
   "src/components/MemberList.vue": {
-    "mtime": 1789879827.1181521,
-    "seen": 1789879888.8973026,
-    "ast_hash": "a3fabc7571ebab4b9cf3924166d21320",
+    "mtime": 1789820917.368543,
+    "seen": 1789820925.9735682,
+    "ast_hash": "4a708a6fe190e38f7270388d53475808",
     "semantic_hash": ""
   },
   "src/components/SessionTimer.vue": {
@@ -498,9 +498,9 @@
     "semantic_hash": ""
   },
   "src/router/index.js": {
-    "mtime": 1789879819.8675387,
-    "seen": 1789879888.8973343,
-    "ast_hash": "d90c38355fd592b4797f74136fe2b3e4",
+    "mtime": 1787306140.0091846,
+    "seen": 1789809656.9358468,
+    "ast_hash": "aab405b7ef15a9a7e8b2410124a46747",
     "semantic_hash": ""
   },
   "src/service/CountryService.js": {

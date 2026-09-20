@@ -186,7 +186,7 @@ const router = createRouter({
           component: () => import("@/views/pages/azo-bolganlar.vue"),
           meta: {
             requiresAuth: true,
-            permission: "view_statistics",
+            permission: "view_members",
           },
         },
         {
