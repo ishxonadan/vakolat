@@ -1,4 +1,5 @@
 const axios = require("axios")
+const crypto = require("crypto")
 const https = require("https")
 
 const httpsAgent = new https.Agent({
@@ -14,6 +15,8 @@ const DEFAULT_STATUS = "0001"
 const DEFAULT_TEMPLATE = "00000001"
 const DEFAULT_CMPNY = "0000238"
 const DEFAULT_CLASS = "0003"
+const DEFAULT_PASS_KEY = "FUTURENR12345678"
+const DEFAULT_PASS_IV = "1234567812345678"
 const SYNC_DELAY_MS = 400
 
 const POSITION_CODES = {
@@ -270,6 +273,52 @@ async function fetchNextUserMaskId() {
 
 function histAdminIp() {
   return process.env.UZNEL_HIST_IP || "195.158.18.173"
+}
+
+function encryptUznelPassword(plain) {
+  const key = Buffer.from(process.env.UZNEL_PASS_KEY || DEFAULT_PASS_KEY)
+  const iv = Buffer.from(process.env.UZNEL_PASS_IV || DEFAULT_PASS_IV)
+  if (key.length !== 16 || iv.length !== 16) {
+    throw new Error("Uznel parol kaliti noto‘g‘ri")
+  }
+  const text = Buffer.from(String(plain || ""), "utf8")
+  if (!text.length) {
+    throw new Error("Parol kerak")
+  }
+  const pad = 16 - (text.length % 16)
+  const padded = pad === 16 ? text : Buffer.concat([text, Buffer.alloc(pad, 0)])
+  const cipher = crypto.createCipheriv("aes-128-cbc", key, iv)
+  cipher.setAutoPadding(false)
+  return Buffer.concat([cipher.update(padded), cipher.final()]).toString("base64")
+}
+
+function buildPassModXml(member, password) {
+  const userId = process.env.UZNEL_USERID || DEFAULT_USERID
+  const location = process.env.UZNEL_LOCATION || DEFAULT_LOCATION
+  const userNo = resolveMemberMaskId(member)
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.nexacroplatform.com/platform/dataset">
+	<Parameters>
+		<Parameter id="USERID">${xmlEscape(userId)}</Parameter>
+		<Parameter id="className">action.set.user.SetUserInfoPassMod</Parameter>
+		<Parameter id="vLocation">${xmlEscape(location)}</Parameter>
+		<Parameter id="vUserId">${xmlEscape(userNo)}</Parameter>
+		<Parameter id="vUserLoca">${xmlEscape(member.LOCATION || location)}</Parameter>
+		<Parameter id="vPassNo">${xmlEscape(encryptUznelPassword(password))}</Parameter>
+		<Parameter id="HistRemark">${xmlEscape(userNo)}</Parameter>
+		<Parameter id="HistAdminIp">${xmlEscape(histAdminIp())}</Parameter>
+		<Parameter id="HistDispId">lon.formUserInfoDP</Parameter>
+	</Parameters>
+</Root>`
+}
+
+async function syncPassword(member) {
+  const password = String(member?.PASSWORD || "").trim()
+  if (!password) return { passwordSynced: false }
+  await delay(SYNC_DELAY_MS)
+  const result = await postUznelXml(buildPassModXml(member, password))
+  assertUznelOk(result, "Uznelga parol yozish muvaffaqiyatsiz")
+  return { passwordSynced: true }
 }
 
 function buildDupChkXml(member) {
@@ -569,6 +618,13 @@ async function registerUznelUser(member) {
     } catch (error) {
       photoError = error.message
     }
+    let passwordSynced = false
+    let passwordError = null
+    try {
+      passwordSynced = (await syncPassword(payload)).passwordSynced
+    } catch (error) {
+      passwordError = error.message
+    }
     return {
       USER_NO: userNo,
       USER_SEQ_NO: existingSeq,
@@ -579,6 +635,8 @@ async function registerUznelUser(member) {
       updated: true,
       photoSynced,
       photoError,
+      passwordSynced,
+      passwordError,
     }
   }
 
@@ -597,6 +655,13 @@ async function registerUznelUser(member) {
   } catch (error) {
     photoError = error.message
   }
+  let passwordSynced = false
+  let passwordError = null
+  try {
+    passwordSynced = (await syncPassword(payload)).passwordSynced
+  } catch (error) {
+    passwordError = error.message
+  }
 
   return {
     USER_NO: userNo,
@@ -608,6 +673,8 @@ async function registerUznelUser(member) {
     updated: false,
     photoSynced,
     photoError,
+    passwordSynced,
+    passwordError,
   }
 }
 

@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import Dropdown from 'primevue/dropdown';
+import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
 import Button from 'primevue/button';
 import apiService from '@/service/api.service';
@@ -16,12 +17,31 @@ const error = ref(null);
 
 /** Tashkiliy bo‘lim (StaffDepartment) — Zallar yoki huquq guruhi emas */
 const selectedDepartmentFilter = ref('__all__');
+const searchQuery = ref('');
 
 const sortByName = (a, b) => {
   const ln = String(a.lastname || '').localeCompare(String(b.lastname || ''), 'uz', { sensitivity: 'base' });
   if (ln !== 0) return ln;
   return String(a.firstname || '').localeCompare(String(b.firstname || ''), 'uz', { sensitivity: 'base' });
 };
+
+function normalizeStaffSearch(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/['ʻʼ‘’`´′]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchesStaffSearch(person, query) {
+  const tokens = normalizeStaffSearch(query).split(' ').filter(Boolean);
+  if (!tokens.length) return true;
+  const login = normalizeStaffSearch(person.nickname);
+  const fullName = normalizeStaffSearch(`${person.firstname || ''} ${person.lastname || ''}`);
+  const reversedName = normalizeStaffSearch(`${person.lastname || ''} ${person.firstname || ''}`);
+  const haystack = `${login} ${fullName} ${reversedName}`;
+  return tokens.every((token) => haystack.includes(token));
+}
 
 const departmentFilterOptions = computed(() => {
   const list = products.value || [];
@@ -60,8 +80,13 @@ const filteredProducts = computed(() => {
   } else {
     out = list.filter((p) => p.staffDepartment && String(p.staffDepartment._id) === v);
   }
+  out = out.filter((person) => matchesStaffSearch(person, searchQuery.value));
   return [...out].sort(sortByName);
 });
+
+const clearSearch = () => {
+  searchQuery.value = '';
+};
 
 const isSuperAdmin = computed(() => authService.getUserLevel() === 'rais');
 
@@ -162,6 +187,28 @@ const viewLogs = (expert) => {
         class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3 pt-1 border-t border-gray-200 dark:border-zinc-600"
       >
         <div class="flex flex-col gap-1 flex-1 min-w-[min(100%,18rem)] sm:max-w-md">
+          <label for="xodim-search" class="text-xs font-medium text-gray-600 dark:text-gray-400">Qidiruv</label>
+          <div class="xodim-search-shell">
+            <i class="pi pi-search xodim-search-icon" aria-hidden="true" />
+            <InputText
+              id="xodim-search"
+              v-model="searchQuery"
+              class="xodim-search-input"
+              placeholder="Login yoki ismi sharif"
+              autocomplete="off"
+            />
+            <button
+              v-if="searchQuery.trim()"
+              type="button"
+              class="xodim-search-clear"
+              aria-label="Tozalash"
+              @click="clearSearch"
+            >
+              <i class="pi pi-times" />
+            </button>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 flex-1 min-w-[min(100%,18rem)] sm:max-w-md">
           <label for="xodim-dept-filter" class="text-xs font-medium text-gray-600 dark:text-gray-400">Tashkiliy bo‘lim bo‘yicha</label>
           <Dropdown
             id="xodim-dept-filter"
@@ -188,6 +235,11 @@ const viewLogs = (expert) => {
       <p>{{ error }}</p>
     </div>
     <DataTable v-if="!isLoading && !error" :value="filteredProducts" :rows="100" :paginator="false" responsiveLayout="scroll">
+      <template #empty>
+        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+          {{ searchQuery.trim() ? 'Qidiruv bo‘yicha xodim topilmadi' : 'Xodimlar yo‘q' }}
+        </div>
+      </template>
       <Column field="nickname" header="Login" :sortable="true" style="width: 12%">
         <template #body="slotProps">
           <span :class="{'text-red-600': !slotProps.data.isActive}">
@@ -283,6 +335,58 @@ const viewLogs = (expert) => {
 </template>
 
 <style scoped>
+.xodim-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.65rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--p-content-border-color, var(--surface-border));
+  border-radius: 8px;
+  background: var(--p-content-background, var(--surface-ground));
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.xodim-search-shell:focus-within {
+  border-color: var(--p-primary-color, var(--primary-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-primary-color, var(--primary-color)) 18%, transparent);
+}
+
+.xodim-search-icon {
+  flex: 0 0 auto;
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+}
+
+.xodim-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0.45rem 0 !important;
+}
+
+.xodim-search-clear {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-color-secondary) 12%, transparent);
+  color: var(--text-color-secondary);
+  cursor: pointer;
+}
+
+.xodim-search-clear:hover {
+  color: var(--text-color);
+  background: color-mix(in srgb, var(--text-color-secondary) 22%, transparent);
+}
+
 .xodim-status-lock :deep(.pi) {
   font-size: 1.35rem;
 }

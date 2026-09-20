@@ -30,23 +30,25 @@ const menuItems = [
         icon: 'pi pi-fw pi-user',
         items: [
           {
+            label: "A'zo bo'lganlar",
+            icon: 'pi pi-fw pi-users',
+            to: '/azo-bolganlar',
+            requiredPermissions: ['view_members']
+          },
+          {
             label: "Bir martalik chipta",
             icon: 'pi pi-fw pi-tags',
             to: '/tickets',
             requiredPermissions: ['view_tickets']
           },
+
           {
             label: "Tashriflar",
             icon: 'pi pi-fw pi-chart-bar',
             to: '/tashriflar',
             requiredPermissions: ['view_statistics']
           },
-          {
-            label: "A'zo bo'lganlar",
-            icon: 'pi pi-fw pi-users',
-            to: '/azo-bolganlar',
-            requiredPermissions: ['view_members']
-          },
+
           {
             label: "Onlayn ro'yxatdan o'tganlar",
             icon: 'pi pi-fw pi-globe',

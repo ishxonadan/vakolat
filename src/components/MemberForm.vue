@@ -61,7 +61,7 @@
             <p>ID karta QR kodini skanerlang — ism, pasport, PINFL, jinsi va fuqarolik avtomatik to'ldiriladi</p>
           </div>
           <div class="form-grid">
-            <div v-if="canGenerateUznelId || isEditMode || userNo" class="form-field full-width">
+            <div v-if="canGenerateUznelId || isEditMode || userNo" class="form-field">
               <label class="field-label" for="userNo">ID</label>
               <div class="id-lookup">
                 <InputText
@@ -85,6 +85,17 @@
                   @click="fetchUznelUserId"
                 />
               </div>
+            </div>
+
+            <div v-if="canGenerateUznelId || isEditMode || userNo" class="form-field">
+              <label class="field-label" for="uznelPassword">Parol</label>
+              <InputText
+                id="uznelPassword"
+                v-model="uznelPassword"
+                class="w-full"
+                placeholder="ID bilan bir xil, o‘zgartirish mumkin"
+                autocomplete="off"
+              />
             </div>
 
             <div class="form-field full-width">
@@ -132,6 +143,22 @@
               />
             </div>
 
+            <div class="form-field full-width">
+              <label class="field-label" for="cmpnyCode">Tashkilot</label>
+              <Dropdown
+                id="cmpnyCode"
+                v-model="cmpnyCode"
+                :options="companyOptions"
+                optionLabel="label"
+                optionValue="code"
+                placeholder="Tashkilotni tanlang"
+                class="w-full"
+                filter
+                filterPlaceholder="Qidirish"
+                appendTo="body"
+              />
+            </div>
+
             <div class="form-field">
               <label class="field-label" for="passportCode">Pasport</label>
               <InputText
@@ -140,6 +167,20 @@
                 placeholder="AA1234567"
                 class="w-full passport-input"
                 autocomplete="off"
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="field-label" for="pinfl">PINFL</label>
+              <InputText
+                id="pinfl"
+                v-model="pinfl"
+                placeholder="14 xonali JSHSHIR"
+                class="w-full"
+                maxlength="14"
+                inputmode="numeric"
+                autocomplete="off"
+                @input="onPinflInput"
               />
             </div>
 
@@ -170,20 +211,6 @@
                 showIcon
                 showButtonBar
                 class="w-full"
-              />
-            </div>
-
-            <div class="form-field">
-              <label class="field-label" for="pinfl">PINFL</label>
-              <InputText
-                id="pinfl"
-                v-model="pinfl"
-                placeholder="14 xonali JSHSHIR"
-                class="w-full"
-                maxlength="14"
-                inputmode="numeric"
-                autocomplete="off"
-                @input="onPinflInput"
               />
             </div>
           </div>
@@ -323,6 +350,7 @@ import {
   parsePhoneNumber,
   phoneCodeOptions,
 } from '@/utils/phoneNumber'
+import { DEFAULT_UZNEL_CMPNY_CODE, ensureUznelCompanyOption, uznelCompanies } from '@/data/uznelCompanies.js'
 
 const props = defineProps({
   selectedMember: {
@@ -389,6 +417,7 @@ const nationalityOptions = [
 const phoneCodes = phoneCodeOptions()
 
 const userNo = ref('')
+const uznelPassword = ref('')
 const userName = ref('')
 const userPosition = ref('')
 const pinfl = ref('')
@@ -401,8 +430,11 @@ const email = ref('')
 const zipCode = ref('')
 const sex = ref('')
 const nationality = ref('')
+const cmpnyCode = ref(DEFAULT_UZNEL_CMPNY_CODE)
 const scannedPassportSeries = ref('')
 const scannedPassportNumber = ref('')
+
+const companyOptions = computed(() => ensureUznelCompanyOption(cmpnyCode.value, uznelCompanies))
 
 const isCustomDialCode = computed(() => isCustomPhoneCode(phoneCode.value))
 const activeDialCode = computed(() => (
@@ -420,6 +452,7 @@ watch(() => props.selectedMember, (newVal) => {
   submitted.value = false
   if (!newVal) return
   userNo.value = newVal.USER_NO || ''
+  uznelPassword.value = newVal.PASSWORD || newVal.USER_NO || ''
   userName.value = newVal.USER_NAME || ''
   userPosition.value = newVal.USER_POSITION || ''
   pinfl.value = newVal.PINFL || ''
@@ -430,6 +463,7 @@ watch(() => props.selectedMember, (newVal) => {
   zipCode.value = newVal.ZIP_CODE || ''
   sex.value = normalizeSex(newVal.SEX, newVal.PINFL)
   nationality.value = newVal.NATIONALITY || ''
+  cmpnyCode.value = newVal.CMPNY_CODE || DEFAULT_UZNEL_CMPNY_CODE
   ensureNationalityOption(nationality.value)
   scannedPassportSeries.value = newVal.PASSPORT_SERIES || ''
   scannedPassportNumber.value = newVal.PASSPORT_NUMBER || ''
@@ -652,7 +686,11 @@ async function fetchUznelUserId() {
     const response = await apiService.post('/members/uznel-id', {})
     const nextId = String(response?.USER_NO || '').trim()
     if (!nextId) throw new Error('Uznel ID olinmadi')
+    const previousId = userNo.value.trim()
     userNo.value = nextId
+    if (!uznelPassword.value.trim() || uznelPassword.value.trim() === previousId) {
+      uznelPassword.value = nextId
+    }
     toast.add({
       severity: 'success',
       summary: 'ID olindi',
@@ -706,6 +744,9 @@ function buildMemberPayload() {
     PASSPORT_NUMBER: scannedPassportNumber.value || undefined,
     SEX: sex.value || '',
     NATIONALITY: nationality.value || '',
+    CMPNY_CODE: cmpnyCode.value || DEFAULT_UZNEL_CMPNY_CODE,
+    FULL_CODE: cmpnyCode.value || DEFAULT_UZNEL_CMPNY_CODE,
+    PASSWORD: uznelPassword.value.trim() || maskId,
     PHOTO: props.selectedMember?.PHOTO || undefined,
   }
 }
@@ -761,14 +802,13 @@ async function syncToUznel() {
       LIB_USE_LDATE: response?.LIB_USE_LDATE || payload.LIB_USE_LDATE,
     })
     const action = response?.updated ? 'yangilandi' : 'yozildi'
+    const extraErrors = [response?.photoError, response?.passwordError].filter(Boolean)
     toast.add({
-      severity: response?.photoError ? 'warn' : 'success',
+      severity: extraErrors.length ? 'warn' : 'success',
       summary: 'Uznel',
-      detail: response?.photoError
-        ? `${payload.USER_NO} ma'lumotlari ${action}, lekin rasm: ${response.photoError}`
-        : response?.photoSynced
-          ? `${payload.USER_NO} ma'lumotlari va rasm ${action}`
-          : `${payload.USER_NO} ma'lumotlari ${action}`,
+      detail: extraErrors.length
+        ? `${payload.USER_NO} ma'lumotlari ${action}, lekin: ${extraErrors.join('; ')}`
+        : `${payload.USER_NO} ma'lumotlari ${action}`,
       life: 3500
     })
   } catch (error) {

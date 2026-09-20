@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1789809640.8903623,
-    "seen": 1789809656.9357898,
-    "ast_hash": "f4426918b1a6f4b45b79890d1b0f3975",
+    "mtime": 1789885276.4336536,
+    "seen": 1789885848.0173995,
+    "ast_hash": "c6ab3f61217d1594c0eeb0196a979d62",
     "semantic_hash": ""
   },
   "postcss.config.js": {
@@ -114,14 +114,14 @@
     "semantic_hash": ""
   },
   "public/models/face_landmark_68_model-weights_manifest.json": {
-    "mtime": 1769183996.2503364,
-    "seen": 1789809656.9357994,
+    "mtime": 1789885458.4622588,
+    "seen": 1789885848.0174468,
     "ast_hash": "1d4029763003335bc6921aadeb58706a",
     "semantic_hash": ""
   },
   "public/models/tiny_face_detector_model-weights_manifest.json": {
-    "mtime": 1769183994.8555462,
-    "seen": 1789809656.9358,
+    "mtime": 1789885458.1246932,
+    "seen": 1789885848.0174487,
     "ast_hash": "5bab50532388f5da9b4cd85b15adc11c",
     "semantic_hash": ""
   },
@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "src/components/MemberForm.vue": {
-    "mtime": 1789879873.3492725,
-    "seen": 1789879888.8973007,
-    "ast_hash": "86214f7aea718cc148586850125c088b",
+    "mtime": 1789888322.9209673,
+    "seen": 1789888339.1361947,
+    "ast_hash": "54ce4c970e816f809091bdc866324e56",
     "semantic_hash": ""
   },
   "src/components/MemberList.vue": {
@@ -390,9 +390,9 @@
     "semantic_hash": ""
   },
   "src/components/WebcamCapture.vue": {
-    "mtime": 1769190791.90001,
-    "seen": 1789809656.9358337,
-    "ast_hash": "34559c0921e30cc24dd462dbb9c8a714",
+    "mtime": 1789887453.505493,
+    "seen": 1789887468.8168137,
+    "ast_hash": "956616e7ada6315f5a84b091bcafc4c3",
     "semantic_hash": ""
   },
   "src/layout/AppConfigurator.vue": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/layout/AppMenu.vue": {
-    "mtime": 1787306140.0085828,
-    "seen": 1789809656.9358363,
-    "ast_hash": "9a17dcc72509fbecb9c4e787aed8569b",
+    "mtime": 1789885979.112989,
+    "seen": 1789886123.7555952,
+    "ast_hash": "c62da6fed7a1763b285bd772c7a3b0f1",
     "semantic_hash": ""
   },
   "src/layout/AppMenuItem.vue": {
@@ -840,9 +840,9 @@
     "semantic_hash": ""
   },
   "src/views/pages/vakillar.vue": {
-    "mtime": 1775229037.3563726,
-    "seen": 1789809656.9358897,
-    "ast_hash": "8a9abaf93f52d03c08a228ce0578e29c",
+    "mtime": 1789885921.7366245,
+    "seen": 1789886123.755696,
+    "ast_hash": "9be4f50180188a099ccbff3c05e5d45e",
     "semantic_hash": ""
   },
   "src/views/settings/SettingsPage.vue": {
@@ -1248,9 +1248,27 @@
     "semantic_hash": ""
   },
   "src/services/uznel.service.js": {
-    "mtime": 1789820316.2399702,
-    "seen": 1789820323.4782548,
-    "ast_hash": "8b93325395daa96f6f87b107870f733a",
+    "mtime": 1789888315.087304,
+    "seen": 1789888339.136266,
+    "ast_hash": "9c9766efdd84e4f86885f696e1412085",
+    "semantic_hash": ""
+  },
+  "src/utils/picoFaceDetect.js": {
+    "mtime": 1789887427.6680717,
+    "seen": 1789887468.8168542,
+    "ast_hash": "4e65577284c2f4582ddd11c82246bed1",
+    "semantic_hash": ""
+  },
+  "src/vendor/pico.js": {
+    "mtime": 1789886356.1559064,
+    "seen": 1789886422.426353,
+    "ast_hash": "39935cb448a0c3c67c859fb6fe08f688",
+    "semantic_hash": ""
+  },
+  "src/data/uznelCompanies.js": {
+    "mtime": 1789887790.7393126,
+    "seen": 1789887801.6525047,
+    "ast_hash": "d997287394f37b17ea801cde7f5aadac",
     "semantic_hash": ""
   }
 }
