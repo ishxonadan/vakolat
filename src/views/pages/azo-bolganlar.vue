@@ -328,6 +328,7 @@ onMounted(() => {
             @close-dialog="closeDialog"
             @save-member="saveMember"
             @uznel-synced="onUznelSynced"
+            @new-member="openAddMemberDialog"
             @image-select="onImageSelect"
             @delete-image="deleteImage"
           />
@@ -350,6 +351,7 @@ onMounted(() => {
         @close-dialog="closeDialog"
         @save-member="saveMember"
         @uznel-synced="onUznelSynced"
+        @new-member="openAddMemberDialog"
         @image-select="onImageSelect"
         @delete-image="deleteImage"
       />

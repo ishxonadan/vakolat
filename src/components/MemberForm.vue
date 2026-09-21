@@ -301,24 +301,38 @@
     <div class="form-actions">
       <Button
         type="button"
+        class="form-actions-cancel"
         label="Bekor qilish"
         icon="pi pi-times"
         outlined
         severity="secondary"
         @click="onCloseDialog"
       />
-      <Button type="submit" v-if="canManageMembers" label="Saqlash" icon="pi pi-check" severity="success" />
-      <Button
-        v-if="canGenerateUznelId && canManageMembers"
-        type="button"
-        label="Uznelga sinxronizatsiya"
-        icon="pi pi-cloud-upload"
-        class="uznel-sync-btn"
-        :disabled="!uznelSyncEnabled || syncingUznel"
-        :loading="syncingUznel"
-        @click="syncToUznel"
-      />
+      <div class="form-actions-primary">
+        <Button type="submit" v-if="canManageMembers" label="Saqlash" icon="pi pi-check" severity="success" />
+        <Button
+          v-if="canGenerateUznelId && canManageMembers"
+          type="button"
+          label="Uznelga sinxronizatsiya"
+          icon="pi pi-cloud-upload"
+          class="uznel-sync-btn"
+          :disabled="!uznelSyncEnabled || syncingUznel"
+          :loading="syncingUznel"
+          @click="syncToUznel"
+        />
+        <Button
+          v-if="canStartNewMember"
+          type="button"
+          label="Yangi foydalanuvchi"
+          icon="pi pi-user-plus"
+          severity="help"
+          outlined
+          @click="requestNewMember"
+        />
+      </div>
     </div>
+
+    <ConfirmDialog />
 
     <WebcamCapture
       v-model:visible="showWebcamDialog"
@@ -337,6 +351,8 @@ import Dropdown from 'primevue/dropdown'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import InputText from 'primevue/inputtext'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
 import WebcamCapture from './WebcamCapture.vue'
 import apiService from '@/service/api.service'
 import authService from '@/service/auth.service'
@@ -381,8 +397,9 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced'])
+const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced', 'new-member'])
 const toast = useToast()
+const confirm = useConfirm()
 const canManageMembers = computed(() => authService.hasPermission('manage_members'))
 
 const fileInput = ref(null)
@@ -390,6 +407,7 @@ const showWebcamDialog = ref(false)
 const submitted = ref(false)
 const fetchingUserNo = ref(false)
 const syncingUznel = ref(false)
+const didSyncUznel = ref(false)
 
 const sexOptions = [
   { label: 'Ayol', value: 'F' },
@@ -451,6 +469,10 @@ const categoryOptions = computed(() => {
   return list
 })
 
+const canStartNewMember = computed(() => (
+  props.canGenerateUznelId && canManageMembers.value && didSyncUznel.value
+))
+
 const isCustomDialCode = computed(() => isCustomPhoneCode(phoneCode.value))
 const activeDialCode = computed(() => (
   isCustomDialCode.value ? customPhoneCode.value : phoneCode.value
@@ -466,6 +488,7 @@ const SCAN_GAP_MS = 120
 watch(() => props.selectedMember, (newVal) => {
   submitted.value = false
   if (!newVal) return
+  if (!newVal.USER_NO) didSyncUznel.value = false
   userNo.value = newVal.USER_NO || ''
   uznelPassword.value = newVal.PASSWORD || newVal.USER_NO || ''
   userName.value = newVal.USER_NAME || ''
@@ -482,7 +505,7 @@ watch(() => props.selectedMember, (newVal) => {
   ensureNationalityOption(nationality.value)
   scannedPassportSeries.value = newVal.PASSPORT_SERIES || ''
   scannedPassportNumber.value = newVal.PASSPORT_NUMBER || ''
-}, { immediate: true, deep: true })
+}, { immediate: true })
 
 watch(() => props.categories, () => {
   if (!userPosition.value) return
@@ -838,6 +861,7 @@ async function syncToUznel() {
       UZNEL_ORG_ROW: response?.UZNEL_ORG_ROW || payload.UZNEL_ORG_ROW,
       LIB_USE_LDATE: response?.LIB_USE_LDATE || payload.LIB_USE_LDATE,
     })
+    didSyncUznel.value = true
     const action = response?.updated ? 'yangilandi' : 'yozildi'
     const extraErrors = [response?.photoError, response?.cardError, response?.passwordError].filter(Boolean)
     toast.add({
@@ -858,6 +882,44 @@ async function syncToUznel() {
   } finally {
     syncingUznel.value = false
   }
+}
+
+function formHasFilledData() {
+  return Boolean(
+    userNo.value.trim()
+    || uznelPassword.value.trim()
+    || userName.value.trim()
+    || userPosition.value
+    || pinfl.value.trim()
+    || phoneLocal.value.trim()
+    || birthday.value
+    || addrs.value.trim()
+    || email.value.trim()
+    || zipCode.value.trim()
+    || sex.value
+    || cmpnyCode.value
+    || scannedPassportSeries.value
+    || scannedPassportNumber.value
+    || props.imageSource
+  )
+}
+
+function requestNewMember() {
+  if (!canStartNewMember.value) return
+  if (!formHasFilledData()) {
+    emit('new-member')
+    return
+  }
+  confirm.require({
+    message: "Formada ma'lumotlar bor. Tozalab yangi foydalanuvchini ro'yxatga olasizmi?",
+    header: 'Tasdiqlash',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Bekor qilish',
+    acceptLabel: 'Ha, tozalash',
+    rejectClass: 'p-button-secondary p-button-outlined',
+    acceptClass: 'p-button-success',
+    accept: () => emit('new-member'),
+  })
 }
 
 const onWebcamCapture = (imageData) => {
@@ -1093,10 +1155,21 @@ const dataURLtoFile = (dataurl, filename) => {
 
 .form-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 0.6rem;
   padding-top: 0.25rem;
   border-top: 1px solid var(--p-content-border-color, var(--surface-border));
+}
+
+.form-actions-cancel {
+  margin-right: auto;
+}
+
+.form-actions-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .uznel-sync-btn.p-button,
