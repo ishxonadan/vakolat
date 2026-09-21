@@ -6,6 +6,8 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 })
 
+const { buildPositionCodeMap } = require("../data/member-categories.defaults")
+
 const DEFAULT_URL = "https://uznel.natlib.uz:444/FN/Manager/action.do"
 const DEFAULT_USERID = "ILHOM"
 const DEFAULT_LOCATION = "R0000000"
@@ -13,21 +15,13 @@ const DEFAULT_GRADE = "0001"
 const DEFAULT_LOAN_CHECK = "0001"
 const DEFAULT_STATUS = "0001"
 const DEFAULT_TEMPLATE = "00000001"
-const DEFAULT_CMPNY = "0000238"
 const DEFAULT_CLASS = "0003"
 const DEFAULT_PASS_KEY = "FUTURENR12345678"
 const DEFAULT_PASS_IV = "1234567812345678"
+const DEFAULT_CARD_TYPE = "0001"
 const SYNC_DELAY_MS = 400
 
-const POSITION_CODES = {
-  Talaba: "0001",
-  "O'qituvchi": "0002",
-  "O‘qituvchi": "0002",
-  Professor: "0003",
-  Tadqiqotchi: "0004",
-  Xodim: "0005",
-  Boshqa: "0006",
-}
+const POSITION_CODES = buildPositionCodeMap()
 
 const STUSER_COLUMNS = `		<ColumnInfo>
 			<Column id="ADDRS" type="STRING" size="200" prop="default" />
@@ -179,7 +173,7 @@ function buildUserCols(member) {
     xmlCol("USER_NO", userNo),
     xmlCol("USER_POSITION", mapPosition(member.USER_POSITION)),
     xmlCol("ZIP_CODE", String(member.ZIP_CODE || "").trim().toUpperCase()),
-    xmlCol("CMPNY_CODE", member.CMPNY_CODE || process.env.UZNEL_CMPNY_CODE || DEFAULT_CMPNY),
+    xmlCol("CMPNY_CODE", member.CMPNY_CODE || ""),
     xmlCol("SMS_CHECK", member.SMS_CHECK || "Y"),
     xmlCol("MAIL_CHECK", member.MAIL_CHECK || "Y"),
     xmlCol("LIB_USE_LDATE", addYearsYyyymmdd(todayYyyymmdd(), 3)),
@@ -460,7 +454,7 @@ function snapshotModFields(member, userSeqNo) {
   const userNo = resolveMemberMaskId(member)
   const userId = process.env.UZNEL_USERID || DEFAULT_USERID
   const location = process.env.UZNEL_LOCATION || DEFAULT_LOCATION
-  const cmpny = member.CMPNY_CODE || process.env.UZNEL_CMPNY_CODE || DEFAULT_CMPNY
+  const cmpny = member.CMPNY_CODE || ""
   return {
     SEQUENCE_NO: String(userSeqNo || member.SEQUENCE_NO || member.USER_SEQ_NO || ""),
     USER_ID: userNo,
@@ -591,6 +585,65 @@ async function syncPhoto(payload, userSeqNo) {
   return { photoSynced: true }
 }
 
+function buildCardIssueXml(member, userSeqNo) {
+  const userId = process.env.UZNEL_USERID || DEFAULT_USERID
+  const location = process.env.UZNEL_LOCATION || DEFAULT_LOCATION
+  const userNo = resolveMemberMaskId(member)
+  const cardNo = String(member.CARD_NO || userNo).trim() || userNo
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.nexacroplatform.com/platform/dataset">
+	<Parameters>
+		<Parameter id="USERID">${xmlEscape(userId)}</Parameter>
+		<Parameter id="className">action.set.user.SetUserCardIssue</Parameter>
+		<Parameter id="vAdminId">${xmlEscape(userId)}</Parameter>
+		<Parameter id="vAdminIp">${xmlEscape(histAdminIp())}</Parameter>
+		<Parameter id="vLocation">${xmlEscape(location)}</Parameter>
+		<Parameter id="vUserId">${xmlEscape(userNo)}</Parameter>
+		<Parameter id="vCardType">${xmlEscape(member.CARD_TYPE || DEFAULT_CARD_TYPE)}</Parameter>
+		<Parameter id="vCardNo">${xmlEscape(cardNo)}</Parameter>
+		<Parameter id="vUserSeqNo">${xmlEscape(userSeqNo)}</Parameter>
+	</Parameters>
+</Root>`
+}
+
+async function syncCardIssue(member, userSeqNo) {
+  if (!userSeqNo) {
+    throw new Error("Karta uchun USER_SEQ_NO topilmadi")
+  }
+  await delay(SYNC_DELAY_MS)
+  const result = await postUznelXml(buildCardIssueXml(member, userSeqNo))
+  assertUznelOk(result, "Uznelga karta yozish muvaffaqiyatsiz")
+  return { cardSynced: true }
+}
+
+async function syncAfterSave(payload, userSeqNo) {
+  let photoSynced = false
+  let photoError = null
+  try {
+    photoSynced = (await syncPhoto(payload, userSeqNo)).photoSynced
+  } catch (error) {
+    photoError = error.message
+  }
+
+  let cardSynced = false
+  let cardError = null
+  try {
+    cardSynced = (await syncCardIssue(payload, userSeqNo)).cardSynced
+  } catch (error) {
+    cardError = error.message
+  }
+
+  let passwordSynced = false
+  let passwordError = null
+  try {
+    passwordSynced = (await syncPassword(payload)).passwordSynced
+  } catch (error) {
+    passwordError = error.message
+  }
+
+  return { photoSynced, photoError, cardSynced, cardError, passwordSynced, passwordError }
+}
+
 async function registerUznelUser(member) {
   const userNo = resolveMemberMaskId(member)
   const userName = String(member?.USER_NAME || "").trim()
@@ -611,20 +664,7 @@ async function registerUznelUser(member) {
   if (existingSeq) {
     const updated = await postUznelXml(buildInfoModXml(payload, existingSeq))
     assertUznelOk(updated, "Uznelda yangilash muvaffaqiyatsiz")
-    let photoSynced = false
-    let photoError = null
-    try {
-      photoSynced = (await syncPhoto(payload, existingSeq)).photoSynced
-    } catch (error) {
-      photoError = error.message
-    }
-    let passwordSynced = false
-    let passwordError = null
-    try {
-      passwordSynced = (await syncPassword(payload)).passwordSynced
-    } catch (error) {
-      passwordError = error.message
-    }
+    const extras = await syncAfterSave(payload, existingSeq)
     return {
       USER_NO: userNo,
       USER_SEQ_NO: existingSeq,
@@ -633,10 +673,7 @@ async function registerUznelUser(member) {
       UZNEL_ORG_ROW: snapshotModFields(payload, existingSeq),
       LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
       updated: true,
-      photoSynced,
-      photoError,
-      passwordSynced,
-      passwordError,
+      ...extras,
     }
   }
 
@@ -648,20 +685,7 @@ async function registerUznelUser(member) {
   const registered = await postUznelXml(buildInfoRegXml(payload))
   assertUznelOk(registered, "Uznelga yozish muvaffaqiyatsiz")
   const userSeqNo = parseUserSeqNo(registered.xml) || parseUserSeqNo(dup.xml)
-  let photoSynced = false
-  let photoError = null
-  try {
-    photoSynced = (await syncPhoto(payload, userSeqNo)).photoSynced
-  } catch (error) {
-    photoError = error.message
-  }
-  let passwordSynced = false
-  let passwordError = null
-  try {
-    passwordSynced = (await syncPassword(payload)).passwordSynced
-  } catch (error) {
-    passwordError = error.message
-  }
+  const extras = await syncAfterSave(payload, userSeqNo)
 
   return {
     USER_NO: userNo,
@@ -671,10 +695,7 @@ async function registerUznelUser(member) {
     UZNEL_ORG_ROW: snapshotModFields(payload, userSeqNo),
     LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
     updated: false,
-    photoSynced,
-    photoError,
-    passwordSynced,
-    passwordError,
+    ...extras,
   }
 }
 

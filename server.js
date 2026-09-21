@@ -35,6 +35,8 @@ const {
   ensureStaffPositionsSeed,
   migrateStaffPositionSortOrderToOneBased,
 } = require("./src/bootstrap/seed-staff")
+const { ensureMemberCategoriesSeed } = require("./src/bootstrap/seed-member-categories")
+const { ensureMemberCompaniesSeed } = require("./src/bootstrap/seed-member-companies")
 const { attachApiAudit } = require("./src/services/audit.service")
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -55,6 +57,8 @@ const {
   Contestant,
   StaffDepartment,
   StaffPosition,
+  MemberCategory,
+  MemberCompany,
   User,
   WebsiteRating,
   AutoRating,
@@ -950,6 +954,8 @@ const authRoutes = require("./routes/auth.routes")(vakolat, JWT_SECRET)
 const expertRoutes = require("./routes/experts.routes")(vakolat, JWT_SECRET)
 const staffDepartmentRoutes = require("./routes/staff-departments.routes")(vakolat)
 const staffPositionRoutes = require("./routes/staff-positions.routes")(vakolat)
+const memberCategoryRoutes = require("./routes/member-categories.routes")(vakolat)
+const memberCompanyRoutes = require("./routes/member-companies.routes")(vakolat)
 const contestantRoutes = require("./routes/contestants.routes")(vakolat)
 const ratingRoutes = require("./routes/ratings.routes")(vakolat)
 const adminRoutes = require("./routes/admin.routes")(vakolat, JWT_SECRET, PlausibleCache)
@@ -970,6 +976,8 @@ app.use("/", authRoutes)
 app.use("/api/experts", expertRoutes)
 app.use("/api/staff-departments", staffDepartmentRoutes)
 app.use("/api/staff-positions", staffPositionRoutes)
+app.use("/api/member-categories", memberCategoryRoutes)
+app.use("/api/member-companies", memberCompanyRoutes)
 app.use("/api/contestants", contestantRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes)
@@ -1144,6 +1152,8 @@ app.listen(PORT, async () => {
     await ensureDefaultStaffDepartment({ StaffDepartment })
     await ensureStaffPositionsSeed({ StaffPosition })
     await migrateStaffPositionSortOrderToOneBased({ StaffPosition })
+    await ensureMemberCategoriesSeed({ MemberCategory })
+    await ensureMemberCompaniesSeed({ MemberCompany })
   } catch (e) {
     console.error("DB seed (staff department / positions):", e)
   }

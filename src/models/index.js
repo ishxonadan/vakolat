@@ -42,6 +42,29 @@ function registerModels({ vakolat, yoqlama, nazorat }) {
   )
   staffPositionSchema.index({ name: 1 }, { unique: true })
 
+  const memberCategorySchema = new mongoose.Schema(
+    {
+      code: { type: String, required: true, trim: true, match: /^\d{4}$/ },
+      name: { type: String, required: true, trim: true },
+      isActive: { type: Boolean, default: true },
+      sortOrder: { type: Number, default: 1 },
+    },
+    { timestamps: true },
+  )
+  memberCategorySchema.index({ code: 1 }, { unique: true })
+  memberCategorySchema.index({ name: 1 }, { unique: true })
+
+  const memberCompanySchema = new mongoose.Schema(
+    {
+      code: { type: String, required: true, trim: true },
+      name: { type: String, required: true, trim: true },
+      isActive: { type: Boolean, default: true },
+      sortOrder: { type: Number, default: 1 },
+    },
+    { timestamps: true },
+  )
+  memberCompanySchema.index({ code: 1 }, { unique: true })
+
   const userSchema = new mongoose.Schema({
     nickname: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -314,6 +337,8 @@ function registerModels({ vakolat, yoqlama, nazorat }) {
   const Contestant = vakolat.model("Websites", contestantSchema)
   const StaffDepartment = vakolat.model("StaffDepartment", staffDepartmentSchema)
   const StaffPosition = vakolat.model("StaffPosition", staffPositionSchema)
+  const MemberCategory = vakolat.model("MemberCategory", memberCategorySchema)
+  const MemberCompany = vakolat.model("MemberCompany", memberCompanySchema)
   const User = vakolat.model("User", userSchema)
   const AuditLog = vakolat.model("AuditLog", auditLogModel.auditLogSchema)
   const RatingAssignment = vakolat.model("RatingAssignment", ratingModel.ratingAssignmentSchema)
@@ -344,6 +369,8 @@ function registerModels({ vakolat, yoqlama, nazorat }) {
     Contestant,
     StaffDepartment,
     StaffPosition,
+    MemberCategory,
+    MemberCompany,
     User,
     AuditLog,
     RatingAssignment,
@@ -359,6 +386,8 @@ function attachCoreModelsToAppLocals(app, models) {
   app.locals.User = models.User
   app.locals.StaffDepartment = models.StaffDepartment
   app.locals.StaffPosition = models.StaffPosition
+  app.locals.MemberCategory = models.MemberCategory
+  app.locals.MemberCompany = models.MemberCompany
   app.locals.Permission = models.Permission
   app.locals.PermissionGroup = models.PermissionGroup
   app.locals.AuditLog = models.AuditLog

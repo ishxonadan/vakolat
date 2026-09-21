@@ -119,7 +119,7 @@
               <Dropdown
                 id="userPosition"
                 v-model="userPosition"
-                :options="categories"
+                :options="categoryOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Toifani tanlang"
@@ -154,6 +154,7 @@
                 placeholder="Tashkilotni tanlang"
                 class="w-full"
                 filter
+                showClear
                 filterPlaceholder="Qidirish"
                 appendTo="body"
               />
@@ -350,7 +351,8 @@ import {
   parsePhoneNumber,
   phoneCodeOptions,
 } from '@/utils/phoneNumber'
-import { DEFAULT_UZNEL_CMPNY_CODE, ensureUznelCompanyOption, uznelCompanies } from '@/data/uznelCompanies.js'
+import { ensureUznelCompanyOption, uznelCompanies } from '@/data/uznelCompanies.js'
+import { normalizeMemberCategoryValue } from '@/utils/memberCategories'
 
 const props = defineProps({
   selectedMember: {
@@ -430,11 +432,24 @@ const email = ref('')
 const zipCode = ref('')
 const sex = ref('')
 const nationality = ref('')
-const cmpnyCode = ref(DEFAULT_UZNEL_CMPNY_CODE)
+const cmpnyCode = ref('')
 const scannedPassportSeries = ref('')
 const scannedPassportNumber = ref('')
 
-const companyOptions = computed(() => ensureUznelCompanyOption(cmpnyCode.value, uznelCompanies))
+const catalogCompanies = ref([])
+const companiesLoaded = ref(false)
+const companyOptions = computed(() => {
+  const list = companiesLoaded.value ? catalogCompanies.value : uznelCompanies
+  return ensureUznelCompanyOption(cmpnyCode.value, list)
+})
+const categoryOptions = computed(() => {
+  const list = Array.isArray(props.categories) ? [...props.categories] : []
+  const current = userPosition.value
+  if (current && !list.some((row) => row.value === current)) {
+    list.unshift({ label: current, value: current })
+  }
+  return list
+})
 
 const isCustomDialCode = computed(() => isCustomPhoneCode(phoneCode.value))
 const activeDialCode = computed(() => (
@@ -454,7 +469,7 @@ watch(() => props.selectedMember, (newVal) => {
   userNo.value = newVal.USER_NO || ''
   uznelPassword.value = newVal.PASSWORD || newVal.USER_NO || ''
   userName.value = newVal.USER_NAME || ''
-  userPosition.value = newVal.USER_POSITION || ''
+  userPosition.value = normalizeMemberCategoryValue(newVal.USER_POSITION, props.categories)
   pinfl.value = newVal.PINFL || ''
   applyParsedPhone(parsePhoneNumber(newVal.TEL_NO))
   birthday.value = parseBirthday(newVal.BIRTHDAY)
@@ -463,11 +478,16 @@ watch(() => props.selectedMember, (newVal) => {
   zipCode.value = newVal.ZIP_CODE || ''
   sex.value = normalizeSex(newVal.SEX, newVal.PINFL)
   nationality.value = newVal.NATIONALITY || ''
-  cmpnyCode.value = newVal.CMPNY_CODE || DEFAULT_UZNEL_CMPNY_CODE
+  cmpnyCode.value = newVal.CMPNY_CODE || ''
   ensureNationalityOption(nationality.value)
   scannedPassportSeries.value = newVal.PASSPORT_SERIES || ''
   scannedPassportNumber.value = newVal.PASSPORT_NUMBER || ''
-}, { immediate: true })
+}, { immediate: true, deep: true })
+
+watch(() => props.categories, () => {
+  if (!userPosition.value) return
+  userPosition.value = normalizeMemberCategoryValue(userPosition.value, props.categories)
+})
 
 watch(phoneCode, (code) => {
   if (!isCustomPhoneCode(code)) customPhoneCode.value = '+'
@@ -621,7 +641,24 @@ function onScanPaste(event) {
 
 onMounted(() => {
   window.addEventListener('keydown', onScanKeydown, true)
+  loadCompanies()
 })
+
+async function loadCompanies() {
+  try {
+    const rows = await apiService.get('/member-companies')
+    if (Array.isArray(rows)) {
+      catalogCompanies.value = rows.map((row) => ({
+        code: row.code,
+        name: row.name,
+        label: `${row.name} (${row.code})`,
+      }))
+      companiesLoaded.value = true
+    }
+  } catch (error) {
+    console.error('Error loading member companies:', error)
+  }
+}
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onScanKeydown, true)
@@ -744,8 +781,8 @@ function buildMemberPayload() {
     PASSPORT_NUMBER: scannedPassportNumber.value || undefined,
     SEX: sex.value || '',
     NATIONALITY: nationality.value || '',
-    CMPNY_CODE: cmpnyCode.value || DEFAULT_UZNEL_CMPNY_CODE,
-    FULL_CODE: cmpnyCode.value || DEFAULT_UZNEL_CMPNY_CODE,
+    CMPNY_CODE: cmpnyCode.value || '',
+    FULL_CODE: cmpnyCode.value || '',
     PASSWORD: uznelPassword.value.trim() || maskId,
     PHOTO: props.selectedMember?.PHOTO || undefined,
   }
@@ -802,7 +839,7 @@ async function syncToUznel() {
       LIB_USE_LDATE: response?.LIB_USE_LDATE || payload.LIB_USE_LDATE,
     })
     const action = response?.updated ? 'yangilandi' : 'yozildi'
-    const extraErrors = [response?.photoError, response?.passwordError].filter(Boolean)
+    const extraErrors = [response?.photoError, response?.cardError, response?.passwordError].filter(Boolean)
     toast.add({
       severity: extraErrors.length ? 'warn' : 'success',
       summary: 'Uznel',

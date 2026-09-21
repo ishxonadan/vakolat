@@ -10,6 +10,7 @@ import MemberList from '@/components/MemberList.vue'
 import MemberForm from '@/components/MemberForm.vue'
 import VisitHistory from '@/components/VisitHistory.vue'
 import { pageSize } from '@/service/pagination.service'
+import { toCategoryOptions } from '@/utils/memberCategories'
 
 const router = useRouter()
 const toast = useToast()
@@ -137,7 +138,9 @@ const openAddMemberDialog = () => {
       const now = new Date()
       return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
     })(),
-    ZIP_CODE: ''
+    ZIP_CODE: '',
+    CMPNY_CODE: '',
+    FULL_CODE: '',
   }
   isEditMode.value = false
   uznelSyncEnabled.value = false
@@ -148,14 +151,18 @@ const openAddMemberDialog = () => {
 
 const memberImage = ref(null)
 const memberImagePreview = ref(null)
-const categories = ref([
-  { label: 'Talaba', value: 'Talaba' },
-  { label: 'O\'qituvchi', value: 'O\'qituvchi' },
-  { label: 'Professor', value: 'Professor' },
-  { label: 'Tadqiqotchi', value: 'Tadqiqotchi' },
-  { label: 'Xodim', value: 'Xodim' },
-  { label: 'Boshqa', value: 'Boshqa' }
-])
+const categories = ref(toCategoryOptions())
+
+const loadCategories = async () => {
+  try {
+    const rows = await apiService.get('/member-categories')
+    if (Array.isArray(rows) && rows.length) {
+      categories.value = toCategoryOptions(rows)
+    }
+  } catch (error) {
+    console.error('Error loading member categories:', error)
+  }
+}
 
 const onImageSelect = (event) => {
   const file = event.files[0]
@@ -269,6 +276,7 @@ const onUpdateRowsPerPage = (r) => {
 
 onMounted(() => {
   fetchMembers()
+  loadCategories()
 })
 </script>
 
@@ -288,6 +296,7 @@ onMounted(() => {
       v-model:sortOrder="sortOrder"
       storage-key="azo-bolganlar"
       export-file-name="azo-bolganlar"
+      :categories="categories"
       @add-member="openAddMemberDialog"
       @update:current-page="onUpdateCurrentPage"
       @update:rows-per-page="onUpdateRowsPerPage"

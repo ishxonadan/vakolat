@@ -176,7 +176,7 @@
         :showFilterMatchModes="false"
         :style="columnStyle('USER_POSITION', '10rem')"
       >
-        <template #body="{ data }">{{ displayValue(data.USER_POSITION) }}</template>
+        <template #body="{ data }">{{ displayPosition(data.USER_POSITION) }}</template>
         <template #filter="{ filterModel }">
           <MultiSelect
             v-model="filterModel.value"
@@ -365,6 +365,7 @@ import InputText from 'primevue/inputtext'
 import Popover from 'primevue/popover'
 import { ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 import authService from '@/service/auth.service'
+import { resolveMemberCategoryLabel } from '@/utils/memberCategories'
 
 const EMPTY = '—'
 const canManageMembers = computed(() => authService.hasPermission('manage_members'))
@@ -447,6 +448,10 @@ const props = defineProps({
   searchPlaceholder: {
     type: String,
     default: 'ID, ism, karta raqami, telefon, manzil yoki toifa bo\'yicha qidirish'
+  },
+  categories: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -482,6 +487,11 @@ function isVisible(field) {
 function displayValue(value) {
   if (value == null || String(value).trim() === '') return EMPTY
   return value
+}
+
+function displayPosition(value) {
+  const label = resolveMemberCategoryLabel(value, props.categories)
+  return displayValue(label)
 }
 
 function displayPassport(data) {
@@ -637,6 +647,9 @@ function csvValue(value) {
 
 function cellExportValue(row, field) {
   if (field === 'BIRTHDAY' || field === 'INSERT_DATE') return formatDate(row[field]) === EMPTY ? '' : formatDate(row[field])
+  if (field === 'USER_POSITION') {
+    return resolveMemberCategoryLabel(row.USER_POSITION, props.categories)
+  }
   if (field === 'PASSPORT_NUMBER') {
     const value = displayPassport(row)
     return value === EMPTY ? '' : value

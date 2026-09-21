@@ -190,6 +190,24 @@ const router = createRouter({
           },
         },
         {
+          path: "/toifalar",
+          name: "member_categories",
+          component: () => import("@/views/pages/member_categories.vue"),
+          meta: {
+            requiresAuth: true,
+            requiredLevel: "admin",
+          },
+        },
+        {
+          path: "/tashkilotlar",
+          name: "member_companies",
+          component: () => import("@/views/pages/member_companies.vue"),
+          meta: {
+            requiresAuth: true,
+            requiredLevel: "admin",
+          },
+        },
+        {
           path: "/onlayn-royxatdan-otganlar",
           name: "onlayn-royxatdan-otganlar",
           component: () => import("@/views/pages/onlayn-royxatdan-otganlar.vue"),

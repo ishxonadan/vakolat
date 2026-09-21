@@ -55,6 +55,18 @@ const menuItems = [
             to: '/onlayn-royxatdan-otganlar',
             requiredPermissions: ['view_members']
           },
+          {
+            label: "Toifalar",
+            icon: 'pi pi-fw pi-bookmark',
+            to: '/toifalar',
+            requiredLevel: 'admin',
+          },
+          {
+            label: "Tashkilotlar",
+            icon: 'pi pi-fw pi-building',
+            to: '/tashkilotlar',
+            requiredLevel: 'admin',
+          },
         ]
       },
       {
