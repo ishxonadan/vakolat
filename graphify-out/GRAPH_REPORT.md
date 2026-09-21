@@ -1,17 +1,17 @@
 # Graph Report - vakolat  (2026-09-21)
 
 ## Corpus Check
-- 196 files · ~216,359 words
+- 200 files · ~217,940 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 28 file(s) not represented in the graph (top: .scss 17, (none) 5, .css 4)
 
 ## Summary
-- 2182 nodes · 3232 edges · 133 communities (116 shown, 17 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 66 edges (avg confidence: 0.86)
+- 2211 nodes · 3276 edges · 138 communities (119 shown, 19 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 67 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1464ff97`
+- Built from commit: `574e9e8d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,7 +39,7 @@
 - Crud.vue
 - collect-data.vue
 - huquqlar.vue
-- mongoose
+- debug-pullik-service-pricing-source.js
 - TableDoc.vue
 - AuthService
 - diss.vue
@@ -68,21 +68,21 @@
 - Test Coverage
 - staff_positions.vue
 - vakil_add.vue
-- createTicketsRoutes
+- tickets.routes.js
 - router/index.js
 - auth.routes.js
 - staff_departments.vue
 - AppConfigurator.vue
 - payment_services.vue
-- MenuDoc.vue
+- member_companies.vue
 - mocks.js
-- primevue
+- pagination.service.js
 - AppMenu.vue
 - MemberForm.vue
 - auth.middleware.js
 - online-registrants.routes.js
 - migrate-pullik.js
-- models/index.js
+- mongoose
 - rate.vue
 - apiFetch
 - payment_departments.vue
@@ -98,7 +98,7 @@
 - playNextVideo
 - MessagesDoc.vue
 - member-categories.defaults.js
-- main.js
+- primevue
 - barcode.test.js
 - cleanup
 - AppMenuItem.vue
@@ -113,7 +113,7 @@
 - vite.config.mjs
 - audit.service.js
 - seed-staff.js
-- member-categories.routes.js
+- loadStatistics
 - detectFace
 - startFaceDetection
 - itemCost
@@ -123,7 +123,7 @@
 - emit
 - jsconfig.json
 - debug-pullik-user.js
-- PanelsDoc.vue
+- createTicketsRoutes
 - uznelCompanies.js
 - formatCountdown
 - parseIdMrz.js
@@ -137,19 +137,24 @@
 - applyParsedId
 - calculateTickerDuration
 - picoFaceDetect.js
-- FileDoc.vue
+- SystemControlPage.vue
+- staff-departments.routes.js
+- seed-member-companies.js
+- formatMonthLabel
+- activePeriodLabel
+- isPeriodOptionDisabled
 - logo.test.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `vue` - 68 edges
-2. `primevue` - 47 edges
-3. `router` - 37 edges
-4. `mongoose` - 32 edges
-5. `ApiService` - 30 edges
-6. `vue-router` - 26 edges
-7. `apiFetch()` - 26 edges
-8. `express` - 25 edges
-9. `verifyToken()` - 24 edges
+1. `vue` - 69 edges
+2. `primevue` - 48 edges
+3. `router` - 38 edges
+4. `mongoose` - 33 edges
+5. `ApiService` - 31 edges
+6. `express` - 26 edges
+7. `vue-router` - 26 edges
+8. `apiFetch()` - 26 edges
+9. `verifyToken()` - 25 edges
 10. `AuthService` - 23 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -167,11 +172,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (133 total, 17 thin omitted)
+## Communities (138 total, 19 thin omitted)
 
 ### Community 0 - "server.js"
-Cohesion: 0.04
-Nodes (50): adminRoutes, app, APP_ENV_ALIASES, appEnvRaw, { attachApiAudit }, auditRoutes, authRoutes, backupFolder (+42 more)
+Cohesion: 0.03
+Nodes (52): adminRoutes, app, APP_ENV_ALIASES, appEnvRaw, { attachApiAudit }, auditRoutes, authRoutes, backupFolder (+44 more)
 
 ### Community 1 - "azo-bolganlar.vue"
 Cohesion: 0.06
@@ -222,8 +227,8 @@ Cohesion: 0.06
 Nodes (31): additional, annotation, approved_date, ashyo, author, categories, category_id, code (+23 more)
 
 ### Community 13 - "payment_statistics.vue"
-Cohesion: 0.05
-Nodes (44): paymentTransactionDirectionLabel(), paymentTransactionTypeLabel(), TX_DIRECTION_LABELS, TX_TYPE_LABELS, activePeriodLabel, activePresetLabel, activeSectionIndex, applyCustomRange() (+36 more)
+Cohesion: 0.07
+Nodes (25): activePresetLabel, activeSectionIndex, currentSpendingMonth, currentTopupMonth, customRange, dayDetailsLoading, detailSortField, detailSortOrder (+17 more)
 
 ### Community 14 - "Test Suite Summary"
 Cohesion: 0.07
@@ -261,9 +266,9 @@ Nodes (17): cacheData, collectAllData(), collectOptions, currentYear, fetchResul
 Cohesion: 0.11
 Nodes (20): activePermissions, confirm, confirmDeleteGroup(), confirmDeletePermission(), currentGroup, currentPermission, loadingGroups, loadingPermissions (+12 more)
 
-### Community 23 - "mongoose"
-Cohesion: 0.08
-Nodes (15): mongoose, express, mongoose, { verifyToken, checkPermissions, checkAnyPermissions }, mongoose, mongoose, inspectCollection(), mongoose (+7 more)
+### Community 23 - "debug-pullik-service-pricing-source.js"
+Cohesion: 0.67
+Nodes (3): inspectCollection(), mongoose, run()
 
 ### Community 24 - "TableDoc.vue"
 Cohesion: 0.09
@@ -290,8 +295,8 @@ Cohesion: 0.10
 Nodes (21): devDependencies, autoprefixer, chai, eslint, eslint-plugin-vue, jsdom, jsdom-global, mocha (+13 more)
 
 ### Community 31 - "vue"
-Cohesion: 0.13
-Nodes (8): vue, items, loading, dropdownItem, dropdownItems, value, events, horizontalEvents
+Cohesion: 0.10
+Nodes (12): vue, items, loading, dropdownItem, dropdownItems, value, cardMenu, items (+4 more)
 
 ### Community 32 - "diss_soha.vue"
 Cohesion: 0.12
@@ -306,8 +311,8 @@ Cohesion: 0.11
 Nodes (18): ref_child_process, ref_fs, ref_os, ref_path, express, fs, path, router (+10 more)
 
 ### Community 35 - "api.service.js"
-Cohesion: 0.13
-Nodes (14): jwt-decode, ApiService, handleUnauthorized(), confirmPassword, currentPassword, loading, newPassword, toast (+6 more)
+Cohesion: 0.20
+Nodes (8): jwt-decode, ApiService, handleUnauthorized(), confirmPassword, currentPassword, loading, newPassword, toast
 
 ### Community 36 - "ChartDoc.vue"
 Cohesion: 0.15
@@ -334,8 +339,8 @@ Cohesion: 0.23
 Nodes (4): cheerio, ref_https, ref_url, PlausibleService
 
 ### Community 42 - "add.vue"
-Cohesion: 0.11
-Nodes (13): clock, contractDate, contractStart, dropdownValue, dropdownValues, dropdownValues2, dropdownValues3, passportExpireDate (+5 more)
+Cohesion: 0.06
+Nodes (24): clock, contractDate, contractStart, dropdownValue, dropdownValues, dropdownValues2, dropdownValues3, passportExpireDate (+16 more)
 
 ### Community 43 - "diss_akademik_daraja.vue"
 Cohesion: 0.14
@@ -354,8 +359,8 @@ Cohesion: 0.08
 Nodes (28): allColumns, applySearchNow(), canManageMembers, cellExportValue(), clearSearch(), columnsPopover, columnWidths, csvValue() (+20 more)
 
 ### Community 47 - "payment_history.vue"
-Cohesion: 0.18
-Nodes (8): filters, loading, loadTransactions(), onPage(), page, toast, total, transactions
+Cohesion: 0.14
+Nodes (12): paymentTransactionDirectionLabel(), paymentTransactionTypeLabel(), TX_DIRECTION_LABELS, TX_TYPE_LABELS, filters, loading, loadTransactions(), onPage() (+4 more)
 
 ### Community 48 - "vakillar.vue"
 Cohesion: 0.12
@@ -373,9 +378,9 @@ Nodes (15): sortablejs, activeCount, addNew(), deleteRow(), destroySortable(), i
 Cohesion: 0.12
 Nodes (14): confirmPassword, firstname, isActive, lastname, nickname, password, permissionGroupCatalog, router (+6 more)
 
-### Community 52 - "createTicketsRoutes"
-Cohesion: 0.16
-Nodes (9): qrcode, express, QRCode, router, createTicketsRoutes(), getNextDailyOrderNumber(), getTodayNormalized(), hasTicketForToday() (+1 more)
+### Community 52 - "tickets.routes.js"
+Cohesion: 0.25
+Nodes (4): qrcode, express, QRCode, router
 
 ### Community 53 - "router/index.js"
 Cohesion: 0.11
@@ -383,10 +388,10 @@ Nodes (16): vue-router, { toggleDarkMode, isDarkTheme }, router, loading, stats,
 
 ### Community 54 - "auth.routes.js"
 Cohesion: 0.10
-Nodes (19): Auth, bcrypt, {
+Nodes (18): Auth, bcrypt, {
   collectPermissionNamesFromPopulatedUser,
   normalizePermissionGroupIds,
-}, express, jwt, mongoose, router, { verifyToken, checkUserLevel } (+11 more)
+}, express, jwt, mongoose, router, { verifyToken, checkUserLevel } (+10 more)
 
 ### Community 55 - "staff_departments.vue"
 Cohesion: 0.20
@@ -400,25 +405,25 @@ Nodes (12): applyTheme(), getPresetExt(), { layoutConfig, setPrimary, setSurface
 Cohesion: 0.16
 Nodes (9): form, loading, loadServices(), removeItem(), save(), services, showDialog, toast (+1 more)
 
-### Community 58 - "MenuDoc.vue"
-Cohesion: 0.14
-Nodes (11): breadcrumbHome, breadcrumbItems, contextMenu, contextMenuItems, megamenuItems, menu, menuitems, nestedMenuitems (+3 more)
+### Community 58 - "member_companies.vue"
+Cohesion: 0.19
+Nodes (13): activeCount, addNew(), companies, deleteRow(), filteredCompanies, loadCatalog(), loading, newCode (+5 more)
 
-### Community 60 - "primevue"
-Cohesion: 0.22
-Nodes (9): primevue, props, clampPageSize(), DEFAULT_PAGE_SIZE, loadPageSize(), pageSize, ROWS_PER_PAGE_OPTIONS, options (+1 more)
+### Community 60 - "pagination.service.js"
+Cohesion: 0.23
+Nodes (8): props, clampPageSize(), DEFAULT_PAGE_SIZE, loadPageSize(), pageSize, ROWS_PER_PAGE_OPTIONS, options, toast
 
 ### Community 61 - "AppMenu.vue"
 Cohesion: 0.19
 Nodes (12): filteredModel, findActiveMenuItemKeyForPath(), hasAccess(), logout(), logoutSection, menuItems, model, route (+4 more)
 
 ### Community 62 - "MemberForm.vue"
-Cohesion: 0.06
-Nodes (35): activeDialCode, addrs, birthday, canManageMembers, categoryOptions, cmpnyCode, customPhoneCode, dataURLtoFile() (+27 more)
+Cohesion: 0.05
+Nodes (37): activeDialCode, addrs, birthday, canManageMembers, catalogCompanies, categoryOptions, cmpnyCode, companiesLoaded (+29 more)
 
 ### Community 63 - "auth.middleware.js"
-Cohesion: 0.07
-Nodes (34): express, express, router, { verifyToken, checkUserLevel }, express, router, { verifyToken, checkUserLevel }, express (+26 more)
+Cohesion: 0.06
+Nodes (42): express, express, router, { verifyToken, checkUserLevel }, express, router, { verifyToken, checkUserLevel }, express (+34 more)
 
 ### Community 64 - "online-registrants.routes.js"
 Cohesion: 0.17
@@ -428,9 +433,9 @@ Nodes (21): applyCreateDefaults(), createOnlineRegistrant(), formatUserNo(), gen
 Cohesion: 0.24
 Nodes (11): BATCH_SIZE, classifyMovementDirection(), CURSOR_BATCH_SIZE, getFirst(), mongoose, normalizeReaderId(), RESET_MIGRATION, run() (+3 more)
 
-### Community 66 - "models/index.js"
-Cohesion: 0.09
-Nodes (21): auditLogSchema, mongoose, mongoose, plausibleCacheSchema, mongoose, ratingAssignmentSchema, websiteRatingSchema, mongoose (+13 more)
+### Community 66 - "mongoose"
+Cohesion: 0.06
+Nodes (29): mongoose, mongoose, mongoose, mongoose, mongoose, mongoose, auditLogSchema, mongoose (+21 more)
 
 ### Community 67 - "rate.vue"
 Cohesion: 0.20
@@ -449,8 +454,8 @@ Cohesion: 0.17
 Nodes (9): currentUser, displayFullName, displayPosition, isImpersonating, logout(), { onMenuToggle, toggleDarkMode, isDarkTheme }, originalUser, router (+1 more)
 
 ### Community 71 - "member_categories.vue"
-Cohesion: 0.24
-Nodes (10): activeCount, addNew(), categories, deleteRow(), loadCatalog(), loading, newCode, newName (+2 more)
+Cohesion: 0.23
+Nodes (11): activeCount, addNew(), categories, deleteRow(), loadCatalog(), loading, newCode, newName (+3 more)
 
 ### Community 72 - "Changelog"
 Cohesion: 0.22
@@ -489,12 +494,12 @@ Cohesion: 0.22
 Nodes (4): email, message, toast, username
 
 ### Community 81 - "member-categories.defaults.js"
-Cohesion: 0.33
-Nodes (5): { DEFAULT_MEMBER_CATEGORIES }, ensureMemberCategoriesSeed(), buildPositionCodeMap(), DEFAULT_MEMBER_CATEGORIES, LEGACY_POSITION_ALIASES
+Cohesion: 0.29
+Nodes (6): { DEFAULT_MEMBER_CATEGORIES }, ensureMemberCategoriesSeed(), buildPositionCodeMap(), DEFAULT_MEMBER_CATEGORIES, LEGACY_POSITION_ALIASES, normalizeCategoryCode()
 
-### Community 82 - "main.js"
-Cohesion: 0.25
-Nodes (6): @primeuix/styled, @primevue/themes, src_assets_styles, src_assets_tailwind, app, AuraSoftDark
+### Community 82 - "primevue"
+Cohesion: 0.14
+Nodes (10): @primeuix/styled, primevue, @primevue/themes, src_assets_styles, src_assets_tailwind, app, AuraSoftDark, fileupload (+2 more)
 
 ### Community 83 - "barcode.test.js"
 Cohesion: 0.50
@@ -549,12 +554,12 @@ Cohesion: 0.48
 Nodes (6): attachApiAudit(), getAuditModel(), jwt, logExplicitAction(), shouldSkipApiAudit(), shouldSkipUser()
 
 ### Community 96 - "seed-staff.js"
-Cohesion: 0.33
+Cohesion: 0.29
 Nodes (5): routes_staff_departments_constants_default_unassigned_staff_department_name, { DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME }, ensureDefaultStaffDepartment(), ensureStaffPositionsSeed(), migrateStaffPositionSortOrderToOneBased()
 
-### Community 97 - "member-categories.routes.js"
-Cohesion: 0.33
-Nodes (5): express, mongoose, { normalizeCategoryCode }, { verifyToken, checkUserLevel }, normalizeCategoryCode()
+### Community 97 - "loadStatistics"
+Cohesion: 0.29
+Nodes (8): applyCustomRange(), formatDateToYmd(), getPresetRange(), loadPresetStatistics(), loadStatistics(), normalizeMonthBuckets(), pad2(), resolveMonthKeysInRange()
 
 ### Community 98 - "detectFace"
 Cohesion: 0.24
@@ -592,9 +597,9 @@ Nodes (3): compilerOptions, paths, exclude
 Cohesion: 0.60
 Nodes (4): getFirst(), mongoose, normalizeReaderId(), run()
 
-### Community 107 - "PanelsDoc.vue"
-Cohesion: 0.40
-Nodes (4): cardMenu, items, menuRef, toggle()
+### Community 107 - "createTicketsRoutes"
+Cohesion: 0.43
+Nodes (5): createTicketsRoutes(), getNextDailyOrderNumber(), getTodayNormalized(), hasTicketForToday(), normalizeToCalendarDay()
 
 ### Community 108 - "uznelCompanies.js"
 Cohesion: 0.33
@@ -628,32 +633,44 @@ Nodes (7): applyParsedId(), consumeScanBuffer(), ensureNationalityOption(), onSc
 Cohesion: 0.22
 Nodes (13): analyzePhotoQuality(), clamp01(), detectLargestFace(), extractFaceGray(), eyeOpenness(), faceBrightness(), faceSharpness(), faceSymmetry() (+5 more)
 
-### Community 132 - "FileDoc.vue"
+### Community 131 - "SystemControlPage.vue"
+Cohesion: 0.33
+Nodes (6): load(), loading, requireZal, save(), saving, toast
+
+### Community 132 - "staff-departments.routes.js"
 Cohesion: 0.40
-Nodes (3): fileupload, toast, upload()
+Nodes (4): { DEFAULT_UNASSIGNED_STAFF_DEPARTMENT_NAME }, express, mongoose, { verifyToken, checkUserLevel }
+
+### Community 133 - "seed-member-companies.js"
+Cohesion: 0.50
+Nodes (3): DEFAULT_MEMBER_COMPANIES, ensureMemberCompaniesSeed(), src_data_uznel_companies
+
+### Community 134 - "formatMonthLabel"
+Cohesion: 0.67
+Nodes (3): formatMonthLabel(), spendingMonthOptions, topupMonthOptions
 
 ### Community 140 - "logo.test.js"
 Cohesion: 0.50
 Nodes (3): getLibraryLogoSvg(), { expect }, { getLibraryLogoSvg }
 
 ## Knowledge Gaps
-- **1167 isolated node(s):** `useTabs`, `tabWidth`, `trailingComma`, `semi`, `singleQuote` (+1162 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1413 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1183 isolated node(s):** `useTabs`, `tabWidth`, `trailingComma`, `semi`, `singleQuote` (+1178 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1432 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `vue` connect `vue` to `azo-bolganlar.vue`, `tv.vue`, `tashriflar.vue`, `FileDoc.vue`, `diss_edit.vue`, `payment_balances.vue`, `onlayn-royxatdan-otganlar.vue`, `WebcamCapture.vue`, `package.json`, `InputDoc.vue`, `payment_service_provision.vue`, `diss_add.vue`, `payment_statistics.vue`, `ticket_add.vue`, `ip-access.vue`, `tickets.vue`, `Crud.vue`, `collect-data.vue`, `huquqlar.vue`, `TableDoc.vue`, `diss.vue`, `OverlayDoc.vue`, `jadval.vue`, `diss_soha.vue`, `vakil_edit.vue`, `api.service.js`, `ChartDoc.vue`, `diss_statistics.vue`, `plausible-debug.vue`, `vakil_logs.vue`, `add.vue`, `diss_akademik_daraja.vue`, `diss_languages.vue`, `library-locations.vue`, `MemberList.vue`, `payment_history.vue`, `vakillar.vue`, `staff_positions.vue`, `vakil_add.vue`, `router/index.js`, `staff_departments.vue`, `AppConfigurator.vue`, `payment_services.vue`, `MenuDoc.vue`, `primevue`, `AppMenu.vue`, `MemberForm.vue`, `rate.vue`, `payment_departments.vue`, `AppTopbar.vue`, `member_categories.vue`, `SessionTimer.vue`, `AppLayout.vue`, `ListDoc.vue`, `MessagesDoc.vue`, `main.js`, `AppMenuItem.vue`, `MediaDoc.vue`, `PanelsDoc.vue`?**
-  _High betweenness centrality (0.396) - this node is a cross-community bridge._
-- **Why does `primevue` connect `primevue` to `azo-bolganlar.vue`, `tashriflar.vue`, `FileDoc.vue`, `diss_edit.vue`, `payment_balances.vue`, `onlayn-royxatdan-otganlar.vue`, `WebcamCapture.vue`, `package.json`, `payment_service_provision.vue`, `diss_add.vue`, `payment_statistics.vue`, `ticket_add.vue`, `ip-access.vue`, `tickets.vue`, `Crud.vue`, `collect-data.vue`, `huquqlar.vue`, `diss.vue`, `OverlayDoc.vue`, `diss_soha.vue`, `vakil_edit.vue`, `api.service.js`, `diss_statistics.vue`, `plausible-debug.vue`, `vakil_logs.vue`, `diss_akademik_daraja.vue`, `diss_languages.vue`, `library-locations.vue`, `MemberList.vue`, `payment_history.vue`, `vakillar.vue`, `staff_positions.vue`, `vakil_add.vue`, `router/index.js`, `staff_departments.vue`, `payment_services.vue`, `MemberForm.vue`, `rate.vue`, `payment_departments.vue`, `member_categories.vue`, `SessionTimer.vue`, `MessagesDoc.vue`, `main.js`?**
-  _High betweenness centrality (0.194) - this node is a cross-community bridge._
-- **Why does `mongoose` connect `mongoose` to `online-registrants.routes.js`, `member-categories.routes.js`, `migrate-pullik.js`, `models/index.js`, `package.json`, `debug-pullik-user.js`, `import-oquv-zallari-staff.js`, `db-connections.js`, `auth.routes.js`, `import-payment-services-2026.js`, `auth.middleware.js`?**
-  _High betweenness centrality (0.097) - this node is a cross-community bridge._
+- **Why does `vue` connect `vue` to `azo-bolganlar.vue`, `tv.vue`, `tashriflar.vue`, `SystemControlPage.vue`, `diss_edit.vue`, `payment_balances.vue`, `onlayn-royxatdan-otganlar.vue`, `WebcamCapture.vue`, `package.json`, `InputDoc.vue`, `payment_service_provision.vue`, `diss_add.vue`, `payment_statistics.vue`, `ticket_add.vue`, `ip-access.vue`, `tickets.vue`, `Crud.vue`, `collect-data.vue`, `huquqlar.vue`, `TableDoc.vue`, `diss.vue`, `OverlayDoc.vue`, `jadval.vue`, `diss_soha.vue`, `vakil_edit.vue`, `api.service.js`, `ChartDoc.vue`, `diss_statistics.vue`, `plausible-debug.vue`, `vakil_logs.vue`, `add.vue`, `diss_akademik_daraja.vue`, `diss_languages.vue`, `library-locations.vue`, `MemberList.vue`, `payment_history.vue`, `vakillar.vue`, `staff_positions.vue`, `vakil_add.vue`, `router/index.js`, `staff_departments.vue`, `AppConfigurator.vue`, `payment_services.vue`, `member_companies.vue`, `pagination.service.js`, `AppMenu.vue`, `MemberForm.vue`, `rate.vue`, `payment_departments.vue`, `AppTopbar.vue`, `member_categories.vue`, `SessionTimer.vue`, `AppLayout.vue`, `ListDoc.vue`, `MessagesDoc.vue`, `primevue`, `AppMenuItem.vue`, `MediaDoc.vue`?**
+  _High betweenness centrality (0.384) - this node is a cross-community bridge._
+- **Why does `primevue` connect `primevue` to `azo-bolganlar.vue`, `tashriflar.vue`, `SystemControlPage.vue`, `diss_edit.vue`, `payment_balances.vue`, `onlayn-royxatdan-otganlar.vue`, `WebcamCapture.vue`, `package.json`, `payment_service_provision.vue`, `diss_add.vue`, `payment_statistics.vue`, `ticket_add.vue`, `ip-access.vue`, `tickets.vue`, `Crud.vue`, `collect-data.vue`, `huquqlar.vue`, `diss.vue`, `OverlayDoc.vue`, `diss_soha.vue`, `vakil_edit.vue`, `api.service.js`, `diss_statistics.vue`, `plausible-debug.vue`, `vakil_logs.vue`, `diss_akademik_daraja.vue`, `diss_languages.vue`, `library-locations.vue`, `MemberList.vue`, `payment_history.vue`, `vakillar.vue`, `staff_positions.vue`, `vakil_add.vue`, `router/index.js`, `staff_departments.vue`, `payment_services.vue`, `member_companies.vue`, `pagination.service.js`, `MemberForm.vue`, `rate.vue`, `payment_departments.vue`, `member_categories.vue`, `SessionTimer.vue`, `MessagesDoc.vue`?**
+  _High betweenness centrality (0.183) - this node is a cross-community bridge._
+- **Why does `mongoose` connect `mongoose` to `online-registrants.routes.js`, `migrate-pullik.js`, `staff-departments.routes.js`, `package.json`, `debug-pullik-user.js`, `import-oquv-zallari-staff.js`, `db-connections.js`, `auth.routes.js`, `debug-pullik-service-pricing-source.js`, `import-payment-services-2026.js`, `auth.middleware.js`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
 - **What connects `useTabs`, `tabWidth`, `trailingComma` to the rest of the system?**
-  _1167 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1183 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `server.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.03571428571428571 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
 - **Should `azo-bolganlar.vue` be split into smaller, more focused modules?**
   _Cohesion score 0.06258890469416785 - nodes in this community are weakly interconnected._
 - **Should `tv.vue` be split into smaller, more focused modules?**

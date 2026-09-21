@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "server.js": {
-    "mtime": 1789814138.321937,
-    "seen": 1789814225.2485564,
-    "ast_hash": "074cbb6ea5a0f81b86450928fd46c38d",
+    "mtime": 1789986479.909758,
+    "seen": 1789986682.0779636,
+    "ast_hash": "c20d52c64baa2f99f67bcb429dcceaad",
     "semantic_hash": ""
   },
   "src/App.vue": {
@@ -366,15 +366,15 @@
     "semantic_hash": ""
   },
   "src/components/MemberForm.vue": {
-    "mtime": 1789888322.9209673,
-    "seen": 1789888339.1361947,
-    "ast_hash": "54ce4c970e816f809091bdc866324e56",
+    "mtime": 1789986650.029773,
+    "seen": 1789986682.0779784,
+    "ast_hash": "ad3945240c47bd290bb140a239a66d87",
     "semantic_hash": ""
   },
   "src/components/MemberList.vue": {
-    "mtime": 1789879827.1181521,
-    "seen": 1789879888.8973026,
-    "ast_hash": "a3fabc7571ebab4b9cf3924166d21320",
+    "mtime": 1789986548.1173348,
+    "seen": 1789986682.0779805,
+    "ast_hash": "332f976f9f4f2b2fa584b32281af07f5",
     "semantic_hash": ""
   },
   "src/components/SessionTimer.vue": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/layout/AppMenu.vue": {
-    "mtime": 1789885979.112989,
-    "seen": 1789886123.7555952,
-    "ast_hash": "c62da6fed7a1763b285bd772c7a3b0f1",
+    "mtime": 1789986664.792559,
+    "seen": 1789986682.0779958,
+    "ast_hash": "1f804d583542e2cdf8f7c36042b4c000",
     "semantic_hash": ""
   },
   "src/layout/AppMenuItem.vue": {
@@ -492,15 +492,15 @@
     "semantic_hash": ""
   },
   "src/models/index.js": {
-    "mtime": 1776435652.21946,
-    "seen": 1789809656.935846,
-    "ast_hash": "500f543bd9302078c90b4cd026a8923e",
+    "mtime": 1789986473.6553404,
+    "seen": 1789986682.078018,
+    "ast_hash": "3a40c5cdc64a4af7069851df8770633a",
     "semantic_hash": ""
   },
   "src/router/index.js": {
-    "mtime": 1789879819.8675387,
-    "seen": 1789879888.8973343,
-    "ast_hash": "d90c38355fd592b4797f74136fe2b3e4",
+    "mtime": 1789986482.2684007,
+    "seen": 1789986682.0780199,
+    "ast_hash": "f72f49a6cbe64da07d69f8e7b87729dc",
     "semantic_hash": ""
   },
   "src/service/CountryService.js": {
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "src/views/pages/azo-bolganlar.vue": {
-    "mtime": 1789820244.2616992,
-    "seen": 1789820323.478274,
-    "ast_hash": "39df9f0f6934f5e2c30372658a28eb95",
+    "mtime": 1789986574.122033,
+    "seen": 1789986682.078077,
+    "ast_hash": "ce8d71e646fcfc64288dd5f78b94e560",
     "semantic_hash": ""
   },
   "src/views/pages/collect-data.vue": {
@@ -732,9 +732,9 @@
     "semantic_hash": ""
   },
   "src/views/pages/onlayn-royxatdan-otganlar.vue": {
-    "mtime": 1789814493.2582915,
-    "seen": 1789814505.2904572,
-    "ast_hash": "ae182deced9ea7f93c8d515c015fb1ac",
+    "mtime": 1789986582.5999198,
+    "seen": 1789986682.0781012,
+    "ast_hash": "a0e7e54ab2bbcd60019ceb91215641d4",
     "semantic_hash": ""
   },
   "src/views/pages/payment_balances.vue": {
@@ -1248,9 +1248,9 @@
     "semantic_hash": ""
   },
   "src/services/uznel.service.js": {
-    "mtime": 1789888315.087304,
-    "seen": 1789888339.136266,
-    "ast_hash": "9c9766efdd84e4f86885f696e1412085",
+    "mtime": 1789986636.7474954,
+    "seen": 1789986682.0780382,
+    "ast_hash": "b8a349b77f35250931831894bd6cf343",
     "semantic_hash": ""
   },
   "src/utils/picoFaceDetect.js": {
@@ -1269,6 +1269,36 @@
     "mtime": 1789887790.7393126,
     "seen": 1789887801.6525047,
     "ast_hash": "d997287394f37b17ea801cde7f5aadac",
+    "semantic_hash": ""
+  },
+  "routes/member-categories.routes.js": {
+    "mtime": 1789986458.7835724,
+    "seen": 1789986682.0779178,
+    "ast_hash": "3c75fb971e490d4976768c0a4913628a",
+    "semantic_hash": ""
+  },
+  "src/bootstrap/seed-member-categories.js": {
+    "mtime": 1789986432.7137332,
+    "seen": 1789986682.0779688,
+    "ast_hash": "2e49413c47ee30f2f5218b26247e91bc",
+    "semantic_hash": ""
+  },
+  "src/data/member-categories.defaults.js": {
+    "mtime": 1789986418.5592651,
+    "seen": 1789986682.0779867,
+    "ast_hash": "250146b4ba8b28a3ee80beb25595ad79",
+    "semantic_hash": ""
+  },
+  "src/utils/memberCategories.js": {
+    "mtime": 1789986637.0985956,
+    "seen": 1789986682.0780447,
+    "ast_hash": "78fb710d03f1dafab3b1927cf3525a11",
+    "semantic_hash": ""
+  },
+  "src/views/pages/member_categories.vue": {
+    "mtime": 1789986459.1016116,
+    "seen": 1789986682.0780993,
+    "ast_hash": "7d87005762f4523e937320e5542f7c9c",
     "semantic_hash": ""
   }
 }

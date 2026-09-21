@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "server.js": {
-    "mtime": 1789986479.909758,
-    "seen": 1789986682.0779636,
-    "ast_hash": "c20d52c64baa2f99f67bcb429dcceaad",
+    "mtime": 1789986970.0456803,
+    "seen": 1789987022.85259,
+    "ast_hash": "2cc5b688ca9858013f15b585e30696b0",
     "semantic_hash": ""
   },
   "src/App.vue": {
@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "src/components/MemberForm.vue": {
-    "mtime": 1789986650.029773,
-    "seen": 1789986682.0779784,
-    "ast_hash": "ad3945240c47bd290bb140a239a66d87",
+    "mtime": 1789986996.9636502,
+    "seen": 1789987022.8526042,
+    "ast_hash": "6d0ff3d05b8fb6d48c6dd2a6ed4e1516",
     "semantic_hash": ""
   },
   "src/components/MemberList.vue": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/layout/AppMenu.vue": {
-    "mtime": 1789986664.792559,
-    "seen": 1789986682.0779958,
-    "ast_hash": "1f804d583542e2cdf8f7c36042b4c000",
+    "mtime": 1789986972.0862358,
+    "seen": 1789987022.8526204,
+    "ast_hash": "adf3656ae8cca5291564f90732797037",
     "semantic_hash": ""
   },
   "src/layout/AppMenuItem.vue": {
@@ -492,15 +492,15 @@
     "semantic_hash": ""
   },
   "src/models/index.js": {
-    "mtime": 1789986473.6553404,
-    "seen": 1789986682.078018,
-    "ast_hash": "3a40c5cdc64a4af7069851df8770633a",
+    "mtime": 1789986951.6763477,
+    "seen": 1789987022.85264,
+    "ast_hash": "d3d1b56a6e186ffbebd5088a93080379",
     "semantic_hash": ""
   },
   "src/router/index.js": {
-    "mtime": 1789986482.2684007,
-    "seen": 1789986682.0780199,
-    "ast_hash": "f72f49a6cbe64da07d69f8e7b87729dc",
+    "mtime": 1789986971.458306,
+    "seen": 1789987022.8526418,
+    "ast_hash": "ff016401de5ed872955baac5397836b3",
     "semantic_hash": ""
   },
   "src/service/CountryService.js": {
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "src/views/pages/azo-bolganlar.vue": {
-    "mtime": 1789986574.122033,
-    "seen": 1789986682.078077,
-    "ast_hash": "ce8d71e646fcfc64288dd5f78b94e560",
+    "mtime": 1789986689.3027718,
+    "seen": 1789987022.852691,
+    "ast_hash": "f495e0f0a226618079fb9c950de03e1a",
     "semantic_hash": ""
   },
   "src/views/pages/collect-data.vue": {
@@ -732,9 +732,9 @@
     "semantic_hash": ""
   },
   "src/views/pages/onlayn-royxatdan-otganlar.vue": {
-    "mtime": 1789986582.5999198,
-    "seen": 1789986682.0781012,
-    "ast_hash": "a0e7e54ab2bbcd60019ceb91215641d4",
+    "mtime": 1789986704.466189,
+    "seen": 1789987022.8527122,
+    "ast_hash": "372af352754d485a92f33c3bcd5afc4c",
     "semantic_hash": ""
   },
   "src/views/pages/payment_balances.vue": {
@@ -1296,9 +1296,33 @@
     "semantic_hash": ""
   },
   "src/views/pages/member_categories.vue": {
-    "mtime": 1789986459.1016116,
-    "seen": 1789986682.0780993,
-    "ast_hash": "7d87005762f4523e937320e5542f7c9c",
+    "mtime": 1789986998.024726,
+    "seen": 1789987022.8527088,
+    "ast_hash": "858489f2233127460087ae15281f5f3e",
+    "semantic_hash": ""
+  },
+  "routes/member-companies.routes.js": {
+    "mtime": 1789986916.408999,
+    "seen": 1789987022.8525507,
+    "ast_hash": "4d7fc07e6b59915c3c1910446b89e014",
+    "semantic_hash": ""
+  },
+  "src/bootstrap/seed-member-companies.js": {
+    "mtime": 1789986916.0225334,
+    "seen": 1789987022.8525965,
+    "ast_hash": "1bd063930130e73969abde45165d9304",
+    "semantic_hash": ""
+  },
+  "src/data/uznel-companies.json": {
+    "mtime": 1789986891.267205,
+    "seen": 1789987022.852613,
+    "ast_hash": "8e679ce55176a3e06e59d9b49201f123",
+    "semantic_hash": ""
+  },
+  "src/views/pages/member_companies.vue": {
+    "mtime": 1789986949.7061775,
+    "seen": 1789987022.8527105,
+    "ast_hash": "85a3ea97a5c40a5668755f68868ea2fa",
     "semantic_hash": ""
   }
 }
