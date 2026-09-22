@@ -23,7 +23,7 @@
               @blur="checkExistingUser"
             />
             <small v-if="errors.passport" class="p-error">{{ errors.passport }}</small>
-            <small class="text-gray-500">Masalan: AB1234567</small>
+            <small class="text-gray-500">Masalan: AB1234567 — yoki ID kartani skanerlang</small>
           </div>
 
           <div>
@@ -160,12 +160,13 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 import apiService from '@/service/api.service';
 import LibraryLogo from '@/components/LibraryLogo.vue';
 import { getLibraryLogoSvg } from '@/utils/logo.js';
+import { isMrzCharsetKey, parseIdMrz } from '@/utils/parseIdMrz';
 
 const toast = useToast();
 const router = useRouter();
@@ -191,6 +192,10 @@ const isAutoFilled = ref(false);
 const isNameChanged = ref(false);
 const existingUser = ref(null);
 const originalName = ref('');
+
+let scanBuffer = '';
+let scanLastAt = 0;
+const SCAN_GAP_MS = 120;
 
 const validateForm = () => {
   errors.fullname = '';
@@ -266,6 +271,94 @@ const onNameChange = () => {
     isNameChanged.value = form.fullname !== originalName.value;
   }
 };
+
+function applyParsedId(parsed) {
+  if (!parsed) return false;
+
+  if (parsed.documentNumber) {
+    form.passport = String(parsed.documentNumber).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+  if (parsed.fullName) {
+    form.fullname = parsed.fullName;
+    originalName.value = parsed.fullName;
+    isAutoFilled.value = true;
+    isNameChanged.value = false;
+  }
+
+  errors.passport = '';
+  errors.fullname = '';
+
+  toast.add({
+    severity: 'success',
+    summary: 'ID skanerlandi',
+    detail: parsed.fullName || parsed.documentNumber,
+    life: 2500,
+  });
+
+  if (form.passport) {
+    void checkExistingUser();
+  }
+  return true;
+}
+
+function consumeScanBuffer(event) {
+  const parsed = parseIdMrz(scanBuffer);
+  scanBuffer = '';
+  scanLastAt = 0;
+  if (!parsed) return false;
+  event?.preventDefault();
+  event?.stopPropagation();
+  applyParsedId(parsed);
+  return true;
+}
+
+function onScanKeydown(event) {
+  if (loading.value) return;
+
+  const now = Date.now();
+  if (now - scanLastAt > SCAN_GAP_MS) {
+    scanBuffer = '';
+  }
+
+  if (event.key === 'Enter') {
+    if (scanBuffer.length >= 60) consumeScanBuffer(event);
+    else scanBuffer = '';
+    return;
+  }
+
+  if (!isMrzCharsetKey(event.key)) return;
+
+  scanLastAt = now;
+  scanBuffer += event.key.toUpperCase();
+  // Keep scanner output out of focused inputs while MRZ is collecting
+  if (scanBuffer.length >= 2) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  if (scanBuffer.length >= 90) {
+    consumeScanBuffer(event);
+  }
+}
+
+function onScanPaste(event) {
+  if (loading.value) return;
+  const text = event.clipboardData?.getData('text') || '';
+  const parsed = parseIdMrz(text);
+  if (!parsed) return;
+  event.preventDefault();
+  applyParsedId(parsed);
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onScanKeydown, true);
+  window.addEventListener('paste', onScanPaste, true);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onScanKeydown, true);
+  window.removeEventListener('paste', onScanPaste, true);
+});
 
 const createTicket = async () => {
   if (!validateForm()) return;
@@ -633,6 +726,8 @@ const createAnother = () => {
   existingUser.value = null;
   originalName.value = '';
   updateMessage.value = '';
+  scanBuffer = '';
+  scanLastAt = 0;
 };
 
 const formatDate = (date) => {
