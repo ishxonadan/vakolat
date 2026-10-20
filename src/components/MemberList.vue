@@ -150,6 +150,27 @@
       </Column>
 
       <Column
+        v-if="isVisible('PHOTO')"
+        field="PHOTO"
+        header="Rasm"
+        :sortable="false"
+        :showFilterMenu="false"
+        :style="columnStyle('PHOTO', '4.5rem')"
+      >
+        <template #body="{ data }">
+          <div class="member-avatar" aria-hidden="true">
+            <img
+              v-if="photoSrc(data.PHOTO)"
+              :src="photoSrc(data.PHOTO)"
+              alt=""
+              class="member-avatar-img"
+            />
+            <i v-else class="pi pi-user member-avatar-fallback" />
+          </div>
+        </template>
+      </Column>
+
+      <Column
         v-if="isVisible('USER_NAME')"
         field="USER_NAME"
         header="Ism"
@@ -356,7 +377,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import Column from 'primevue/column'
@@ -372,6 +393,7 @@ const canManageMembers = computed(() => authService.hasPermission('manage_member
 
 const allColumns = [
   { field: 'USER_NO', header: 'ID', always: true },
+  { field: 'PHOTO', header: 'Rasm', hiddenByDefault: true },
   { field: 'USER_NAME', header: 'Ism' },
   { field: 'USER_POSITION', header: 'Toifa' },
   { field: 'CARD_NO', header: 'Karta raqami' },
@@ -484,6 +506,15 @@ function isVisible(field) {
   return visibleFields.value.includes(field)
 }
 
+const includePhoto = computed(() => visibleFields.value.includes('PHOTO'))
+
+function photoSrc(photo) {
+  const raw = String(photo || '').trim()
+  if (!raw) return ''
+  if (raw.startsWith('data:') || raw.startsWith('blob:') || raw.startsWith('http')) return raw
+  return `data:image/jpeg;base64,${raw}`
+}
+
 function displayValue(value) {
   if (value == null || String(value).trim() === '') return EMPTY
   return value
@@ -515,6 +546,14 @@ function persistVisibleFields() {
     // ignore storage errors
   }
 }
+
+let columnsHydrated = false
+
+watch(includePhoto, (enabled, wasEnabled) => {
+  if (!columnsHydrated) return
+  if (enabled === wasEnabled) return
+  emit('refresh')
+})
 
 function columnStyle(field, defaultWidth) {
   const saved = columnWidths.value[field]
@@ -612,27 +651,46 @@ function onRowClick(event) {
 function formatDate(dateString) {
   if (!dateString) return EMPTY
   try {
+    const raw = String(dateString).trim()
     let date
-    if (dateString.includes('/')) {
-      const parts = dateString.split('/')
+    let withTime = false
+    if (raw.includes('/')) {
+      const parts = raw.split('/')
       if (parts.length === 3) {
         date = new Date(parts[2], parts[1] - 1, parts[0])
       }
-    } else if (dateString.includes('-')) {
-      date = new Date(dateString)
-    } else if (dateString.length === 8) {
-      const year = dateString.substring(0, 4)
-      const month = dateString.substring(4, 6)
-      const day = dateString.substring(6, 8)
-      date = new Date(year, month - 1, day)
+    } else if (raw.includes('-')) {
+      date = new Date(raw)
+      withTime = raw.includes('T') || raw.includes(':')
+    } else if (/^\d{14}$/.test(raw)) {
+      date = new Date(
+        Number(raw.slice(0, 4)),
+        Number(raw.slice(4, 6)) - 1,
+        Number(raw.slice(6, 8)),
+        Number(raw.slice(8, 10)),
+        Number(raw.slice(10, 12)),
+        Number(raw.slice(12, 14)),
+      )
+      withTime = true
+    } else if (/^\d{8}$/.test(raw)) {
+      date = new Date(Number(raw.slice(0, 4)), Number(raw.slice(4, 6)) - 1, Number(raw.slice(6, 8)))
     } else {
-      date = new Date(dateString)
+      date = new Date(raw)
     }
 
     if (isNaN(date.getTime())) {
-      return dateString
+      return raw
     }
 
+    if (withTime) {
+      return date.toLocaleString('uz-UZ', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    }
     return date.toLocaleDateString('uz-UZ')
   } catch {
     return dateString
@@ -646,6 +704,7 @@ function csvValue(value) {
 }
 
 function cellExportValue(row, field) {
+  if (field === 'PHOTO') return row.PHOTO ? 'ha' : ''
   if (field === 'BIRTHDAY' || field === 'INSERT_DATE') return formatDate(row[field]) === EMPTY ? '' : formatDate(row[field])
   if (field === 'USER_POSITION') {
     return resolveMemberCategoryLabel(row.USER_POSITION, props.categories)
@@ -678,9 +737,10 @@ function downloadCsv(rows = [], total = rows.length) {
 onMounted(() => {
   loadVisibleFields()
   loadColumnWidths()
+  columnsHydrated = true
 })
 
-defineExpose({ downloadCsv })
+defineExpose({ downloadCsv, includePhoto })
 </script>
 
 <style scoped>
@@ -1018,6 +1078,31 @@ defineExpose({ downloadCsv })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.member-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--p-content-hover-background, var(--surface-hover)) 80%, transparent);
+  border: 1px solid var(--p-content-border-color, var(--surface-border));
+  flex-shrink: 0;
+}
+
+.member-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.member-avatar-fallback {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
 }
 
 :deep(.member-registry-table .p-datatable-tbody > tr:nth-child(even)) {

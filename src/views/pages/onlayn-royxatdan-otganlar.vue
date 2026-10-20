@@ -37,6 +37,7 @@ const buildSearchBody = ({ page = currentPage.value, limit = pageSize.value, exp
   sortField: sortField.value,
   sortOrder: sortOrder.value === 1 ? 'asc' : 'desc',
   export: exportMode || undefined,
+  includePhoto: Boolean(memberListRef.value?.includePhoto),
 })
 
 const fetchMembers = async () => {

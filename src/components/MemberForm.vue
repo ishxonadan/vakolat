@@ -732,12 +732,27 @@ function toLocalYyyymmdd(value) {
     return `${value.getFullYear()}${pad2(value.getMonth() + 1)}${pad2(value.getDate())}`
   }
   const raw = String(value).trim()
-  if (/^\d{8}$/.test(raw)) return raw
+  if (/^\d{8,14}$/.test(raw)) return raw.slice(0, 8)
   const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (dateOnly) return `${dateOnly[1]}${dateOnly[2]}${dateOnly[3]}`
   const parsed = new Date(raw)
   if (isNaN(parsed.getTime())) return ''
   return `${parsed.getFullYear()}${pad2(parsed.getMonth() + 1)}${pad2(parsed.getDate())}`
+}
+
+function toLocalYyyymmddHHmmss(value = new Date()) {
+  const d = value instanceof Date ? value : new Date(value)
+  if (isNaN(d.getTime())) return ''
+  return (
+    `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`
+    + `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`
+  )
+}
+
+function resolveInsertDate() {
+  const existing = String(props.selectedMember?.INSERT_DATE || '').trim()
+  if (/^\d{8,14}$/.test(existing)) return existing
+  return toLocalYyyymmddHHmmss(new Date())
 }
 
 function parseBirthday(value) {
@@ -832,7 +847,7 @@ function buildMemberPayload() {
     PINFL: pinfl.value.trim(),
     TEL_NO: composePhoneNumber(activeDialCode.value, phoneLocal.value),
     BIRTHDAY: toLocalYyyymmdd(birthday.value),
-    INSERT_DATE: toLocalYyyymmdd(props.selectedMember?.INSERT_DATE) || toLocalYyyymmdd(new Date()),
+    INSERT_DATE: resolveInsertDate(),
     ADDRS: addrs.value.trim(),
     EMAIL: email.value.trim(),
     ZIP_CODE: zipCode.value.trim().toUpperCase(),

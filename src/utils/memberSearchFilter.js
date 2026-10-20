@@ -88,9 +88,10 @@ function dateRangeClause(field, from, to) {
   const toKey = toYyyymmdd(to)
   if (!fromKey && !toKey) return null
 
+  // INSERT_DATE may be YYYYMMDD or YYYYMMDDHHmmss — pad upper bound so both match
   const compact = {}
   if (fromKey) compact.$gte = fromKey
-  if (toKey) compact.$lte = toKey
+  if (toKey) compact.$lte = `${toKey}999999`
 
   const iso = {}
   if (fromKey) iso.$gte = `${fromKey.slice(0, 4)}-${fromKey.slice(4, 6)}-${fromKey.slice(6, 8)}`
@@ -167,7 +168,13 @@ function parseSort(body, defaultField = "INSERT_DATE") {
   const sortField = ALLOWED_FILTER_FIELDS.has(body?.sortField) ? body.sortField : defaultField
   const rawOrder = body?.sortOrder
   const ascending = rawOrder === "asc" || rawOrder === 1 || rawOrder === "1"
-  return { [sortField]: ascending ? 1 : -1 }
+  const dir = ascending ? 1 : -1
+  const sort = { [sortField]: dir }
+  // Same calendar day used to tie; _id carries creation time for older YYYYMMDD-only rows
+  if (sortField === "INSERT_DATE") {
+    sort._id = dir
+  }
+  return sort
 }
 
 function buildMemberSearchFilter(body, searchFields = DEFAULT_SEARCH_FIELDS) {

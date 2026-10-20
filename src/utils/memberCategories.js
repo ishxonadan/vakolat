@@ -20,7 +20,7 @@ const FALLBACK = [
 
 export const KAFEDRA_OPTIONS = [
   { label: "1", value: 1, disabled: true },
-  { label: "2", value: 2, disabled: true },
+  { label: "2", value: 2, disabled: false },
   { label: "3", value: 3, disabled: false },
   { label: "4", value: 4, disabled: false },
 ]

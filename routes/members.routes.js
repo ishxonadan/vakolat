@@ -11,7 +11,11 @@ module.exports = (nazorat) => {
   } = require("../src/utils/memberSearchFilter")
   const { fetchNextUserMaskId, registerUznelUser } = require("../src/services/uznel.service")
 
-  const LIST_SELECT = { PHOTO: 0, PASSWORD: 0 }
+  const listSelect = ({ includePhoto = false } = {}) => {
+    const select = { PASSWORD: 0 }
+    if (!includePhoto) select.PHOTO = 0
+    return select
+  }
 
   const cacheSchema = new mongoose.Schema(
     {
@@ -145,10 +149,14 @@ module.exports = (nazorat) => {
         }
       }
 
-      // Build sort query
-      let sort = { INSERT_DATE: -1 } // Default sort by insert date descending
+      // Build sort query (INSERT_DATE + _id so same-day rows order by time)
+      const sortDir = req.query.sortOrder === "asc" ? 1 : -1
+      let sort = { INSERT_DATE: -1, _id: -1 }
       if (req.query.sortField) {
-        sort = { [req.query.sortField]: req.query.sortOrder === "asc" ? 1 : -1 }
+        sort = { [req.query.sortField]: sortDir }
+        if (req.query.sortField === "INSERT_DATE") {
+          sort._id = sortDir
+        }
       }
 
       const [members, total] = await Promise.all([
@@ -211,9 +219,10 @@ module.exports = (nazorat) => {
       const skip = (page - 1) * limit
       const filter = buildMemberSearchFilter(req.body)
       const sort = parseSort(req.body)
+      const includePhoto = req.body?.includePhoto === true || req.body?.includePhoto === "true"
 
       const [members, total] = await Promise.all([
-        CacheUser.find(filter).select(LIST_SELECT).sort(sort).skip(skip).limit(limit).lean(),
+        CacheUser.find(filter).select(listSelect({ includePhoto })).sort(sort).skip(skip).limit(limit).lean(),
         CacheUser.countDocuments(filter),
       ])
 

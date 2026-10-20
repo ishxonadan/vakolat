@@ -10,7 +10,11 @@ module.exports = (vakolat, nazorat) => {
     parseSort,
   } = require("../src/utils/memberSearchFilter")
 
-  const LIST_SELECT = { PHOTO: 0, PASSWORD: 0 }
+  const listSelect = ({ includePhoto = false } = {}) => {
+    const select = { PASSWORD: 0 }
+    if (!includePhoto) select.PHOTO = 0
+    return select
+  }
 
   const memberFields = {
     USER_NO: String,
@@ -123,7 +127,12 @@ module.exports = (vakolat, nazorat) => {
   async function applyCreateDefaults(data) {
     data.USER_NO = await generateNextUserNo()
     if (!data.INSERT_DATE) {
-      data.INSERT_DATE = new Date().toISOString().split("T")[0].replace(/-/g, "")
+      const now = new Date()
+      const p = (n) => String(n).padStart(2, "0")
+      data.INSERT_DATE = (
+        `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`
+        + `${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`
+      )
     }
     if (!data.STATUS_CODE) {
       data.STATUS_CODE = "0001"
@@ -199,9 +208,10 @@ module.exports = (vakolat, nazorat) => {
       const skip = (page - 1) * limit
       const filter = buildMemberSearchFilter(req.body)
       const sort = parseSort(req.body)
+      const includePhoto = req.body?.includePhoto === true || req.body?.includePhoto === "true"
 
       const [members, total] = await Promise.all([
-        OnlineRegistrant.find(filter).select(LIST_SELECT).sort(sort).skip(skip).limit(limit).lean(),
+        OnlineRegistrant.find(filter).select(listSelect({ includePhoto })).sort(sort).skip(skip).limit(limit).lean(),
         OnlineRegistrant.countDocuments(filter),
       ])
 

@@ -40,6 +40,7 @@ const buildSearchBody = ({ page = currentPage.value, limit = pageSize.value, exp
   sortField: sortField.value,
   sortOrder: sortOrder.value === 1 ? 'asc' : 'desc',
   export: exportMode || undefined,
+  includePhoto: Boolean(memberListRef.value?.includePhoto),
 })
 
 const fetchMembers = async () => {
@@ -136,7 +137,11 @@ const openAddMemberDialog = () => {
     NATIONALITY: 'UZB',
     INSERT_DATE: (() => {
       const now = new Date()
-      return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+      const p = (n) => String(n).padStart(2, '0')
+      return (
+        `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`
+        + `${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`
+      )
     })(),
     ZIP_CODE: '',
     CMPNY_CODE: '',

@@ -94,8 +94,9 @@ function toYyyymmdd(value) {
     return fromLocalDate(value)
   }
   const raw = String(value).trim()
-  if (/^\d{8}$/.test(raw)) return raw
-  const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  // Local INSERT_DATE may include time (YYYYMMDDHHmmss); Uznel wants YYYYMMDD
+  if (/^\d{8,14}$/.test(raw)) return raw.slice(0, 8)
+  const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (dateOnly) return `${dateOnly[1]}${dateOnly[2]}${dateOnly[3]}`
   const dmy = raw.match(/^(\d{2})[./](\d{2})[./](\d{4})$/)
   if (dmy) return `${dmy[3]}${dmy[2]}${dmy[1]}`
