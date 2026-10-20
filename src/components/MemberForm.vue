@@ -317,15 +317,26 @@
     </div>
 
     <div class="form-actions">
-      <Button
-        type="button"
-        class="form-actions-cancel"
-        label="Bekor qilish"
-        icon="pi pi-times"
-        outlined
-        severity="secondary"
-        @click="onCloseDialog"
-      />
+      <div class="form-actions-leading">
+        <Button
+          type="button"
+          class="form-actions-cancel"
+          label="Bekor qilish"
+          icon="pi pi-times"
+          outlined
+          severity="secondary"
+          @click="onCloseDialog"
+        />
+        <MemberRecordNav
+          v-if="recordOrder != null"
+          :order="recordOrder"
+          :can-prev="canRecordPrev"
+          :can-next="canRecordNext"
+          :busy="recordNavBusy"
+          @prev="emit('record-prev')"
+          @next="emit('record-next')"
+        />
+      </div>
       <div class="form-actions-primary">
         <Button type="submit" v-if="canManageMembers" label="Saqlash" icon="pi pi-check" severity="success" />
         <Button
@@ -372,6 +383,7 @@ import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import WebcamCapture from './WebcamCapture.vue'
+import MemberRecordNav from './MemberRecordNav.vue'
 import apiService from '@/service/api.service'
 import authService from '@/service/auth.service'
 import { isMrzCharsetKey, normalizeSex, parseIdMrz, sexFromPinfl } from '@/utils/parseIdMrz'
@@ -418,10 +430,26 @@ const props = defineProps({
   uznelSyncEnabled: {
     type: Boolean,
     default: false
+  },
+  recordOrder: {
+    type: Number,
+    default: null
+  },
+  canRecordPrev: {
+    type: Boolean,
+    default: false
+  },
+  canRecordNext: {
+    type: Boolean,
+    default: false
+  },
+  recordNavBusy: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced', 'new-member'])
+const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced', 'new-member', 'record-prev', 'record-next'])
 const toast = useToast()
 const confirm = useConfirm()
 const canManageMembers = computed(() => authService.hasPermission('manage_members'))
@@ -1213,7 +1241,10 @@ const dataURLtoFile = (dataurl, filename) => {
   border-top: 1px solid var(--p-content-border-color, var(--surface-border));
 }
 
-.form-actions-cancel {
+.form-actions-leading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin-right: auto;
 }
 

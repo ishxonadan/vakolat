@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue"
 import { useToast } from "primevue/usetoast"
+import Dialog from "primevue/dialog"
 import apiService from "@/service/api.service"
 
 const toast = useToast()
@@ -35,7 +36,17 @@ const timeLeaders = ref({
   to: null,
   male: [],
   female: [],
+  youth: [],
 })
+const leaderGroup = ref("male")
+const leaderGroups = [
+  { label: "Erkaklar", value: "male" },
+  { label: "Ayollar", value: "female" },
+  { label: "Yoshlar", value: "youth" },
+]
+const memberVisible = ref(false)
+const memberLoading = ref(false)
+const member = ref(null)
 
 const periodOptions = [
   { label: "Bugun", value: "today" },
@@ -97,6 +108,56 @@ const formatDuration = (seconds) => {
   return `${minutes} daqiqa`
 }
 
+const activeLeaders = computed(() => timeLeaders.value[leaderGroup.value] || [])
+
+const sexLabel = (value) => {
+  const raw = String(value || "").trim().toUpperCase()
+  if (raw === "M" || raw === "ERKAK" || raw === "MALE" || raw === "0001") return "Erkak"
+  if (raw === "F" || raw === "AYOL" || raw === "FEMALE" || raw === "0002") return "Ayol"
+  return value || "—"
+}
+
+const memberPhoto = computed(() => {
+  const raw = String(member.value?.PHOTO || "").trim()
+  if (!raw) return ""
+  if (raw.startsWith("data:") || raw.startsWith("http")) return raw
+  return `data:image/jpeg;base64,${raw}`
+})
+
+const memberFields = computed(() => {
+  const row = member.value
+  if (!row) return []
+  return [
+    ["ID", row.USER_NO],
+    ["Ism", row.USER_NAME],
+    ["Jinsi", sexLabel(row.SEX)],
+    ["Tug'ilgan sana", row.BIRTHDAY],
+    ["Telefon", row.TEL_NO],
+    ["Manzil", row.ADDRS],
+    ["Toifa", row.USER_POSITION],
+    ["Pasport", [row.PASSPORT_SERIES, row.PASSPORT_NUMBER].filter(Boolean).join(" ") || row.ZIP_CODE],
+  ].filter(([, value]) => value != null && String(value).trim() !== "")
+})
+
+const openMember = async (userNo) => {
+  member.value = null
+  memberVisible.value = true
+  memberLoading.value = true
+  try {
+    member.value = await apiService.get(`/visits/member/${encodeURIComponent(userNo)}`)
+  } catch (error) {
+    memberVisible.value = false
+    toast.add({
+      severity: "error",
+      summary: "Xato",
+      detail: error?.message || "Foydalanuvchi yuklanmadi",
+      life: 3500,
+    })
+  } finally {
+    memberLoading.value = false
+  }
+}
+
 const formattedVisits = computed(() => Number(stats.value.visits || 0).toLocaleString("uz-UZ"))
 const formattedPageviews = computed(() => Number(stats.value.pageviews || 0).toLocaleString("uz-UZ"))
 
@@ -142,6 +203,7 @@ const fetchTimeLeaders = async (params) => {
       to: data?.to || null,
       male: Array.isArray(data?.male) ? data.male : [],
       female: Array.isArray(data?.female) ? data.female : [],
+      youth: Array.isArray(data?.youth) ? data.youth : [],
     }
   } catch (error) {
     toast.add({
@@ -278,39 +340,56 @@ onMounted(() => {
         </article>
       </div>
 
-      <div v-else class="leader-grid">
+      <div v-else class="leader-board">
+        <div class="leader-groups" role="tablist">
+          <button
+            v-for="group in leaderGroups"
+            :key="group.value"
+            type="button"
+            class="period-pill"
+            :class="{ 'is-active': leaderGroup === group.value }"
+            @click="leaderGroup = group.value"
+          >
+            {{ group.label }}
+          </button>
+        </div>
+        <p v-if="leaderGroup === 'youth'" class="leader-note">14–30 yosh</p>
         <article class="leader-card">
-          <h2>Erkaklar</h2>
           <p v-if="loading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</p>
-          <p v-else-if="timeLeaders.male.length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
+          <p v-else-if="activeLeaders.length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
           <ol v-else>
-            <li v-for="row in timeLeaders.male" :key="`m-${row.place}`">
-              <span class="place" :data-place="row.place">{{ row.place }}</span>
-              <div class="leader-person">
-                <strong>{{ row.name }}</strong>
-                <small>{{ row.userNo }}</small>
-              </div>
-              <span class="leader-time">{{ formatDuration(row.seconds) }}</span>
-            </li>
-          </ol>
-        </article>
-        <article class="leader-card">
-          <h2>Ayollar</h2>
-          <p v-if="loading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</p>
-          <p v-else-if="timeLeaders.female.length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
-          <ol v-else>
-            <li v-for="row in timeLeaders.female" :key="`f-${row.place}`">
-              <span class="place" :data-place="row.place">{{ row.place }}</span>
-              <div class="leader-person">
-                <strong>{{ row.name }}</strong>
-                <small>{{ row.userNo }}</small>
-              </div>
-              <span class="leader-time">{{ formatDuration(row.seconds) }}</span>
+            <li v-for="row in activeLeaders" :key="`${leaderGroup}-${row.place}`">
+              <button type="button" class="leader-row" @click="openMember(row.userNo)">
+                <span class="place" :data-place="row.place">{{ row.place }}</span>
+                <span class="leader-person">
+                  <strong>{{ row.name }}</strong>
+                  <small>{{ row.userNo }}</small>
+                </span>
+                <span class="leader-time">{{ formatDuration(row.seconds) }}</span>
+              </button>
             </li>
           </ol>
         </article>
       </div>
     </section>
+
+    <Dialog
+      v-model:visible="memberVisible"
+      modal
+      :header="member?.USER_NAME || 'Foydalanuvchi'"
+      :style="{ width: 'min(520px, 94vw)' }"
+    >
+      <div v-if="memberLoading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</div>
+      <div v-else-if="member" class="member-sheet">
+        <img v-if="memberPhoto" :src="memberPhoto" alt="" class="member-sheet-photo" />
+        <dl>
+          <template v-for="[label, value] in memberFields" :key="label">
+            <dt>{{ label }}</dt>
+            <dd>{{ value }}</dd>
+          </template>
+        </dl>
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -499,13 +578,39 @@ onMounted(() => {
   padding: 0;
 }
 
+.leader-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.leader-note {
+  margin: -0.35rem 0 0.75rem;
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+}
+
 .leader-card li {
+  border-top: 1px solid var(--surface-border);
+}
+
+.leader-row {
+  width: 100%;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 0.75rem;
   align-items: center;
   padding: 0.7rem 0;
-  border-top: 1px solid var(--surface-border);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.leader-row:hover strong {
+  color: var(--primary-color);
 }
 
 .place {
@@ -553,6 +658,38 @@ onMounted(() => {
   margin: 0 0 0.8rem;
   color: var(--text-color-secondary);
   font-size: 0.88rem;
+}
+
+.member-sheet {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.member-sheet-photo {
+  width: 6.5rem;
+  height: 8rem;
+  object-fit: cover;
+  border-radius: 0.6rem;
+  flex-shrink: 0;
+}
+
+.member-sheet dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.35rem 0.75rem;
+  flex: 1;
+}
+
+.member-sheet dt {
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+}
+
+.member-sheet dd {
+  margin: 0;
+  font-size: 0.92rem;
 }
 
 @media (max-width: 760px) {

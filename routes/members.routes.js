@@ -8,14 +8,9 @@ module.exports = (nazorat) => {
     parseLimit,
     parsePage,
     parseSort,
+    userNoSortKey,
   } = require("../src/utils/memberSearchFilter")
   const { fetchNextUserMaskId, registerUznelUser } = require("../src/services/uznel.service")
-
-  const listSelect = ({ includePhoto = false } = {}) => {
-    const select = { PASSWORD: 0 }
-    if (!includePhoto) select.PHOTO = 0
-    return select
-  }
 
   const cacheSchema = new mongoose.Schema(
     {
@@ -34,6 +29,7 @@ module.exports = (nazorat) => {
       INDEM_CNT: String,
       INSERT_DATE: String,
       REG_AT: Number,
+      ID_NUM: String,
       LIB_USE_LDATE: String,
       LOAN_CHECK: String,
       LOAN_CNT: String,
@@ -80,43 +76,97 @@ module.exports = (nazorat) => {
   )
 
   const CacheUser = nazorat.model("CacheUser", cacheSchema)
+  const REG_SORT_INDEX = "cache_reg_sort"
+  let regIndexReady = false
 
-  function registrationSortPipeline(filter, dir, skip, limit, includePhoto) {
-    const hide = { PASSWORD: 0, _regSort: 0, _idNum: 0 }
-    if (!includePhoto) hide.PHOTO = 0
-    return [
-      { $match: filter },
-      {
-        $addFields: {
-          _regSort: "$REG_AT",
-          _idNum: {
-            $convert: {
-              input: {
-                $let: {
-                  vars: {
-                    found: {
-                      $regexFind: {
-                        input: { $ifNull: ["$USER_NO", ""] },
-                        regex: "\\d+",
-                      },
-                    },
-                  },
-                  in: "$$found.match",
-                },
-              },
-              to: "long",
-              onError: 0,
-              onNull: 0,
-            },
-          },
-        },
-      },
-      { $sort: { _regSort: dir, _idNum: dir, USER_NO: dir } },
-      { $skip: skip },
-      { $limit: limit },
-      { $project: hide },
-    ]
+  const listSelect = ({ includePhoto = false } = {}) => {
+    const select = { PASSWORD: 0, UZNEL_ORG_ROW: 0, ID_NUM: 0 }
+    if (!includePhoto) select.PHOTO = 0
+    return select
   }
+
+  function registrationSort(dir) {
+    return { REG_AT: dir, ID_NUM: dir, USER_NO: dir }
+  }
+
+  function canUseRegistrationIndex(filter) {
+    if (!filter || Object.keys(filter).length === 0) return true
+    return filter.USER_NO instanceof RegExp && Object.keys(filter).length === 1
+  }
+
+  async function findMembers({ filter, sort, skip, limit, includePhoto, useRegIndex }) {
+    const run = (hint) => {
+      let query = CacheUser.find(filter)
+        .select(listSelect({ includePhoto }))
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean()
+      if (hint) query = query.hint(hint)
+      return query
+    }
+    if (!useRegIndex || !regIndexReady) return run(null)
+    try {
+      return await run(REG_SORT_INDEX)
+    } catch (error) {
+      const missingHint = error?.code === 2 || /hint provided does not correspond/i.test(error?.message || "")
+      if (!missingHint) throw error
+      return run(null)
+    }
+  }
+
+  async function ensureMemberIndexes() {
+    try {
+      await CacheUser.collection.createIndex(
+        { REG_AT: -1, ID_NUM: -1, USER_NO: -1 },
+        { name: REG_SORT_INDEX },
+      )
+      regIndexReady = true
+    } catch (error) {
+      const alreadyExists = error.code === 85 || error.code === 86 || /already exists/i.test(error.message || "")
+      if (alreadyExists) regIndexReady = true
+      else console.error("Member sort index failed:", error.message)
+    }
+  }
+
+  async function backfillIdNum() {
+    const meta = nazorat.collection("cache_meta")
+    const state = await meta.findOne({ _id: "id_num_backfill" })
+    if (state?.done) return
+    const cursor = CacheUser.find({ ID_NUM: { $exists: false } }).select("USER_NO").lean().cursor()
+    let batch = []
+    const flush = async () => {
+      if (!batch.length) return
+      await CacheUser.bulkWrite(batch, { ordered: false })
+      batch = []
+    }
+    for await (const doc of cursor) {
+      batch.push({
+        updateOne: {
+          filter: { _id: doc._id },
+          update: { $set: { ID_NUM: userNoSortKey(doc.USER_NO) } },
+        },
+      })
+      if (batch.length >= 500) {
+        await flush()
+        await new Promise((resolve) => setTimeout(resolve, 25))
+      }
+    }
+    await flush()
+    await meta.updateOne(
+      { _id: "id_num_backfill" },
+      { $set: { done: true, at: new Date() } },
+      { upsert: true },
+    )
+  }
+
+  const prepareMemberList = () => {
+    ensureMemberIndexes()
+      .then(() => backfillIdNum())
+      .catch((error) => console.error("Member list prepare failed:", error.message))
+  }
+  if (nazorat.readyState === 1) prepareMemberList()
+  else nazorat.once("connected", prepareMemberList)
 
   router.post("/uznel-id", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
@@ -190,12 +240,11 @@ module.exports = (nazorat) => {
 
       const sortDir = req.query.sortOrder === "asc" ? 1 : -1
       const sortField = req.query.sortField || "INSERT_DATE"
-      const membersQuery = sortField === "INSERT_DATE"
-        ? CacheUser.aggregate(registrationSortPipeline(filter, sortDir, skip, limit, true))
-        : CacheUser.find(filter).sort({ [sortField]: sortDir }).skip(skip).limit(limit).lean()
+      const useRegIndex = sortField === "INSERT_DATE" && canUseRegistrationIndex(filter)
+      const sort = useRegIndex ? registrationSort(sortDir) : { [sortField]: sortDir }
 
       const [members, total] = await Promise.all([
-        membersQuery,
+        findMembers({ filter, sort, skip, limit, includePhoto: false, useRegIndex }),
         CacheUser.countDocuments(filter),
       ])
 
@@ -257,12 +306,12 @@ module.exports = (nazorat) => {
       const includePhoto = req.body?.includePhoto === true || req.body?.includePhoto === "true"
       const sortField = req.body?.sortField || "INSERT_DATE"
       const sortDir = sort[sortField] || -1
-      const membersQuery = sortField === "INSERT_DATE"
-        ? CacheUser.aggregate(registrationSortPipeline(filter, sortDir, skip, limit, includePhoto))
-        : CacheUser.find(filter).select(listSelect({ includePhoto })).sort(sort).skip(skip).limit(limit).lean()
+      const useRegSort = sortField === "INSERT_DATE"
+      const useRegIndex = useRegSort && canUseRegistrationIndex(filter)
+      const listSort = useRegSort ? registrationSort(sortDir) : sort
 
       const [members, total] = await Promise.all([
-        membersQuery,
+        findMembers({ filter, sort: listSort, skip, limit, includePhoto, useRegIndex }),
         CacheUser.countDocuments(filter),
       ])
 
@@ -288,6 +337,7 @@ module.exports = (nazorat) => {
       delete updateData._id
       delete updateData.__v
       delete updateData.REG_AT
+      updateData.ID_NUM = userNoSortKey(updateData.USER_NO || userNo)
 
       const result = await CacheUser.findOneAndUpdate(
         { USER_NO: userNo },
@@ -313,7 +363,12 @@ module.exports = (nazorat) => {
       delete body._id
       delete body.__v
       delete body.REG_AT
-      const newMember = new CacheUser({ ...body, REG_AT: Date.now() })
+      delete body.ID_NUM
+      const newMember = new CacheUser({
+        ...body,
+        REG_AT: Date.now(),
+        ID_NUM: userNoSortKey(body.USER_NO),
+      })
       const savedMember = await newMember.save()
       res.status(201).json({ success: true, member: savedMember })
     } catch (error) {

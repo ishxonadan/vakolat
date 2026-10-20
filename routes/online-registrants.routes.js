@@ -8,6 +8,7 @@ module.exports = (vakolat, nazorat) => {
     parseLimit,
     parsePage,
     parseSort,
+    userNoSortKey,
   } = require("../src/utils/memberSearchFilter")
 
   const listSelect = ({ includePhoto = false } = {}) => {
@@ -144,6 +145,7 @@ module.exports = (vakolat, nazorat) => {
     const cachePayload = sanitizePayload(data)
     // restore USER_NO after sanitize (create/update always have it)
     cachePayload.USER_NO = data.USER_NO
+    cachePayload.ID_NUM = userNoSortKey(data.USER_NO)
     delete cachePayload._id
     await CacheUser.findOneAndUpdate(
       { USER_NO: cachePayload.USER_NO },

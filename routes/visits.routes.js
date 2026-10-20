@@ -159,12 +159,40 @@ module.exports = (nazoratConnection) => {
     return ""
   }
 
-  const placeRows = (rows) => rows.slice(0, 3).map((row, index) => ({
+  const ageOn = (birthday, onDate) => {
+    const digits = String(birthday || "").replace(/\D/g, "").slice(0, 8)
+    if (!/^\d{8}$/.test(digits)) return null
+    const birth = new Date(Number(digits.slice(0, 4)), Number(digits.slice(4, 6)) - 1, Number(digits.slice(6, 8)))
+    if (Number.isNaN(birth.getTime())) return null
+    let age = onDate.getFullYear() - birth.getFullYear()
+    const month = onDate.getMonth() - birth.getMonth()
+    if (month < 0 || (month === 0 && onDate.getDate() < birth.getDate())) age -= 1
+    return age
+  }
+
+  const placeRows = (rows) => rows.slice(0, 10).map((row, index) => ({
     place: index + 1,
     userNo: row.userNo,
     name: row.name,
     seconds: row.seconds,
   }))
+
+  router.get("/member/:userNo", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+    try {
+      const db = getDb()
+      const userNo = String(req.params.userNo || "").trim()
+      if (!userNo) return res.status(400).json({ error: "ID kerak" })
+      const user = await db.collection("cache").findOne(
+        { USER_NO: userNo },
+        { projection: { PASSWORD: 0, UZNEL_ORG_ROW: 0 } },
+      )
+      if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" })
+      res.json(user)
+    } catch (error) {
+      console.error("visit member:", error)
+      res.status(500).json({ error: "Foydalanuvchi yuklanmadi" })
+    }
+  })
 
   // GET photos for the current page only. Kept off the list payload so the table can render first.
   router.get("/photos", verifyToken, async (req, res) => {
@@ -350,13 +378,16 @@ module.exports = (nazoratConnection) => {
             userNo: "$user.USER_NO",
             name: "$user.USER_NAME",
             sex: "$user.SEX",
+            birthday: "$user.BIRTHDAY",
             seconds: 1,
           },
         },
       ]).toArray()
 
+      const asOf = new Date(`${to}T12:00:00`)
       const male = []
       const female = []
+      const youth = []
       for (const row of rows) {
         const group = sexGroup(row.sex)
         const item = {
@@ -366,15 +397,19 @@ module.exports = (nazoratConnection) => {
         }
         if (group === "male") male.push(item)
         else if (group === "female") female.push(item)
+        const age = ageOn(row.birthday, asOf)
+        if (age != null && age >= 14 && age <= 30) youth.push(item)
       }
-      male.sort((a, b) => b.seconds - a.seconds)
-      female.sort((a, b) => b.seconds - a.seconds)
+      for (const list of [male, female, youth]) {
+        list.sort((a, b) => b.seconds - a.seconds)
+      }
 
       res.json({
         from,
         to,
         male: placeRows(male),
         female: placeRows(female),
+        youth: placeRows(youth),
       })
     } catch (error) {
       console.error("time-leaders:", error)

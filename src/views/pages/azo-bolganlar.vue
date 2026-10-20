@@ -8,6 +8,7 @@ import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import MemberList from '@/components/MemberList.vue'
 import MemberForm from '@/components/MemberForm.vue'
+import MemberRecordNav from '@/components/MemberRecordNav.vue'
 import VisitHistory from '@/components/VisitHistory.vue'
 import { pageSize } from '@/service/pagination.service'
 import { toCategoryOptions } from '@/utils/memberCategories'
@@ -32,6 +33,9 @@ const userVisits = ref([])
 const loadingVisits = ref(false)
 const isEditMode = ref(false)
 const uznelSyncEnabled = ref(false)
+const memberIndex = ref(-1)
+const recordNavBusy = ref(false)
+let openToken = 0
 
 const buildSearchBody = ({ page = currentPage.value, limit = pageSize.value, exportMode = false } = {}) => ({
   page,
@@ -50,6 +54,9 @@ const fetchMembers = async () => {
     const response = await apiService.post('/members/search', buildSearchBody())
     members.value = response.members
     totalRecords.value = response.total
+    if (showDialog.value && selectedMember.value?.USER_NO && !recordNavBusy.value) {
+      memberIndex.value = members.value.findIndex((row) => row.USER_NO === selectedMember.value.USER_NO)
+    }
   } catch (error) {
     console.error('Error fetching members:', error)
     toast.add({
@@ -101,28 +108,61 @@ function memberIsUznelSynced(member) {
   return Boolean(member?.UZNEL_SYNCED || member?.USER_SEQ_NO || member?.SEQUENCE_NO)
 }
 
-const openMemberDialog = async (member) => {
+const recordOrder = computed(() => {
+  if (!isEditMode.value || memberIndex.value < 0) return null
+  return (currentPage.value - 1) * pageSize.value + memberIndex.value + 1
+})
+
+const canRecordPrev = computed(() => recordOrder.value != null && recordOrder.value > 1)
+const canRecordNext = computed(() => recordOrder.value != null && recordOrder.value < totalRecords.value)
+
+const openMemberDialog = async (member, { keepTab = false } = {}) => {
+  const token = ++openToken
+  memberIndex.value = members.value.findIndex((row) => row.USER_NO && row.USER_NO === member.USER_NO)
   selectedMember.value = { ...member }
   isEditMode.value = true
   uznelSyncEnabled.value = memberIsUznelSynced(member)
-  activeTab.value = 0
+  if (!keepTab) activeTab.value = 0
   showDialog.value = true
   memberImagePreview.value = member.PHOTO || null
+  userVisits.value = []
 
   if (member.USER_NO) {
     try {
       const full = await apiService.get(`/members/by-user-no/${member.USER_NO}`)
+      if (token !== openToken) return
       selectedMember.value = { ...full }
       memberImagePreview.value = full.PHOTO || null
       uznelSyncEnabled.value = memberIsUznelSynced(full)
     } catch (error) {
       console.error('Error fetching member details:', error)
     }
-    await fetchUserVisits(member.USER_NO)
+    await fetchUserVisits(member.USER_NO, token)
+  }
+}
+
+const stepMember = async (delta) => {
+  if (recordNavBusy.value) return
+  if (delta < 0 && !canRecordPrev.value) return
+  if (delta > 0 && !canRecordNext.value) return
+  const nextIndex = memberIndex.value + delta
+  if (nextIndex >= 0 && nextIndex < members.value.length) {
+    await openMemberDialog(members.value[nextIndex], { keepTab: true })
+    return
+  }
+  recordNavBusy.value = true
+  try {
+    currentPage.value += delta > 0 ? 1 : -1
+    await fetchMembers()
+    const row = delta > 0 ? members.value[0] : members.value.at(-1)
+    if (row) await openMemberDialog(row, { keepTab: true })
+  } finally {
+    recordNavBusy.value = false
   }
 }
 
 const openAddMemberDialog = () => {
+  memberIndex.value = -1
   selectedMember.value = {
     USER_NO: '',
     USER_NAME: '',
@@ -189,12 +229,14 @@ const deleteImage = () => {
   memberImage.value = null
 }
 
-const fetchUserVisits = async (userNo) => {
+const fetchUserVisits = async (userNo, token = openToken) => {
   try {
     loadingVisits.value = true
     const response = await apiService.get(`/visits/user/${userNo}`)
+    if (token !== openToken) return
     userVisits.value = response.visits || []
   } catch (error) {
+    if (token !== openToken) return
     console.error('Error fetching user visits:', error)
     toast.add({
       severity: 'error',
@@ -203,7 +245,7 @@ const fetchUserVisits = async (userNo) => {
       life: 3000
     })
   } finally {
-    loadingVisits.value = false
+    if (token === openToken) loadingVisits.value = false
   }
 }
 
@@ -249,6 +291,7 @@ const onUznelSynced = (member) => {
 
 const closeDialog = () => {
   showDialog.value = false
+  memberIndex.value = -1
   selectedMember.value = null
   userVisits.value = []
   memberImagePreview.value = null
@@ -331,12 +374,18 @@ onMounted(() => {
             :is-edit-mode="true"
             :can-generate-uznel-id="true"
             :uznel-sync-enabled="uznelSyncEnabled"
+            :record-order="recordOrder"
+            :can-record-prev="canRecordPrev"
+            :can-record-next="canRecordNext"
+            :record-nav-busy="recordNavBusy"
             @close-dialog="closeDialog"
             @save-member="saveMember"
             @uznel-synced="onUznelSynced"
             @new-member="openAddMemberDialog"
             @image-select="onImageSelect"
             @delete-image="deleteImage"
+            @record-prev="stepMember(-1)"
+            @record-next="stepMember(1)"
           />
         </TabPanel>
         <TabPanel header="Tashriflar tarixi">
@@ -344,6 +393,16 @@ onMounted(() => {
             :user-visits="userVisits"
             :loading-visits="loadingVisits"
           />
+          <div v-if="recordOrder != null" class="visit-record-nav">
+            <MemberRecordNav
+              :order="recordOrder"
+              :can-prev="canRecordPrev"
+              :can-next="canRecordNext"
+              :busy="recordNavBusy"
+              @prev="stepMember(-1)"
+              @next="stepMember(1)"
+            />
+          </div>
         </TabPanel>
       </TabView>
       <MemberForm
@@ -364,3 +423,10 @@ onMounted(() => {
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+.visit-record-nav {
+  display: flex;
+  margin-top: 0.75rem;
+}
+</style>

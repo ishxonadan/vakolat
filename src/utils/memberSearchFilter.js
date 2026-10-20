@@ -30,6 +30,11 @@ function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
+function userNoSortKey(userNo) {
+  const match = String(userNo || "").match(/\d+/)
+  return (match ? match[0] : "0").padStart(20, "0")
+}
+
 function tokenize(value) {
   return String(value || "")
     .trim()
@@ -212,4 +217,5 @@ module.exports = {
   parsePage,
   parseSort,
   tokenize,
+  userNoSortKey,
 }
