@@ -155,7 +155,7 @@
         header="Rasm"
         :sortable="false"
         :showFilterMenu="false"
-        :style="columnStyle('PHOTO', '4.5rem')"
+        :style="columnStyle('PHOTO', '7rem', '6.5rem')"
       >
         <template #body="{ data }">
           <div class="member-avatar" aria-hidden="true">
@@ -555,11 +555,11 @@ watch(includePhoto, (enabled, wasEnabled) => {
   emit('refresh')
 })
 
-function columnStyle(field, defaultWidth) {
+function columnStyle(field, defaultWidth, minWidth = '4.75rem') {
   const saved = columnWidths.value[field]
   return {
     width: saved || defaultWidth,
-    minWidth: '4.75rem'
+    minWidth
   }
 }
 
@@ -1081,8 +1081,8 @@ defineExpose({ downloadCsv, includePhoto })
 }
 
 .member-avatar {
-  width: 2rem;
-  height: 2rem;
+  width: 5.5rem;
+  height: 5.5rem;
   border-radius: 999px;
   overflow: hidden;
   display: inline-flex;
@@ -1101,7 +1101,7 @@ defineExpose({ downloadCsv, includePhoto })
 }
 
 .member-avatar-fallback {
-  font-size: 0.85rem;
+  font-size: 1.75rem;
   color: var(--text-color-secondary);
 }
 

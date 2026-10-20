@@ -1,12 +1,18 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue"
 import { useToast } from "primevue/usetoast"
+import SelectButton from "primevue/selectbutton"
 import apiService from "@/service/api.service"
 
 const toast = useToast()
 const loading = ref(false)
 const periodPreset = ref("7d")
 const customRange = ref(null)
+const activeStat = ref("natlib-content-search")
+
+const statOptions = [
+  { label: "natlib.uz kontent qidiruvi", value: "natlib-content-search" },
+]
 const stats = ref({
   visits: 0,
   pageviews: 0,
@@ -70,6 +76,7 @@ const formattedVisits = computed(() => Number(stats.value.visits || 0).toLocaleS
 const formattedPageviews = computed(() => Number(stats.value.pageviews || 0).toLocaleString("uz-UZ"))
 
 const loadStatistics = async () => {
+  if (activeStat.value !== "natlib-content-search") return
   if (periodPreset.value === "custom") return
   await fetchStatistics({ period: periodPreset.value })
 }
@@ -124,6 +131,10 @@ watch(periodPreset, async (value) => {
   await loadStatistics()
 })
 
+watch(activeStat, async () => {
+  await loadStatistics()
+})
+
 onMounted(() => {
   loadStatistics()
 })
@@ -133,14 +144,27 @@ onMounted(() => {
   <div class="card">
     <div class="flex justify-between items-start mb-4 gap-3 flex-wrap">
       <h1 class="text-xl font-semibold m-0">Statistika</h1>
+    </div>
+
+    <SelectButton
+      v-model="activeStat"
+      :options="statOptions"
+      optionLabel="label"
+      optionValue="value"
+      :allowEmpty="false"
+      class="mb-4"
+    />
+
+    <template v-if="activeStat === 'natlib-content-search'">
+    <div class="flex justify-between items-start mb-4 gap-3 flex-wrap">
+      <div>
+        <h2 class="text-lg font-semibold m-0">natlib.uz kontent qidiruvi</h2>
+      </div>
       <div class="flex flex-column gap-2 align-items-end">
         <Tag severity="contrast" :value="`Davr: ${activePeriodLabel}`" />
         <Tag severity="info" :value="`Tanlangan: ${activePresetLabel}`" />
       </div>
     </div>
-    <p class="text-sm text-color-secondary mt-0 mb-4">
-      Saytda qidiruv natijalari sahifasi (<span class="font-mono">{{ stats.page }}</span>) necha marta ochilgani.
-    </p>
 
     <div class="flex flex-wrap gap-2 mb-4">
       <Button
@@ -191,5 +215,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
