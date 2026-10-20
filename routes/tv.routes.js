@@ -7,6 +7,13 @@ const agent = new https.Agent({
   rejectUnauthorized: false,
 });
 
+function localDateString(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 module.exports = (nazorat, vakolat) => {
   const Tickets = nazorat.model("Ticket")
   const LibraryUsers = nazorat.model("LibraryUser")
@@ -33,7 +40,7 @@ module.exports = (nazorat, vakolat) => {
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
 
       // Format today's date as YYYY-MM-DD for comparison with tashrif collection
-      const todayDateString = today.toISOString().split("T")[0]
+      const todayDateString = localDateString(today)
       console.log(`📊 Getting TV stats for date: ${todayDateString}`)
 
       // 🎯 Count actual visitors from tashrif collection
@@ -216,7 +223,7 @@ const response = await axios({
   router.get("/debug/registrations", async (req, res) => {
     try {
       const today = new Date()
-      const todayDateString = today.toISOString().split("T")[0]
+      const todayDateString = localDateString(today)
       const apiDateString = todayDateString.replace(/-/g, "")
 
       console.log(`🧪 Testing registration API for date: ${apiDateString}`)
@@ -321,7 +328,7 @@ const response = await axios({
   router.get("/debug/tashrif", async (req, res) => {
     try {
       const today = new Date()
-      const todayDateString = today.toISOString().split("T")[0]
+      const todayDateString = localDateString(today)
 
       // Get total records in tashrif collection
       const totalRecords = await Tashrif.countDocuments({})
@@ -368,7 +375,7 @@ const response = await axios({
   router.get("/debug/visitor-breakdown", async (req, res) => {
     try {
       const today = new Date()
-      const todayDateString = today.toISOString().split("T")[0]
+      const todayDateString = localDateString(today)
 
       // Get all today's records with details
       const todayVisitors = await Tashrif.find({
