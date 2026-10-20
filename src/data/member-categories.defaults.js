@@ -1,22 +1,34 @@
 const DEFAULT_MEMBER_CATEGORIES = [
-  { code: "0001", name: "Talaba" },
-  { code: "0002", name: "O'quvchi" },
-  { code: "0003", name: "Abituriyent" },
-  { code: "0004", name: "Magistr" },
-  { code: "0005", name: "Ilmiy xodim" },
-  { code: "0006", name: "Dotsent" },
-  { code: "0007", name: "Professor" },
-  { code: "0008", name: "Xizmatchi" },
-  { code: "0009", name: "Ishchi" },
-  { code: "0010", name: "Ishsiz" },
-  { code: "0011", name: "Pensioner" },
-  { code: "0012", name: "Chet el" },
-  { code: "0015", name: "Akademik" },
-  { code: "0016", name: "O'qituvchi" },
-  { code: "0017", name: "Shifokor" },
-  { code: "0018", name: "Tadbirkor" },
-  { code: "9999", name: "Boshqa" },
+  { code: "0001", name: "Talaba", kafedra: 3 },
+  { code: "0002", name: "O'quvchi", kafedra: 3 },
+  { code: "0003", name: "Abituriyent", kafedra: 3 },
+  { code: "0004", name: "Magistr", kafedra: 4 },
+  { code: "0005", name: "Ilmiy xodim", kafedra: 3 },
+  { code: "0006", name: "Dotsent", kafedra: 3 },
+  { code: "0007", name: "Professor", kafedra: 3 },
+  { code: "0008", name: "Xizmatchi", kafedra: 3 },
+  { code: "0009", name: "Ishchi", kafedra: 3 },
+  { code: "0010", name: "Ishsiz", kafedra: 3 },
+  { code: "0011", name: "Pensioner", kafedra: 3 },
+  { code: "0012", name: "Chet el", kafedra: 3 },
+  { code: "0015", name: "Akademik", kafedra: 3 },
+  { code: "0016", name: "O'qituvchi", kafedra: 3 },
+  { code: "0017", name: "Shifokor", kafedra: 3 },
+  { code: "0018", name: "Tadbirkor", kafedra: 3 },
+  { code: "9999", name: "Boshqa", kafedra: 3 },
 ]
+
+function normalizeKafedra(value) {
+  const n = Number(value)
+  if (!Number.isInteger(n) || n < 1 || n > 4) return null
+  return n
+}
+
+function toClassCode(kafedra) {
+  const n = normalizeKafedra(kafedra)
+  if (n == null) return ""
+  return String(n).padStart(4, "0")
+}
 
 const LEGACY_POSITION_ALIASES = {
   "O‘qituvchi": "0016",
@@ -45,4 +57,6 @@ module.exports = {
   LEGACY_POSITION_ALIASES,
   buildPositionCodeMap,
   normalizeCategoryCode,
+  normalizeKafedra,
+  toClassCode,
 }

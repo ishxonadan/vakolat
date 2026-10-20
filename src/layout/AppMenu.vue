@@ -133,6 +133,12 @@ const menuItems = [
             to: '/diss/languages',
             requiredPermissions: ['manage_diss_languages']
           },
+          {
+            label: 'Kategoriyalar',
+            icon: 'pi pi-fw pi-tags',
+            to: '/diss/categories',
+            requiredPermissions: ['manage_diss_categories']
+          },
           { 
             label: 'Soha', 
             icon: 'pi pi-fw pi-list', 

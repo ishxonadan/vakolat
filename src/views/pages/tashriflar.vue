@@ -41,6 +41,8 @@ const currentPage = ref(1)
 const searchQuery = ref('')
 const dateRangeFilter = ref(null) // For filtering table
 const dateRangeStats = ref(null) // For statistics only
+const photoCache = new Map()
+let visitsRequestId = 0
 
 // Dialog state
 const showUserDialog = ref(false)
@@ -58,7 +60,48 @@ const autoRefreshEnabled = ref(true) // ON by default
 const autoRefreshInterval = ref(null)
 const lastFetchTime = ref(0)
 const REFRESH_INTERVAL = 10000 // 10 seconds
+const SLOW_STATS_INTERVAL = 60000
 const MIN_FETCH_INTERVAL = 1000 // 1 second throttle
+let lastSlowStatsAt = 0
+
+const formatLocalDate = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const withCachedPhotos = (rows) =>
+  rows.map((visit) => {
+    if (!photoCache.has(visit.id)) return visit
+    const photo = photoCache.get(visit.id)
+    return photo ? { ...visit, userPhoto: photo } : visit
+  })
+
+const fetchPhotos = async (rows, requestId) => {
+  const ids = [...new Set(rows.map((visit) => visit.id).filter((id) => id && !photoCache.has(id)))]
+  if (!ids.length) return
+
+  try {
+    const response = await api.get('/visits/photos', { params: { ids: ids.join(',') } })
+    const photos = response.data?.photos || {}
+    for (const id of ids) {
+      photoCache.set(id, photos[id] || null)
+    }
+
+    if (selectedUser.value && photoCache.has(selectedUser.value.id)) {
+      const photo = photoCache.get(selectedUser.value.id)
+      if (photo) {
+        selectedUser.value = { ...selectedUser.value, userPhoto: photo }
+      }
+    }
+
+    if (requestId !== visitsRequestId) return
+    visits.value = withCachedPhotos(visits.value)
+  } catch (error) {
+    console.error('❌ Error fetching visit photos:', error)
+  }
+}
 
 // Get photo URL - handle base64 images
 const getPhotoUrl = (photo) => {
@@ -89,7 +132,7 @@ const isStillInLibrary = (visit) => {
   if (visit.ketdi) return false
   
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
+  const today = formatLocalDate(now)
   const currentHour = now.getHours()
   const currentMinute = now.getMinutes()
   
@@ -127,8 +170,11 @@ const fetchUserHistory = async (userId) => {
 
 // Show user details
 const showUserDetails = async (user) => {
-  selectedUser.value = user
+  selectedUser.value = withCachedPhotos([user])[0]
   showUserDialog.value = true
+  if (!selectedUser.value.userPhoto) {
+    fetchPhotos([user], visitsRequestId)
+  }
   await fetchUserHistory(user.id)
 }
 
@@ -142,6 +188,7 @@ const fetchVisits = async (isAutoRefresh = false) => {
   }
   
   lastFetchTime.value = now
+  const requestId = ++visitsRequestId
   
   // Only show loading spinner for manual refresh, not auto-refresh
   if (!isAutoRefresh) {
@@ -160,23 +207,25 @@ const fetchVisits = async (isAutoRefresh = false) => {
       params.append('search', searchQuery.value)
     }
 
-    if (dateRangeFilter.value && dateRangeFilter.value.length === 2) {
-      params.append('startDate', dateRangeFilter.value[0].toISOString().split('T')[0])
-      params.append('endDate', dateRangeFilter.value[1].toISOString().split('T')[0])
+    if (dateRangeFilter.value && dateRangeFilter.value.length === 2 && dateRangeFilter.value[1]) {
+      params.append('startDate', formatLocalDate(dateRangeFilter.value[0]))
+      params.append('endDate', formatLocalDate(dateRangeFilter.value[1]))
     }
 
     const queryString = params.toString()
     console.log('📤 Query string:', queryString)
 
     const response = await api.get(`/visits?${queryString}`)
+    if (requestId !== visitsRequestId) return
     
     console.log('📥 Response:', {
       visitsCount: response.data.visits.length,
       pagination: response.data.pagination
     })
     
-    visits.value = response.data.visits
+    visits.value = withCachedPhotos(response.data.visits)
     totalRecords.value = response.data.pagination.total
+    fetchPhotos(response.data.visits, requestId)
     
     if (response.data.visits.length > 0) {
       console.log('📍 First visit:', response.data.visits[0].date, response.data.visits[0].keldi)
@@ -191,37 +240,34 @@ const fetchVisits = async (isAutoRefresh = false) => {
       life: 3000,
     })
   } finally {
-    loading.value = false
+    if (requestId === visitsRequestId) {
+      loading.value = false
+    }
   }
 }
 
-// Fetch statistics
-const fetchStatistics = async () => {
+// Fetch statistics. Year-long period stats stay off the 10s refresh.
+const fetchStatistics = async ({ includeSlow = true } = {}) => {
   try {
     console.log('📊 Fetching statistics...')
-    
-    const [today, month] = await Promise.all([
-      api.get('/visits/stats/today'),
-      api.get('/visits/stats/month'),
-    ])
 
-    console.log('📊 Today response:', today.data)
-    console.log('📊 Month response:', month.data)
+    const requests = [api.get('/visits/stats/today')]
+    if (includeSlow) {
+      requests.push(api.get('/visits/stats/month'))
+      if (dateRangeStats.value && dateRangeStats.value.length === 2 && dateRangeStats.value[1]) {
+        const startDate = formatLocalDate(dateRangeStats.value[0])
+        const endDate = formatLocalDate(dateRangeStats.value[1])
+        requests.push(api.get('/visits/stats/period', { params: { startDate, endDate } }))
+      }
+    }
+
+    const [today, month, period] = await Promise.all(requests)
 
     todayStats.value = today.data
-    monthStats.value = month.data
-
-    // Fetch period stats if date range is selected
-    if (dateRangeStats.value && dateRangeStats.value.length === 2) {
-      const startDate = dateRangeStats.value[0].toISOString().split('T')[0]
-      const endDate = dateRangeStats.value[1].toISOString().split('T')[0]
-      console.log('📊 Fetching period stats:', { startDate, endDate })
-      
-      const period = await api.get(`/visits/stats/period?startDate=${startDate}&endDate=${endDate}`)
-      console.log('📊 Period response:', period.data)
-      
+    if (month) monthStats.value = month.data
+    if (period) {
       periodStats.value = period.data
-    } else {
+    } else if (includeSlow) {
       periodStats.value = { total: 0, unique: 0, days: 0, average: 0 }
     }
   } catch (error) {
@@ -311,8 +357,11 @@ const startAutoRefresh = () => {
     clearInterval(autoRefreshInterval.value)
   }
   autoRefreshInterval.value = setInterval(() => {
-    fetchVisits(true) // Pass true to indicate auto-refresh
-    fetchStatistics() // Also update statistics
+    fetchVisits(true)
+    const now = Date.now()
+    const includeSlow = now - lastSlowStatsAt >= SLOW_STATS_INTERVAL
+    if (includeSlow) lastSlowStatsAt = now
+    fetchStatistics({ includeSlow })
   }, REFRESH_INTERVAL)
   console.log('▶️ Auto-refresh started (10 seconds)')
 }
@@ -327,8 +376,9 @@ const stopAutoRefresh = () => {
 }
 
 const manualRefresh = () => {
-  fetchVisits(false) // Manual refresh shows loading
-  fetchStatistics()
+  lastSlowStatsAt = Date.now()
+  fetchVisits(false)
+  fetchStatistics({ includeSlow: true })
 }
 
 // Watch for rows per page changes
@@ -346,10 +396,13 @@ onMounted(() => {
   const today = new Date()
   const startOfYear = new Date(today.getFullYear(), 0, 1) // January 1 of current year
   dateRangeStats.value = [startOfYear, today]
+  lastSlowStatsAt = Date.now()
   
-  fetchVisits(false)
-  fetchStatistics()
-  startAutoRefresh() // Start auto-refresh on mount
+  // Show the table first. Year stats run after that response, not in front of it.
+  fetchVisits(false).finally(() => {
+    fetchStatistics({ includeSlow: true })
+  })
+  startAutoRefresh()
 })
 
 onUnmounted(() => {

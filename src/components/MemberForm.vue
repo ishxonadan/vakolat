@@ -125,6 +125,24 @@
                 placeholder="Toifani tanlang"
                 class="w-full"
                 :invalid="submitted && !userPosition"
+                @update:modelValue="onToifaChange"
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="field-label" for="kafedra">
+                Kafedra <span class="required">*</span>
+              </label>
+              <Dropdown
+                id="kafedra"
+                v-model="kafedra"
+                :options="kafedraOptions"
+                optionLabel="label"
+                optionValue="value"
+                optionDisabled="disabled"
+                placeholder="Kafedrani tanlang"
+                class="w-full"
+                :invalid="submitted && !kafedra"
               />
             </div>
 
@@ -368,7 +386,13 @@ import {
   phoneCodeOptions,
 } from '@/utils/phoneNumber'
 import { ensureUznelCompanyOption, uznelCompanies } from '@/data/uznelCompanies.js'
-import { normalizeMemberCategoryValue } from '@/utils/memberCategories'
+import {
+  KAFEDRA_OPTIONS,
+  classCodeToKafedra,
+  normalizeMemberCategoryValue,
+  resolveKafedraForCategory,
+  toClassCode,
+} from '@/utils/memberCategories'
 
 const props = defineProps({
   selectedMember: {
@@ -440,6 +464,8 @@ const userNo = ref('')
 const uznelPassword = ref('')
 const userName = ref('')
 const userPosition = ref('')
+const kafedra = ref(null)
+const kafedraOptions = KAFEDRA_OPTIONS
 const pinfl = ref('')
 const phoneCode = ref('+998')
 const customPhoneCode = ref('+')
@@ -493,6 +519,8 @@ watch(() => props.selectedMember, (newVal) => {
   uznelPassword.value = newVal.PASSWORD || newVal.USER_NO || ''
   userName.value = newVal.USER_NAME || ''
   userPosition.value = normalizeMemberCategoryValue(newVal.USER_POSITION, props.categories)
+  kafedra.value = classCodeToKafedra(newVal.CLASS_CODE)
+    ?? resolveKafedraForCategory(userPosition.value, props.categories)
   pinfl.value = newVal.PINFL || ''
   applyParsedPhone(parsePhoneNumber(newVal.TEL_NO))
   birthday.value = parseBirthday(newVal.BIRTHDAY)
@@ -511,6 +539,13 @@ watch(() => props.categories, () => {
   if (!userPosition.value) return
   userPosition.value = normalizeMemberCategoryValue(userPosition.value, props.categories)
 })
+
+function onToifaChange(position) {
+  const fromToifa = resolveKafedraForCategory(position, props.categories)
+  if (fromToifa != null) {
+    kafedra.value = fromToifa
+  }
+}
 
 watch(phoneCode, (code) => {
   if (!isCustomPhoneCode(code)) customPhoneCode.value = '+'
@@ -793,6 +828,7 @@ function buildMemberPayload() {
     USER_ID: maskId,
     USER_NAME: userName.value.trim(),
     USER_POSITION: userPosition.value,
+    CLASS_CODE: toClassCode(kafedra.value),
     PINFL: pinfl.value.trim(),
     TEL_NO: composePhoneNumber(activeDialCode.value, phoneLocal.value),
     BIRTHDAY: toLocalYyyymmdd(birthday.value),
@@ -814,11 +850,11 @@ function buildMemberPayload() {
 const onSaveMember = () => {
   if (!canManageMembers.value) return
   submitted.value = true
-  if (!userName.value.trim() || !userPosition.value) {
+  if (!userName.value.trim() || !userPosition.value || !kafedra.value) {
     toast.add({
       severity: 'warn',
       summary: 'Majburiy maydonlar',
-      detail: "Ism va toifani to'ldiring",
+      detail: "Ism, toifa va kafedrani to'ldiring",
       life: 2500
     })
     return
@@ -839,11 +875,11 @@ const onSaveMember = () => {
 async function syncToUznel() {
   if (!canManageMembers.value || !props.uznelSyncEnabled || syncingUznel.value) return
   submitted.value = true
-  if (!userNo.value.trim() || !userName.value.trim() || !userPosition.value || !toLocalYyyymmdd(birthday.value)) {
+  if (!userNo.value.trim() || !userName.value.trim() || !userPosition.value || !kafedra.value || !toLocalYyyymmdd(birthday.value)) {
     toast.add({
       severity: 'warn',
       summary: 'Majburiy maydonlar',
-      detail: "Avval ID, ism, toifa va tug'ilgan sanani to'ldiring",
+      detail: "Avval ID, ism, toifa, kafedra va tug'ilgan sanani to'ldiring",
       life: 3000
     })
     return

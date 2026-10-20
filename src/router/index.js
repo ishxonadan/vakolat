@@ -40,6 +40,15 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: "diss/categories",
+          name: "diss_categories",
+          component: () => import("@/views/pages/diss_categories.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "manage_diss_categories",
+          },
+        },
+        {
           path: "diss/soha",
           name: "diss_soha",
           component: () => import("@/views/pages/diss_soha.vue"),

@@ -1,7 +1,10 @@
 const express = require("express")
 const mongoose = require("mongoose")
 const { verifyToken, checkUserLevel } = require("../src/middleware/auth.middleware")
-const { normalizeCategoryCode } = require("../src/data/member-categories.defaults")
+const {
+  normalizeCategoryCode,
+  normalizeKafedra,
+} = require("../src/data/member-categories.defaults")
 
 module.exports = (vakolat) => {
   const router = express.Router()
@@ -29,12 +32,16 @@ module.exports = (vakolat) => {
       if (!name) {
         return res.status(400).json({ error: "Toifa nomi majburiy" })
       }
+      const kafedra = normalizeKafedra(req.body.kafedra ?? 3)
+      if (kafedra == null) {
+        return res.status(400).json({ error: "Kafedra 1–4 oralig‘ida bo‘lishi kerak" })
+      }
       let sortOrder = req.body.sortOrder
       if (typeof sortOrder !== "number" || Number.isNaN(sortOrder)) {
         const max = await MemberCategory.findOne().sort({ sortOrder: -1 }).select("sortOrder").lean()
         sortOrder = max?.sortOrder != null ? max.sortOrder + 1 : 1
       }
-      const doc = await MemberCategory.create({ code, name, isActive: true, sortOrder })
+      const doc = await MemberCategory.create({ code, name, kafedra, isActive: true, sortOrder })
       res.status(201).json(doc)
     } catch (e) {
       if (e?.code === 11000) {
@@ -68,6 +75,13 @@ module.exports = (vakolat) => {
           return res.status(400).json({ error: "Toifa nomi bo‘sh bo‘lmasligi kerak" })
         }
         doc.name = name
+      }
+      if (req.body.kafedra !== undefined) {
+        const kafedra = normalizeKafedra(req.body.kafedra)
+        if (kafedra == null) {
+          return res.status(400).json({ error: "Kafedra 1–4 oralig‘ida bo‘lishi kerak" })
+        }
+        doc.kafedra = kafedra
       }
       if (req.body.isActive !== undefined) {
         doc.isActive = req.body.isActive !== false

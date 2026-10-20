@@ -172,14 +172,145 @@ app.get("/api/diss/cats", verifyToken, async (req, res) => {
   }
 })
 
-// Legacy categories for Kategoriya (collection 'razdels')
+// Categories for Kategoriya (collection 'razdels'); Documents.category_id -> razdel_id
+const seedRazdelsIfEmpty = async () => {
+  const count = await Razdels.countDocuments()
+  if (count === 0) {
+    await Razdels.insertMany([
+      { name: "Dissertatsiya", razdel_id: 1 },
+      { name: "Avtoreferat", razdel_id: 2 },
+    ])
+    console.log("Seeded default categories (razdels)")
+  }
+}
+
+async function nextRazdelId() {
+  const max = await Razdels.findOne().sort({ razdel_id: -1 }).select("razdel_id").lean()
+  const n = Number(max?.razdel_id)
+  return Number.isFinite(n) ? n + 1 : 1
+}
+
+async function dissertationCountsByCategory() {
+  const rows = await Documents.aggregate([
+    { $group: { _id: "$category_id", count: { $sum: 1 } } },
+  ])
+  const map = new Map()
+  for (const row of rows) {
+    if (row._id == null) continue
+    map.set(Number(row._id), row.count)
+  }
+  return map
+}
+
 app.get("/api/diss/razdels", verifyToken, async (req, res) => {
   try {
+    await seedRazdelsIfEmpty()
+    const includeCounts = String(req.query.includeCounts || "") === "true"
     const razdelsData = await Razdels.find().sort({ razdel_id: 1 }).lean()
+    const counts = includeCounts ? await dissertationCountsByCategory() : null
     const list = (Array.isArray(razdelsData) ? razdelsData : [])
       .filter((doc) => doc.name != null && doc.razdel_id != null)
-      .map((doc) => ({ name: String(doc.name), razdel_id: Number(doc.razdel_id) }))
+      .map((doc) => {
+        const razdel_id = Number(doc.razdel_id)
+        const item = {
+          _id: doc._id,
+          name: String(doc.name),
+          razdel_id,
+        }
+        if (counts) item.dissertationCount = counts.get(razdel_id) || 0
+        return item
+      })
     res.json(list)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post("/api/diss/razdels", checkPermissions(["manage_diss_categories"]), async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim()
+    if (!name) {
+      return res.status(400).json({ message: "Nomi majburiy" })
+    }
+    let razdel_id = req.body?.razdel_id != null ? Number(req.body.razdel_id) : null
+    if (razdel_id == null || Number.isNaN(razdel_id)) {
+      razdel_id = await nextRazdelId()
+    }
+    const existing = await Razdels.findOne({ razdel_id })
+    if (existing) {
+      return res.status(400).json({ message: "Bunday razdel_id allaqachon mavjud" })
+    }
+    const doc = await Razdels.create({ name, razdel_id })
+    res.status(201).json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.put("/api/diss/razdels/:id", checkPermissions(["manage_diss_categories"]), async (req, res) => {
+  try {
+    const id = req.params.id
+    const doc = await Razdels.findById(id)
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    if (req.body?.name !== undefined) {
+      const name = String(req.body.name || "").trim()
+      if (!name) return res.status(400).json({ message: "Nomi bo'sh bo'lmasligi kerak" })
+      doc.name = name
+    }
+    await doc.save()
+    res.json(doc)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.delete("/api/diss/razdels/:id", checkPermissions(["manage_diss_categories"]), async (req, res) => {
+  try {
+    const doc = await Razdels.findById(req.params.id)
+    if (!doc) return res.status(404).json({ message: "Topilmadi" })
+    const razdelId = Number(doc.razdel_id)
+    const used = await Documents.countDocuments({ category_id: razdelId })
+    if (used > 0) {
+      return res.status(400).json({
+        message: `Bu kategoriyada ${used} ta dissertatsiya bor. Avval boshqa kategoriyaga ko'chiring`,
+        dissertationCount: used,
+      })
+    }
+    await Razdels.findByIdAndDelete(doc._id)
+    res.json({ message: "O'chirildi" })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post("/api/diss/razdels/move", checkPermissions(["manage_diss_categories"]), async (req, res) => {
+  try {
+    const fromId = Number(req.body?.fromRazdelId)
+    const toId = Number(req.body?.toRazdelId)
+    if (!Number.isFinite(fromId) || !Number.isFinite(toId)) {
+      return res.status(400).json({ message: "fromRazdelId va toRazdelId majburiy" })
+    }
+    if (fromId === toId) {
+      return res.status(400).json({ message: "Manba va nishon bir xil bo'lmasligi kerak" })
+    }
+    const [fromCat, toCat] = await Promise.all([
+      Razdels.findOne({ razdel_id: fromId }).lean(),
+      Razdels.findOne({ razdel_id: toId }).lean(),
+    ])
+    if (!fromCat) return res.status(404).json({ message: "Manba kategoriya topilmadi" })
+    if (!toCat) return res.status(404).json({ message: "Nishon kategoriya topilmadi" })
+
+    const result = await Documents.updateMany(
+      { category_id: fromId },
+      { $set: { category_id: toId, modified_date: new Date() } },
+    )
+    res.json({
+      message: "Ko'chirildi",
+      matched: result.matchedCount ?? result.n,
+      modified: result.modifiedCount ?? result.nModified,
+      fromRazdelId: fromId,
+      toRazdelId: toId,
+    })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }

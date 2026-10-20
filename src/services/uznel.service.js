@@ -6,7 +6,10 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 })
 
-const { buildPositionCodeMap } = require("../data/member-categories.defaults")
+const {
+  buildPositionCodeMap,
+  toClassCode,
+} = require("../data/member-categories.defaults")
 
 const DEFAULT_URL = "https://uznel.natlib.uz:444/FN/Manager/action.do"
 const DEFAULT_USERID = "ILHOM"
@@ -15,7 +18,6 @@ const DEFAULT_GRADE = "0001"
 const DEFAULT_LOAN_CHECK = "0001"
 const DEFAULT_STATUS = "0001"
 const DEFAULT_TEMPLATE = "00000001"
-const DEFAULT_CLASS = "0003"
 const DEFAULT_PASS_KEY = "FUTURENR12345678"
 const DEFAULT_PASS_IV = "1234567812345678"
 const DEFAULT_CARD_TYPE = "0001"
@@ -130,6 +132,12 @@ function mapPosition(value) {
   return POSITION_CODES[raw] || DEFAULT_GRADE
 }
 
+function mapClassCode(value) {
+  const raw = String(value || "").trim()
+  if (/^\d{4}$/.test(raw)) return raw
+  return toClassCode(raw) || ""
+}
+
 function mapTelNo(value) {
   const digits = String(value || "").replace(/\D/g, "")
   if (!digits) return ""
@@ -177,7 +185,7 @@ function buildUserCols(member) {
     xmlCol("SMS_CHECK", member.SMS_CHECK || "Y"),
     xmlCol("MAIL_CHECK", member.MAIL_CHECK || "Y"),
     xmlCol("LIB_USE_LDATE", addYearsYyyymmdd(todayYyyymmdd(), 3)),
-    xmlCol("CLASS_CODE", member.CLASS_CODE || process.env.UZNEL_CLASS_CODE || DEFAULT_CLASS),
+    xmlCol("CLASS_CODE", mapClassCode(member.CLASS_CODE)),
   ].join("")
 }
 
@@ -478,7 +486,7 @@ function snapshotModFields(member, userSeqNo) {
     FULL_CODE: member.FULL_CODE || cmpny,
     SMS_CHECK: member.SMS_CHECK || "Y",
     MAIL_CHECK: member.MAIL_CHECK || "Y",
-    CLASS_CODE: member.CLASS_CODE || process.env.UZNEL_CLASS_CODE || DEFAULT_CLASS,
+    CLASS_CODE: mapClassCode(member.CLASS_CODE),
     LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
     UN_AGREE_FLAG: member.UN_AGREE_FLAG || "9999",
   }

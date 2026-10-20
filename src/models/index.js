@@ -46,6 +46,7 @@ function registerModels({ vakolat, yoqlama, nazorat }) {
     {
       code: { type: String, required: true, trim: true, match: /^\d{4}$/ },
       name: { type: String, required: true, trim: true },
+      kafedra: { type: Number, min: 1, max: 4, default: 3 },
       isActive: { type: Boolean, default: true },
       sortOrder: { type: Number, default: 1 },
     },

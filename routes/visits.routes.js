@@ -11,6 +11,45 @@ module.exports = (nazoratConnection) => {
     return nazoratConnection.db
   }
 
+  const CACHE_LIST_FIELDS = {
+    USER_NO: 1,
+    USER_NAME: 1,
+    USER_POSITION: 1,
+    TEL_NO: 1,
+  }
+
+  const ensureIndex = async (collection, keys, name) => {
+    try {
+      await collection.createIndex(keys, { name })
+    } catch (error) {
+      const alreadyExists = error.code === 85 || error.code === 86 || /already exists/i.test(error.message || "")
+      if (!alreadyExists) {
+        console.error(`❌ Visit index ${name} failed:`, error.message)
+      }
+    }
+  }
+
+  const ensureVisitIndexes = () => {
+    try {
+      const db = getDb()
+      const tashrif = db.collection("tashrif")
+      const cache = db.collection("cache")
+      Promise.all([
+        ensureIndex(tashrif, { date: -1, keldi: -1 }, "tashrif_date_keldi"),
+        ensureIndex(tashrif, { id: 1, date: -1, keldi: -1 }, "tashrif_id_date_keldi"),
+        ensureIndex(cache, { USER_NO: 1 }, "cache_user_no"),
+      ]).then(() => console.log("✅ Visit indexes ready"))
+    } catch (error) {
+      console.error("❌ Visit index setup skipped:", error.message)
+    }
+  }
+
+  if (nazoratConnection.readyState === 1) {
+    ensureVisitIndexes()
+  } else {
+    nazoratConnection.once("connected", ensureVisitIndexes)
+  }
+
   const calculateDuration = (keldi, ketdi) => {
     if (!keldi || !ketdi) return null
 
@@ -31,126 +70,139 @@ module.exports = (nazoratConnection) => {
     }
   }
 
+  const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+  const readCount = (rows) => rows?.[0]?.n || 0
+
+  const summarizeVisits = async (collection, match, { includeCurrent = false } = {}) => {
+    const totalPromise = collection.countDocuments(match)
+    const uniquePromise = collection
+      .aggregate([{ $match: match }, { $group: { _id: "$id" } }, { $count: "n" }])
+      .toArray()
+    const currentPromise = includeCurrent
+      ? collection.countDocuments({
+          ...match,
+          $or: [{ ketdi: null }, { ketdi: "" }],
+        })
+      : Promise.resolve(0)
+
+    const [total, uniqueRows, current] = await Promise.all([totalPromise, uniquePromise, currentPromise])
+
+    return {
+      total,
+      unique: readCount(uniqueRows),
+      current,
+    }
+  }
+
+  const loadUsersByIds = async (cacheCollection, ids, projection) => {
+    const uniqueIds = [...new Set(ids.filter(Boolean))]
+    if (!uniqueIds.length) return new Map()
+
+    const users = await cacheCollection.find({ USER_NO: { $in: uniqueIds } }, { projection }).toArray()
+    return new Map(users.map((user) => [user.USER_NO, user]))
+  }
+
+  const isoDate = (date) => date.toISOString().split("T")[0]
+
+  // GET photos for the current page only. Kept off the list payload so the table can render first.
+  router.get("/photos", verifyToken, async (req, res) => {
+    try {
+      const ids = String(req.query.ids || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .slice(0, 300)
+
+      if (!ids.length) {
+        return res.json({ photos: {} })
+      }
+
+      const db = getDb()
+      const users = await db
+        .collection("cache")
+        .find({ USER_NO: { $in: ids } }, { projection: { USER_NO: 1, PHOTO: 1 } })
+        .toArray()
+
+      const photos = {}
+      for (const user of users) {
+        if (user.PHOTO) photos[user.USER_NO] = user.PHOTO
+      }
+
+      res.json({ photos })
+    } catch (error) {
+      console.error("❌ Error fetching visit photos:", error)
+      res.status(500).json({ error: "Failed to fetch photos", details: error.message })
+    }
+  })
+
   // GET all visits with pagination and filtering - LATEST FIRST
   router.get("/", verifyToken, async (req, res) => {
     try {
-      // Parse query parameters with explicit logging
-      console.log("\n📊 ===== NEW REQUEST =====")
-      console.log("🔍 Raw query params:", req.query)
-
       const page = Number.parseInt(req.query.page, 10) || 1
-      const limit = Number.parseInt(req.query.limit, 10) || 20
+      const limit = Math.min(Number.parseInt(req.query.limit, 10) || 20, 300)
       const skip = (page - 1) * limit
-
-      console.log(`📄 Parsed values:`)
-      console.log(`   - Page: ${page} (type: ${typeof page})`)
-      console.log(`   - Limit: ${limit} (type: ${typeof limit})`)
-      console.log(`   - Skip: ${skip} (type: ${typeof skip})`)
-
       const query = {}
-
-      // Date range filter
-      if (req.query.startDate && req.query.endDate) {
-        query.date = {
-          $gte: req.query.startDate,
-          $lte: req.query.endDate,
-        }
-        console.log(`📅 Date filter applied: ${req.query.startDate} to ${req.query.endDate}`)
-      }
-
-      // Search filter - case insensitive partial match
-      if (req.query.search) {
-        const db = getDb()
-        const cacheCollection = db.collection("cache")
-
-        // Create case-insensitive regex for partial matching
-        const searchRegex = new RegExp(req.query.search, "i")
-        console.log(`🔍 Search filter: "${req.query.search}" (regex: /${req.query.search}/i)`)
-
-        // First, search in cache for matching users
-        const matchingUsers = await cacheCollection
-          .find({
-            $or: [{ USER_NO: searchRegex }, { USER_NAME: searchRegex }],
-          })
-          .toArray()
-
-        console.log(`   Found ${matchingUsers.length} matching users in cache`)
-
-        // Get IDs of matching users
-        const matchingIds = matchingUsers.map((u) => u.USER_NO)
-
-        // Search in tashrif collection
-        query.$or = [
-          { id: { $in: matchingIds } }, // Match by user ID from cache
-          { id: searchRegex }, // Direct ID match
-          { userName: searchRegex }, // Direct userName match in tashrif
-        ]
-
-        console.log(`   Searching for IDs:`, matchingIds.slice(0, 5), matchingIds.length > 5 ? "..." : "")
-      }
-
-      console.log("🔎 MongoDB query:", JSON.stringify(query, null, 2))
 
       const db = getDb()
       const collection = db.collection("tashrif")
       const cacheCollection = db.collection("cache")
 
-      // Get total count
-      const total = await collection.countDocuments(query)
-      console.log(`📊 Total matching documents: ${total}`)
-      console.log(`📊 Total pages: ${Math.ceil(total / limit)}`)
-
-      // Sort by date DESC, then keldi DESC (newest first)
-      const sortOptions = { date: -1, keldi: -1 }
-      console.log(`🔽 Sort options:`, sortOptions)
-      console.log(`⏭️  Applying skip(${skip}).limit(${limit})`)
-
-      // Fetch with pagination
-      const cursor = collection.find(query).sort(sortOptions).skip(skip).limit(limit)
-      const visits = await cursor.toArray()
-
-      console.log(`✅ Retrieved ${visits.length} documents`)
-
-      if (visits.length > 0) {
-        console.log(`📍 FIRST document:`)
-        console.log(`   - ID: ${visits[0].id}`)
-        console.log(`   - Date: ${visits[0].date}`)
-        console.log(`   - Keldi: ${visits[0].keldi}`)
-        console.log(`   - _id: ${visits[0]._id}`)
-
-        console.log(`📍 LAST document:`)
-        const last = visits[visits.length - 1]
-        console.log(`   - ID: ${last.id}`)
-        console.log(`   - Date: ${last.date}`)
-        console.log(`   - Keldi: ${last.keldi}`)
-        console.log(`   - _id: ${last._id}`)
-      } else {
-        console.log("⚠️  No documents returned!")
+      if (req.query.startDate && req.query.endDate) {
+        query.date = {
+          $gte: req.query.startDate,
+          $lte: req.query.endDate,
+        }
       }
 
-      console.log("===========================\n")
+      if (req.query.search) {
+        const searchRegex = new RegExp(escapeRegex(req.query.search), "i")
 
-      // Enrich visits with user data from cache
-      const enrichedVisits = await Promise.all(
-        visits.map(async (visit) => {
-          const userCache = await cacheCollection.findOne({ USER_NO: visit.id })
+        const matchingUsers = await cacheCollection
+          .find(
+            {
+              $or: [{ USER_NO: searchRegex }, { USER_NAME: searchRegex }],
+            },
+            { projection: { USER_NO: 1 } },
+          )
+          .limit(500)
+          .toArray()
 
-          return {
-            _id: visit._id,
-            id: visit.id,
-            date: visit.date,
-            keldi: visit.keldi,
-            ketdi: visit.ketdi || null,
-            duration: calculateDuration(visit.keldi, visit.ketdi),
-            userName: userCache?.USER_NAME || visit.userName || "Noma'lum",
-            userPosition: userCache?.USER_POSITION || visit.userPosition || "-",
-            userPhoto: userCache?.PHOTO || null,
-            userTel: userCache?.TEL_NO || null,
-          }
-        }),
+        const matchingIds = matchingUsers.map((user) => user.USER_NO)
+
+        query.$or = [{ id: { $in: matchingIds } }, { id: searchRegex }, { userName: searchRegex }]
+      }
+
+      const hasFilter = Object.keys(query).length > 0
+      const totalPromise = hasFilter ? collection.countDocuments(query) : collection.estimatedDocumentCount()
+
+      const [total, visits] = await Promise.all([
+        totalPromise,
+        collection.find(query).sort({ date: -1, keldi: -1 }).skip(skip).limit(limit).toArray(),
+      ])
+
+      const usersById = await loadUsersByIds(
+        cacheCollection,
+        visits.map((visit) => visit.id),
+        CACHE_LIST_FIELDS,
       )
 
-      const responseData = {
+      const enrichedVisits = visits.map((visit) => {
+        const userCache = usersById.get(visit.id)
+        return {
+          _id: visit._id,
+          id: visit.id,
+          date: visit.date,
+          keldi: visit.keldi,
+          ketdi: visit.ketdi || null,
+          duration: calculateDuration(visit.keldi, visit.ketdi),
+          userName: userCache?.USER_NAME || visit.userName || "Noma'lum",
+          userPosition: userCache?.USER_POSITION || visit.userPosition || "-",
+          userTel: userCache?.TEL_NO || null,
+        }
+      })
+
+      res.json({
         visits: enrichedVisits,
         pagination: {
           page,
@@ -158,13 +210,9 @@ module.exports = (nazoratConnection) => {
           total,
           pages: Math.ceil(total / limit),
         },
-      }
-
-      console.log(`📤 Sending response with ${enrichedVisits.length} enriched visits`)
-      res.json(responseData)
+      })
     } catch (error) {
       console.error("❌ ERROR in visits route:", error)
-      console.error("❌ Stack trace:", error.stack)
       res.status(500).json({ error: "Failed to fetch visits", details: error.message })
     }
   })
@@ -173,25 +221,15 @@ module.exports = (nazoratConnection) => {
   router.get("/user/:userId", verifyToken, async (req, res) => {
     try {
       const userId = req.params.userId
-      console.log("📜 Fetching visit history for user:", userId)
-
       const db = getDb()
       const collection = db.collection("tashrif")
       const cacheCollection = db.collection("cache")
 
-      // Get all visits for this user, sorted by date descending
-      const visits = await collection
-        .find({ id: userId })
-        .sort({ date: -1, keldi: -1 })
-        .limit(50) // Limit to last 50 visits
-        .toArray()
+      const [visits, userCache] = await Promise.all([
+        collection.find({ id: userId }).sort({ date: -1, keldi: -1 }).limit(50).toArray(),
+        cacheCollection.findOne({ USER_NO: userId }, { projection: CACHE_LIST_FIELDS }),
+      ])
 
-      console.log("📜 Found", visits.length, "visits for user", userId)
-
-      // Get user info from cache
-      const userCache = await cacheCollection.findOne({ USER_NO: userId })
-
-      // Enrich visits with user data
       const enrichedVisits = visits.map((visit) => ({
         _id: visit._id,
         id: visit.id,
@@ -201,7 +239,6 @@ module.exports = (nazoratConnection) => {
         duration: calculateDuration(visit.keldi, visit.ketdi),
         userName: userCache?.USER_NAME || userId,
         userPosition: userCache?.USER_POSITION || "-",
-        userPhoto: userCache?.PHOTO || null,
       }))
 
       res.json({
@@ -217,34 +254,15 @@ module.exports = (nazoratConnection) => {
   // GET today's statistics
   router.get("/stats/today", verifyToken, async (req, res) => {
     try {
-      console.log("📊 Fetching today stats")
       const db = getDb()
-      const today = new Date().toISOString().split("T")[0]
-      console.log("📅 Today's date:", today)
-      const collection = db.collection("tashrif")
+      const today = isoDate(new Date())
+      const stats = await summarizeVisits(db.collection("tashrif"), { date: today }, { includeCurrent: true })
 
-      // Debug: Check what dates exist in the database
-      const allDates = await collection.distinct("date")
-      console.log("📅 Available dates in database:", allDates.slice(0, 10), `(${allDates.length} total)`)
-
-      const todayVisits = await collection.find({ date: today }).toArray()
-      console.log("📊 Found", todayVisits.length, "visits for today")
-      
-      if (todayVisits.length > 0) {
-        console.log("📄 First visit sample:", todayVisits[0])
-      }
-
-      const uniqueIds = new Set(todayVisits.map((v) => v.id))
-      const currentInside = todayVisits.filter((v) => !v.ketdi).length
-
-      const stats = {
-        total: todayVisits.length,
-        unique: uniqueIds.size,
-        current: currentInside,
-      }
-
-      console.log("✅ Today stats:", stats)
-      res.json(stats)
+      res.json({
+        total: stats.total,
+        unique: stats.unique,
+        current: stats.current,
+      })
     } catch (error) {
       console.error("❌ Error fetching today stats:", error)
       res.status(500).json({ error: "Failed to fetch today statistics", details: error.message })
@@ -254,38 +272,23 @@ module.exports = (nazoratConnection) => {
   // GET this month's statistics
   router.get("/stats/month", verifyToken, async (req, res) => {
     try {
-      console.log("📊 Fetching month stats")
       const db = getDb()
       const now = new Date()
       const year = now.getFullYear()
       const month = String(now.getMonth() + 1).padStart(2, "0")
       const startDate = `${year}-${month}-01`
-      const endDate = new Date(year, now.getMonth() + 1, 0).toISOString().split("T")[0]
-      
-      console.log("📅 Month date range:", { startDate, endDate })
+      const endDate = isoDate(new Date(year, now.getMonth() + 1, 0))
 
-      const collection = db.collection("tashrif")
-
-      const monthVisits = await collection
-        .find({
-          date: { $gte: startDate, $lte: endDate },
-        })
-        .toArray()
-
-      console.log("📊 Found", monthVisits.length, "visits for this month")
-
-      const uniqueIds = new Set(monthVisits.map((v) => v.id))
+      const stats = await summarizeVisits(db.collection("tashrif"), {
+        date: { $gte: startDate, $lte: endDate },
+      })
       const daysInMonth = now.getDate()
-      const average = daysInMonth > 0 ? Math.round(monthVisits.length / daysInMonth) : 0
 
-      const stats = {
-        total: monthVisits.length,
-        unique: uniqueIds.size,
-        average,
-      }
-
-      console.log("✅ Month stats:", stats)
-      res.json(stats)
+      res.json({
+        total: stats.total,
+        unique: stats.unique,
+        average: daysInMonth > 0 ? Math.round(stats.total / daysInMonth) : 0,
+      })
     } catch (error) {
       console.error("❌ Error fetching month stats:", error)
       res.status(500).json({ error: "Failed to fetch month statistics", details: error.message })
@@ -295,7 +298,6 @@ module.exports = (nazoratConnection) => {
   // GET period statistics
   router.get("/stats/period", verifyToken, async (req, res) => {
     try {
-      console.log("📊 Fetching period stats", req.query)
       const db = getDb()
       const { startDate, endDate } = req.query
 
@@ -303,30 +305,20 @@ module.exports = (nazoratConnection) => {
         return res.status(400).json({ error: "Start date and end date are required" })
       }
 
-      const collection = db.collection("tashrif")
-
-      const periodVisits = await collection
-        .find({
-          date: { $gte: startDate, $lte: endDate },
-        })
-        .toArray()
-
-      const uniqueIds = new Set(periodVisits.map((v) => v.id))
+      const stats = await summarizeVisits(db.collection("tashrif"), {
+        date: { $gte: startDate, $lte: endDate },
+      })
 
       const start = new Date(startDate)
       const end = new Date(endDate)
       const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
-      const average = days > 0 ? Math.round(periodVisits.length / days) : 0
 
-      const stats = {
-        total: periodVisits.length,
-        unique: uniqueIds.size,
+      res.json({
+        total: stats.total,
+        unique: stats.unique,
         days,
-        average,
-      }
-
-      console.log("✅ Period stats:", stats)
-      res.json(stats)
+        average: days > 0 ? Math.round(stats.total / days) : 0,
+      })
     } catch (error) {
       console.error("❌ Error fetching period stats:", error)
       res.status(500).json({ error: "Failed to fetch period statistics", details: error.message })
@@ -336,7 +328,6 @@ module.exports = (nazoratConnection) => {
   // GET position statistics for a period
   router.get("/stats/positions", verifyToken, async (req, res) => {
     try {
-      console.log("📊 Fetching position stats", req.query)
       const db = getDb()
       const { startDate, endDate } = req.query
 
@@ -347,35 +338,40 @@ module.exports = (nazoratConnection) => {
       const collection = db.collection("tashrif")
       const cacheCollection = db.collection("cache")
 
-      const visits = await collection
-        .find({
-          date: { $gte: startDate, $lte: endDate },
-        })
+      const grouped = await collection
+        .aggregate([
+          { $match: { date: { $gte: startDate, $lte: endDate } } },
+          { $group: { _id: "$id" } },
+        ])
         .toArray()
 
-      const userIds = [...new Set(visits.map((v) => v.id))]
+      const userIds = grouped.map((row) => row._id).filter(Boolean)
       const positionCounts = {}
 
-      await Promise.all(
-        userIds.map(async (userId) => {
-          const userCache = await cacheCollection.findOne({ USER_NO: userId })
-          const position = userCache?.USER_POSITION || "Noma'lum"
+      for (let offset = 0; offset < userIds.length; offset += 500) {
+        const chunk = userIds.slice(offset, offset + 500)
+        const users = await cacheCollection
+          .find({ USER_NO: { $in: chunk } }, { projection: { USER_NO: 1, USER_POSITION: 1 } })
+          .toArray()
+        const usersById = new Map(users.map((user) => [user.USER_NO, user]))
+
+        for (const id of chunk) {
+          const position = usersById.get(id)?.USER_POSITION || "Noma'lum"
           positionCounts[position] = (positionCounts[position] || 0) + 1
-        }),
-      )
+        }
+      }
 
       const positionStats = Object.entries(positionCounts)
         .map(([position, count]) => ({ position, count }))
         .sort((a, b) => b.count - a.count)
 
-      console.log("✅ Position stats:", positionStats)
       res.json(positionStats)
     } catch (error) {
       console.error("❌ Error fetching position stats:", error)
       res.status(500).json({ error: "Failed to fetch position statistics", details: error.message })
     }
   })
- 
+
   console.log("✅ Visits routes initialized")
   return router
 }

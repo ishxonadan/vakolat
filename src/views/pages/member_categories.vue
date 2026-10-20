@@ -4,21 +4,29 @@ import { useToast } from "primevue/usetoast"
 import Button from "primevue/button"
 import InputText from "primevue/inputtext"
 import InputSwitch from "primevue/inputswitch"
+import Dropdown from "primevue/dropdown"
 import ProgressSpinner from "primevue/progressspinner"
 import apiService from "@/service/api.service"
+import { KAFEDRA_OPTIONS } from "@/utils/memberCategories"
 
 const toast = useToast()
 const categories = ref([])
 const newCode = ref("")
 const newName = ref("")
+const newKafedra = ref(3)
 const loading = ref(false)
+const kafedraOptions = KAFEDRA_OPTIONS
 
 const activeCount = computed(() => categories.value.filter((row) => row.isActive !== false).length)
 
 const loadCatalog = async () => {
   loading.value = true
   try {
-    categories.value = await apiService.get("/member-categories", { params: { includeInactive: true } })
+    const rows = await apiService.get("/member-categories", { params: { includeInactive: true } })
+    categories.value = (Array.isArray(rows) ? rows : []).map((row) => ({
+      ...row,
+      kafedra: row.kafedra == null ? 3 : Number(row.kafedra),
+    }))
   } catch (e) {
     toast.add({
       severity: "error",
@@ -42,10 +50,15 @@ const addNew = async () => {
     toast.add({ severity: "warn", summary: "Diqqat", detail: "Kod va nomni kiriting", life: 2500 })
     return
   }
+  if (newKafedra.value == null) {
+    toast.add({ severity: "warn", summary: "Diqqat", detail: "Kafedrani tanlang", life: 2500 })
+    return
+  }
   try {
-    await apiService.post("/member-categories", { code, name })
+    await apiService.post("/member-categories", { code, name, kafedra: newKafedra.value })
     newCode.value = ""
     newName.value = ""
+    newKafedra.value = 3
     toast.add({ severity: "success", summary: "Qo‘shildi", life: 2500 })
     await loadCatalog()
   } catch (e) {
@@ -63,6 +76,7 @@ const saveRow = async (row, { silent = false } = {}) => {
     await apiService.put(`/member-categories/${row._id}`, {
       code: row.code,
       name: row.name,
+      kafedra: row.kafedra,
       isActive: row.isActive !== false,
     })
     if (!silent) {
@@ -155,7 +169,7 @@ const deleteRow = async (row) => {
           </span>
           Yangi toifa
         </h2>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 max-w-3xl">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 max-w-4xl">
           <div class="w-full sm:w-36">
             <label for="member-cat-new-code" class="mb-1.5 block text-sm font-medium text-surface-700 dark:text-surface-300">
               Kod
@@ -179,6 +193,21 @@ const deleteRow = async (row) => {
               placeholder="Masalan: Tadqiqotchi"
               class="w-full"
               @keyup.enter="addNew"
+            />
+          </div>
+          <div class="w-full sm:w-32">
+            <label for="member-cat-new-kafedra" class="mb-1.5 block text-sm font-medium text-surface-700 dark:text-surface-300">
+              Kafedra
+            </label>
+            <Dropdown
+              id="member-cat-new-kafedra"
+              v-model="newKafedra"
+              :options="kafedraOptions"
+              optionLabel="label"
+              optionValue="value"
+              optionDisabled="disabled"
+              placeholder="Tanlang"
+              class="w-full"
             />
           </div>
           <Button label="Qo‘shish" icon="pi pi-plus" class="shrink-0" @click="addNew" />
@@ -225,6 +254,17 @@ const deleteRow = async (row) => {
             </div>
             <div class="flex-1 min-w-0">
               <InputText v-model="row.name" class="w-full" placeholder="Nom" />
+            </div>
+            <div class="w-28 shrink-0">
+              <Dropdown
+                v-model="row.kafedra"
+                :options="kafedraOptions"
+                optionLabel="label"
+                optionValue="value"
+                optionDisabled="disabled"
+                placeholder="Kafedra"
+                class="w-full"
+              />
             </div>
             <div class="flex items-center gap-3">
               <div class="flex flex-col items-center gap-0.5">
