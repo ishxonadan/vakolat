@@ -36,10 +36,11 @@ const timeLeaders = ref({
   to: null,
   male: [],
   female: [],
+  youth: [],
   youthMale: [],
   youthFemale: [],
 })
-const youthSex = ref("female")
+const youthSex = ref("all")
 const leaderGroups = [
   { label: "Erkaklar", value: "male" },
   { label: "Ayollar", value: "female" },
@@ -104,7 +105,9 @@ const activePeriodLabel = computed(() => {
 
 const rowsFor = (group) => {
   if (group !== "youth") return timeLeaders.value[group] || []
-  return youthSex.value === "male" ? timeLeaders.value.youthMale : timeLeaders.value.youthFemale
+  if (youthSex.value === "male") return timeLeaders.value.youthMale
+  if (youthSex.value === "female") return timeLeaders.value.youthFemale
+  return timeLeaders.value.youth
 }
 
 const formatDuration = (seconds) => {
@@ -197,6 +200,7 @@ const fetchTimeLeaders = async (params) => {
       to: data?.to || null,
       male: Array.isArray(data?.male) ? data.male : [],
       female: Array.isArray(data?.female) ? data.female : [],
+      youth: Array.isArray(data?.youth) ? data.youth : [],
       youthMale: Array.isArray(data?.youthMale) ? data.youthMale : [],
       youthFemale: Array.isArray(data?.youthFemale) ? data.youthFemale : [],
     }
@@ -343,6 +347,13 @@ onMounted(() => {
               <p v-if="group.value === 'youth'" class="leader-note">14–30 yosh</p>
             </div>
             <div v-if="group.value === 'youth'" class="sex-switch" role="group" aria-label="Yoshlar jinsi">
+              <button
+                type="button"
+                :class="{ 'is-active': youthSex === 'all' }"
+                @click="youthSex = 'all'"
+              >
+                Hamma
+              </button>
               <button
                 type="button"
                 :class="{ 'is-active': youthSex === 'female' }"
