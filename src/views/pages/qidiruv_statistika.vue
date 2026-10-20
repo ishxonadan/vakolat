@@ -1,10 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue"
 import { useToast } from "primevue/usetoast"
-import Dialog from "primevue/dialog"
-import Tag from "primevue/tag"
+import VisitUserDialog from "@/components/VisitUserDialog.vue"
 import apiService from "@/service/api.service"
-import { resolveMemberCategoryLabel } from "@/utils/memberCategories"
 
 const toast = useToast()
 const loading = ref(false)
@@ -38,8 +36,10 @@ const timeLeaders = ref({
   to: null,
   male: [],
   female: [],
-  youth: [],
+  youthMale: [],
+  youthFemale: [],
 })
+const youthSex = ref("female")
 const leaderGroups = [
   { label: "Erkaklar", value: "male" },
   { label: "Ayollar", value: "female" },
@@ -102,42 +102,17 @@ const activePeriodLabel = computed(() => {
   return activePresetLabel.value
 })
 
+const rowsFor = (group) => {
+  if (group !== "youth") return timeLeaders.value[group] || []
+  return youthSex.value === "male" ? timeLeaders.value.youthMale : timeLeaders.value.youthFemale
+}
+
 const formatDuration = (seconds) => {
   const total = Math.max(0, Number(seconds || 0))
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   if (hours > 0) return `${hours} soat ${minutes} daqiqa`
   return `${minutes} daqiqa`
-}
-
-const currentVisit = computed(() => visitHistory.value[0] || null)
-
-const profilePhoto = computed(() => {
-  const raw = String(profile.value?.PHOTO || "").trim()
-  if (!raw) return ""
-  if (raw.startsWith("data:") || raw.startsWith("blob:") || raw.startsWith("http")) return raw
-  return `data:image/jpeg;base64,${raw}`
-})
-
-const profilePosition = computed(() => resolveMemberCategoryLabel(profile.value?.USER_POSITION) || "—")
-
-const localToday = () => {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
-  return `${now.getFullYear()}-${month}-${day}`
-}
-
-const stillInLibrary = (visit) => {
-  if (!visit || visit.ketdi) return false
-  if (visit.date !== localToday()) return false
-  const now = new Date()
-  return now.getHours() < 21 || (now.getHours() === 21 && now.getMinutes() < 21)
-}
-
-const showValue = (value) => {
-  const text = value == null ? "" : String(value).trim()
-  return text || "-"
 }
 
 const openMember = async (userNo) => {
@@ -150,8 +125,20 @@ const openMember = async (userNo) => {
       apiService.get(`/visits/member/${encodeURIComponent(userNo)}`),
       apiService.get(`/visits/user/${encodeURIComponent(userNo)}`),
     ])
-    profile.value = user
-    visitHistory.value = Array.isArray(history?.visits) ? history.visits : []
+    const visits = Array.isArray(history?.visits) ? history.visits : []
+    const latest = visits[0] || {}
+    profile.value = {
+      id: user?.USER_NO || userNo,
+      userName: user?.USER_NAME || latest.userName || userNo,
+      userPosition: user?.USER_POSITION || latest.userPosition || "-",
+      userTel: user?.TEL_NO || null,
+      userPhoto: user?.PHOTO || null,
+      date: latest.date,
+      keldi: latest.keldi,
+      ketdi: latest.ketdi,
+      duration: latest.duration,
+    }
+    visitHistory.value = visits
   } catch (error) {
     profileVisible.value = false
     toast.add({
@@ -210,7 +197,8 @@ const fetchTimeLeaders = async (params) => {
       to: data?.to || null,
       male: Array.isArray(data?.male) ? data.male : [],
       female: Array.isArray(data?.female) ? data.female : [],
-      youth: Array.isArray(data?.youth) ? data.youth : [],
+      youthMale: Array.isArray(data?.youthMale) ? data.youthMale : [],
+      youthFemale: Array.isArray(data?.youthFemale) ? data.youthFemale : [],
     }
   } catch (error) {
     toast.add({
@@ -349,12 +337,32 @@ onMounted(() => {
 
       <div v-else class="leader-grid">
         <article v-for="group in leaderGroups" :key="group.value" class="leader-card">
-          <h2>{{ group.label }}</h2>
-          <p v-if="group.value === 'youth'" class="leader-note">14–30 yosh</p>
+          <div class="leader-card-head">
+            <div>
+              <h2>{{ group.label }}</h2>
+              <p v-if="group.value === 'youth'" class="leader-note">14–30 yosh</p>
+            </div>
+            <div v-if="group.value === 'youth'" class="sex-switch" role="group" aria-label="Yoshlar jinsi">
+              <button
+                type="button"
+                :class="{ 'is-active': youthSex === 'female' }"
+                @click="youthSex = 'female'"
+              >
+                Ayol
+              </button>
+              <button
+                type="button"
+                :class="{ 'is-active': youthSex === 'male' }"
+                @click="youthSex = 'male'"
+              >
+                Erkak
+              </button>
+            </div>
+          </div>
           <p v-if="loading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</p>
-          <p v-else-if="(timeLeaders[group.value] || []).length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
+          <p v-else-if="rowsFor(group.value).length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
           <ol v-else>
-            <li v-for="row in timeLeaders[group.value]" :key="`${group.value}-${row.place}`">
+            <li v-for="row in rowsFor(group.value)" :key="`${group.value}-${youthSex}-${row.place}`">
               <button type="button" class="leader-row" @click="openMember(row.userNo)">
                 <span class="place" :data-place="row.place">{{ row.place }}</span>
                 <span class="leader-person">
@@ -369,82 +377,12 @@ onMounted(() => {
       </div>
     </section>
 
-    <Dialog
+    <VisitUserDialog
       v-model:visible="profileVisible"
-      modal
-      :draggable="false"
-      :style="{ width: 'min(920px, 94vw)' }"
-      contentClass="visit-profile-dialog"
-    >
-      <div v-if="profileLoading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</div>
-      <div v-else-if="profile" class="visit-profile">
-        <div class="visit-profile-head">
-          <img v-if="profilePhoto" :src="profilePhoto" alt="" class="visit-profile-photo" />
-          <div v-else class="visit-profile-photo visit-profile-photo-empty">
-            {{ profile.USER_NAME?.charAt(0) || "?" }}
-          </div>
-          <div>
-            <h3>{{ profile.USER_NAME || profile.USER_NO }}</h3>
-            <p>{{ profilePosition }}</p>
-            <Tag
-              :value="stillInLibrary(currentVisit) ? 'Kutubxonada' : 'Chiqdi'"
-              :severity="stillInLibrary(currentVisit) ? 'success' : 'secondary'"
-            />
-          </div>
-        </div>
-
-        <section>
-          <h4><i class="pi pi-calendar" /> Joriy tashrif ma'lumotlari</h4>
-          <div class="visit-facts">
-            <div class="visit-fact">
-              <span>ID raqam</span>
-              <strong>{{ showValue(profile.USER_NO) }}</strong>
-            </div>
-            <div class="visit-fact">
-              <span>Telefon raqam</span>
-              <strong>{{ showValue(profile.TEL_NO) }}</strong>
-            </div>
-            <div class="visit-fact visit-fact-date">
-              <span>Kelgan sana</span>
-              <strong>{{ showValue(currentVisit?.date) }}</strong>
-            </div>
-            <div class="visit-fact visit-fact-out">
-              <span>Ketgan vaqt</span>
-              <strong>{{ showValue(currentVisit?.ketdi) }}</strong>
-            </div>
-            <div class="visit-fact visit-fact-in">
-              <span>Kelgan vaqt</span>
-              <strong>{{ showValue(currentVisit?.keldi) }}</strong>
-            </div>
-            <div class="visit-fact visit-fact-duration">
-              <span>Davomiyligi</span>
-              <strong>{{ showValue(currentVisit?.duration) }}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h4>
-            <i class="pi pi-history" />
-            Tashriflar tarixi
-            <small>({{ visitHistory.length }} ta tashrif)</small>
-          </h4>
-          <p v-if="visitHistory.length === 0" class="leader-empty">Tashriflar tarixi topilmadi</p>
-          <ul v-else class="visit-history">
-            <li v-for="item in visitHistory" :key="item._id || `${item.date}-${item.keldi}`">
-              <div>
-                <strong>{{ showValue(item.date) }}</strong>
-                <span>Keldi {{ showValue(item.keldi) }}</span>
-              </div>
-              <div>
-                <span>{{ item.ketdi ? `Ketdi ${item.ketdi}` : "Kutubxonada" }}</span>
-                <span v-if="item.duration">{{ item.duration }}</span>
-              </div>
-            </li>
-          </ul>
-        </section>
-      </div>
-    </Dialog>
+      :user="profile"
+      :history="visitHistory"
+      :loading="profileLoading"
+    />
   </div>
 </template>
 
@@ -622,9 +560,41 @@ onMounted(() => {
   background: var(--surface-ground);
 }
 
+.leader-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 .leader-card h2 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 0.95rem;
+}
+
+.sex-switch {
+  display: inline-flex;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+}
+
+.sex-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--text-color-secondary);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sex-switch button.is-active {
+  background: var(--primary-color);
+  color: var(--primary-color-text, #fff);
 }
 
 .leader-card ol {
@@ -634,7 +604,7 @@ onMounted(() => {
 }
 
 .leader-note {
-  margin: -0.35rem 0 0.75rem;
+  margin: 0.15rem 0 0;
   color: var(--text-color-secondary);
   font-size: 0.8rem;
 }
@@ -678,6 +648,16 @@ onMounted(() => {
   color: #5c4813;
 }
 
+.place[data-place="2"] {
+  background: #d5dde6;
+  color: #3d4a57;
+}
+
+.place[data-place="3"] {
+  background: #e7c4a4;
+  color: #6a4124;
+}
+
 .leader-person {
   min-width: 0;
 }
@@ -708,122 +688,8 @@ onMounted(() => {
   font-size: 0.88rem;
 }
 
-.visit-profile {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.visit-profile-head {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--surface-border);
-}
-
-.visit-profile-photo {
-  width: 5.5rem;
-  height: 5.5rem;
-  object-fit: cover;
-  border-radius: 0.9rem;
-  border: 3px solid #dbeafe;
-  flex-shrink: 0;
-}
-
-.visit-profile-photo-empty {
-  display: grid;
-  place-items: center;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 1.6rem;
-  font-weight: 700;
-}
-
-.visit-profile-head h3 {
-  margin: 0 0 0.2rem;
-  font-size: 1.25rem;
-}
-
-.visit-profile-head p {
-  margin: 0 0 0.45rem;
-  color: var(--text-color-secondary);
-}
-
-.visit-profile h4 {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-}
-
-.visit-profile h4 small {
-  font-weight: 500;
-  color: var(--text-color-secondary);
-}
-
-.visit-facts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.visit-fact {
-  padding: 0.85rem 1rem;
-  border-radius: 0.7rem;
-  background: var(--surface-ground);
-}
-
-.visit-fact span {
-  display: block;
-  margin-bottom: 0.2rem;
-  color: var(--text-color-secondary);
-  font-size: 0.8rem;
-}
-
-.visit-fact strong {
-  font-size: 1.05rem;
-}
-
-.visit-fact-date { background: #eff6ff; }
-.visit-fact-in { background: #ecfdf3; }
-.visit-fact-out { background: #fff7ed; }
-.visit-fact-duration { background: #f5f3ff; }
-
-.visit-history {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 16rem;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.visit-history li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 0.7rem;
-}
-
-.visit-history strong,
-.visit-history span {
-  display: block;
-}
-
-.visit-history span {
-  color: var(--text-color-secondary);
-  font-size: 0.82rem;
-}
-
 @media (max-width: 1100px) {
-  .leader-grid,
-  .visit-facts {
+  .leader-grid {
     grid-template-columns: 1fr;
   }
 }

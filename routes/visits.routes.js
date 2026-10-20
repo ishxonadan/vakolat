@@ -387,7 +387,8 @@ module.exports = (nazoratConnection) => {
       const asOf = new Date(`${to}T12:00:00`)
       const male = []
       const female = []
-      const youth = []
+      const youthMale = []
+      const youthFemale = []
       for (const row of rows) {
         const group = sexGroup(row.sex)
         const item = {
@@ -398,9 +399,12 @@ module.exports = (nazoratConnection) => {
         if (group === "male") male.push(item)
         else if (group === "female") female.push(item)
         const age = ageOn(row.birthday, asOf)
-        if (age != null && age >= 14 && age <= 30) youth.push(item)
+        if (age != null && age >= 14 && age <= 30) {
+          if (group === "male") youthMale.push(item)
+          else if (group === "female") youthFemale.push(item)
+        }
       }
-      for (const list of [male, female, youth]) {
+      for (const list of [male, female, youthMale, youthFemale]) {
         list.sort((a, b) => b.seconds - a.seconds)
       }
 
@@ -409,7 +413,8 @@ module.exports = (nazoratConnection) => {
         to,
         male: placeRows(male),
         female: placeRows(female),
-        youth: placeRows(youth),
+        youthMale: placeRows(youthMale),
+        youthFemale: placeRows(youthFemale),
       })
     } catch (error) {
       console.error("time-leaders:", error)
