@@ -37,7 +37,13 @@
             <span class="font-mono">{{ data.razdel_id }}</span>
           </template>
         </Column>
-        <Column field="name" header="Nomi" sortable />
+        <Column field="name" header="O'zbekcha" sortable />
+        <Column field="name_ru" header="Ruscha" sortable>
+          <template #body="{ data }">{{ data.name_ru || '—' }}</template>
+        </Column>
+        <Column field="name_en" header="Inglizcha" sortable>
+          <template #body="{ data }">{{ data.name_en || '—' }}</template>
+        </Column>
         <Column field="dissertationCount" header="Dissertatsiyalar" sortable style="width: 160px">
           <template #body="{ data }">
             <span class="tabular-nums">{{ data.dissertationCount ?? 0 }}</span>
@@ -73,18 +79,37 @@
     <Dialog
       v-model:visible="dialogVisible"
       :modal="true"
-      :style="{ width: '420px' }"
+      :style="{ width: '480px' }"
       :header="isEdit ? 'Kategoriyani tahrirlash' : 'Yangi kategoriya'"
       :closable="true"
       @hide="closeDialog"
     >
       <div class="space-y-4 py-2">
         <div>
-          <label for="cat-name" class="block text-sm font-semibold mb-2">Nomi *</label>
+          <label for="cat-name" class="block text-sm font-semibold mb-2">O'zbekcha *</label>
           <InputText
             id="cat-name"
             v-model="formData.name"
             placeholder="Masalan: Dissertatsiya"
+            class="w-full"
+          />
+          <small class="text-gray-500">Asosiy nom. Boshqa loyiha shu maydonni o'qiydi.</small>
+        </div>
+        <div>
+          <label for="cat-name-ru" class="block text-sm font-semibold mb-2">Ruscha</label>
+          <InputText
+            id="cat-name-ru"
+            v-model="formData.name_ru"
+            placeholder="Например: Диссертация"
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label for="cat-name-en" class="block text-sm font-semibold mb-2">Inglizcha</label>
+          <InputText
+            id="cat-name-en"
+            v-model="formData.name_en"
+            placeholder="For example: Dissertation"
             class="w-full"
           />
         </div>
@@ -199,7 +224,8 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const isSaving = ref(false)
 const editingId = ref(null)
-const formData = ref({ name: '', razdel_id: null })
+const emptyForm = () => ({ name: '', name_ru: '', name_en: '', razdel_id: null })
+const formData = ref(emptyForm())
 
 const moveDialogVisible = ref(false)
 const isMoving = ref(false)
@@ -233,34 +259,46 @@ const fetchCategories = async () => {
 const openAddDialog = () => {
   isEdit.value = false
   editingId.value = null
-  formData.value = { name: '', razdel_id: null }
+  formData.value = emptyForm()
   dialogVisible.value = true
 }
 
 const openEditDialog = (row) => {
   isEdit.value = true
   editingId.value = row._id
-  formData.value = { name: row.name || '', razdel_id: row.razdel_id }
+  formData.value = {
+    name: row.name || '',
+    name_ru: row.name_ru || '',
+    name_en: row.name_en || '',
+    razdel_id: row.razdel_id,
+  }
   dialogVisible.value = true
 }
 
 const closeDialog = () => {
   dialogVisible.value = false
-  formData.value = { name: '', razdel_id: null }
+  formData.value = emptyForm()
   editingId.value = null
 }
 
 const saveCategory = async () => {
   const name = String(formData.value.name || '').trim()
   if (!name) {
-    toast.add({ severity: 'warn', summary: 'Diqqat', detail: 'Nomi to\'ldirilishi shart', life: 3000 })
+    toast.add({ severity: 'warn', summary: 'Diqqat', detail: 'O\'zbekcha nomi to\'ldirilishi shart', life: 3000 })
     return
   }
   isSaving.value = true
   try {
     const url = isEdit.value ? `/api/diss/razdels/${editingId.value}` : '/api/diss/razdels'
     const method = isEdit.value ? 'PUT' : 'POST'
-    const res = await apiFetch(url, { method, body: JSON.stringify({ name }) })
+    const res = await apiFetch(url, {
+      method,
+      body: JSON.stringify({
+        name,
+        name_ru: String(formData.value.name_ru || '').trim(),
+        name_en: String(formData.value.name_en || '').trim(),
+      }),
+    })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'Saqlashda xatolik')
     toast.add({

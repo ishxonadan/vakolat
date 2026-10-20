@@ -159,6 +159,8 @@ function registerModels({ vakolat, yoqlama, nazorat }) {
   const razdelsSchema = new mongoose.Schema(
     {
       name: String,
+      name_ru: { type: String, default: "" },
+      name_en: { type: String, default: "" },
       razdel_id: Number,
     },
     { collection: "razdels" },

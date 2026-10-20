@@ -177,11 +177,29 @@ const seedRazdelsIfEmpty = async () => {
   const count = await Razdels.countDocuments()
   if (count === 0) {
     await Razdels.insertMany([
-      { name: "Dissertatsiya", razdel_id: 1 },
-      { name: "Avtoreferat", razdel_id: 2 },
+      { name: "Dissertatsiya", name_ru: "Диссертация", name_en: "Dissertation", razdel_id: 1 },
+      { name: "Avtoreferat", name_ru: "Автореферат", name_en: "Abstract", razdel_id: 2 },
     ])
     console.log("Seeded default categories (razdels)")
   }
+  const defaults = [
+    { name: "Dissertatsiya", name_ru: "Диссертация", name_en: "Dissertation" },
+    { name: "Avtoreferat", name_ru: "Автореферат", name_en: "Abstract" },
+  ]
+  for (const row of defaults) {
+    await Razdels.updateMany(
+      { name: row.name, $or: [{ name_ru: { $exists: false } }, { name_ru: null }, { name_ru: "" }] },
+      { $set: { name_ru: row.name_ru } },
+    )
+    await Razdels.updateMany(
+      { name: row.name, $or: [{ name_en: { $exists: false } }, { name_en: null }, { name_en: "" }] },
+      { $set: { name_en: row.name_en } },
+    )
+  }
+}
+
+function optionalName(value) {
+  return String(value ?? "").trim()
 }
 
 async function nextRazdelId() {
@@ -215,6 +233,8 @@ app.get("/api/diss/razdels", verifyToken, async (req, res) => {
         const item = {
           _id: doc._id,
           name: String(doc.name),
+          name_ru: String(doc.name_ru || ""),
+          name_en: String(doc.name_en || ""),
           razdel_id,
         }
         if (counts) item.dissertationCount = counts.get(razdel_id) || 0
@@ -240,7 +260,12 @@ app.post("/api/diss/razdels", checkPermissions(["manage_diss_categories"]), asyn
     if (existing) {
       return res.status(400).json({ message: "Bunday razdel_id allaqachon mavjud" })
     }
-    const doc = await Razdels.create({ name, razdel_id })
+    const doc = await Razdels.create({
+      name,
+      name_ru: optionalName(req.body?.name_ru),
+      name_en: optionalName(req.body?.name_en),
+      razdel_id,
+    })
     res.status(201).json(doc)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -254,9 +279,11 @@ app.put("/api/diss/razdels/:id", checkPermissions(["manage_diss_categories"]), a
     if (!doc) return res.status(404).json({ message: "Topilmadi" })
     if (req.body?.name !== undefined) {
       const name = String(req.body.name || "").trim()
-      if (!name) return res.status(400).json({ message: "Nomi bo'sh bo'lmasligi kerak" })
+      if (!name) return res.status(400).json({ message: "O'zbekcha nomi bo'sh bo'lmasligi kerak" })
       doc.name = name
     }
+    if (req.body?.name_ru !== undefined) doc.name_ru = optionalName(req.body.name_ru)
+    if (req.body?.name_en !== undefined) doc.name_en = optionalName(req.body.name_en)
     await doc.save()
     res.json(doc)
   } catch (error) {
