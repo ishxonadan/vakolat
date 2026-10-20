@@ -508,7 +508,26 @@ class PlausibleService {
       return data
     } catch (error) {
       console.error(`Error querying Plausible for ${siteId}:`, error.response?.data || error.message)
-      throw new Error(`Plausible API xatosi: ${error.message}`)
+      const detail = error.response?.data?.error || error.response?.data?.message
+      throw new Error(detail ? `Plausible API xatosi: ${detail}` : `Plausible API xatosi: ${error.message}`)
+    }
+  }
+
+  // Visits and pageviews of the public search results page.
+  async getSearchInitiated(dateRange) {
+    const siteId = process.env.PLAUSIBLE_SITE_ID || "natlib.uz"
+    const page = process.env.PLAUSIBLE_SEARCH_PAGE || "/search/tot/result"
+    const data = await this.queryPlausible(siteId, ["visits", "pageviews"], dateRange, [
+      ["is", "event:page", [page]],
+    ])
+    const metrics = data?.results?.[0]?.metrics || []
+    const range = data?.query?.date_range
+    return {
+      visits: Number(metrics[0] || 0),
+      pageviews: Number(metrics[1] || 0),
+      from: Array.isArray(range) ? range[0] : null,
+      to: Array.isArray(range) ? range[1] : null,
+      page,
     }
   }
 

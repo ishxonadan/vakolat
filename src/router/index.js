@@ -163,6 +163,15 @@ const router = createRouter({
           },
         },
         {
+          path: "/qidiruv-statistika",
+          name: "qidiruv_statistika",
+          component: () => import("@/views/pages/qidiruv_statistika.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "view_statistics",
+          },
+        },
+        {
           path: "/huquqlar",
           name: "huquqlar",
           component: () => import("@/views/pages/huquqlar.vue"),

@@ -48,6 +48,12 @@ const menuItems = [
             to: '/tashriflar',
             requiredPermissions: ['view_statistics']
           },
+          {
+            label: "Statistika",
+            icon: 'pi pi-fw pi-chart-line',
+            to: '/qidiruv-statistika',
+            requiredPermissions: ['view_statistics']
+          },
 
           {
             label: "Onlayn ro'yxatdan o'tganlar",
