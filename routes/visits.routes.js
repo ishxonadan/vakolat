@@ -1,5 +1,5 @@
 const express = require("express")
-const { verifyToken } = require("../src/middleware/auth.middleware")
+const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
 
 module.exports = (nazoratConnection) => {
   const router = express.Router()
@@ -104,6 +104,67 @@ module.exports = (nazoratConnection) => {
   }
 
   const isoDate = (date) => date.toISOString().split("T")[0]
+
+  const localYmd = (date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
+  const resolveLocalRange = (period, from, to) => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const today = localYmd(now)
+    if (period === "today") return [today, today]
+    if (period === "3d") {
+      const start = new Date(now)
+      start.setDate(now.getDate() - 2)
+      return [localYmd(start), today]
+    }
+    if (period === "7d") {
+      const start = new Date(now)
+      start.setDate(now.getDate() - 6)
+      return [localYmd(start), today]
+    }
+    if (period === "this_month") return [localYmd(new Date(year, now.getMonth(), 1)), today]
+    if (period === "year_to_date") return [`${year}-01-01`, today]
+    if (period === "q1") return [`${year}-01-01`, `${year}-03-31`]
+    if (period === "q2") return [`${year}-01-01`, `${year}-06-30`]
+    if (period === "dec20") return [`${year}-01-01`, `${year}-12-20`]
+    if (period === "custom") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from || "") || !/^\d{4}-\d{2}-\d{2}$/.test(to || "")) return null
+      return from <= to ? [from, to] : [to, from]
+    }
+    return null
+  }
+
+  const clockToSeconds = (field) => ({
+    $let: {
+      vars: { parts: { $split: [{ $ifNull: [`$${field}`, ""] }, ":"] } },
+      in: {
+        $add: [
+          { $multiply: [{ $convert: { input: { $arrayElemAt: ["$$parts", 0] }, to: "int", onError: 0, onNull: 0 } }, 3600] },
+          { $multiply: [{ $convert: { input: { $arrayElemAt: ["$$parts", 1] }, to: "int", onError: 0, onNull: 0 } }, 60] },
+          { $convert: { input: { $ifNull: [{ $arrayElemAt: ["$$parts", 2] }, "0"] }, to: "int", onError: 0, onNull: 0 } },
+        ],
+      },
+    },
+  })
+
+  const sexGroup = (value) => {
+    const raw = String(value || "").trim().toUpperCase()
+    if (raw === "M" || raw === "ERKAK" || raw === "MALE" || raw === "0001") return "male"
+    if (raw === "F" || raw === "AYOL" || raw === "FEMALE" || raw === "0002") return "female"
+    return ""
+  }
+
+  const placeRows = (rows) => rows.slice(0, 3).map((row, index) => ({
+    place: index + 1,
+    userNo: row.userNo,
+    name: row.name,
+    seconds: row.seconds,
+  }))
 
   // GET photos for the current page only. Kept off the list payload so the table can render first.
   router.get("/photos", verifyToken, async (req, res) => {
@@ -248,6 +309,76 @@ module.exports = (nazoratConnection) => {
     } catch (error) {
       console.error("❌ Error fetching user history:", error)
       res.status(500).json({ error: "Failed to fetch user history", details: error.message })
+    }
+  })
+
+  router.get("/time-leaders", verifyToken, checkPermissions(["view_statistics"]), async (req, res) => {
+    try {
+      const db = getDb()
+      const period = String(req.query.period || "7d")
+      const range = resolveLocalRange(period, String(req.query.from || ""), String(req.query.to || ""))
+      if (!range) return res.status(400).json({ error: "Davr noto'g'ri" })
+      const [from, to] = range
+
+      const rows = await db.collection("tashrif").aggregate([
+        {
+          $match: {
+            date: { $gte: from, $lte: to },
+            keldi: { $nin: [null, ""] },
+            ketdi: { $nin: [null, ""] },
+          },
+        },
+        {
+          $addFields: {
+            seconds: { $subtract: [clockToSeconds("ketdi"), clockToSeconds("keldi")] },
+          },
+        },
+        { $match: { seconds: { $gt: 0 } } },
+        { $group: { _id: "$id", seconds: { $sum: "$seconds" } } },
+        {
+          $lookup: {
+            from: "cache",
+            localField: "_id",
+            foreignField: "USER_NO",
+            as: "user",
+          },
+        },
+        { $unwind: { path: "$user", preserveNullAndEmptyArrays: false } },
+        {
+          $project: {
+            _id: 0,
+            userNo: "$user.USER_NO",
+            name: "$user.USER_NAME",
+            sex: "$user.SEX",
+            seconds: 1,
+          },
+        },
+      ]).toArray()
+
+      const male = []
+      const female = []
+      for (const row of rows) {
+        const group = sexGroup(row.sex)
+        const item = {
+          userNo: row.userNo,
+          name: row.name || row.userNo,
+          seconds: Number(row.seconds || 0),
+        }
+        if (group === "male") male.push(item)
+        else if (group === "female") female.push(item)
+      }
+      male.sort((a, b) => b.seconds - a.seconds)
+      female.sort((a, b) => b.seconds - a.seconds)
+
+      res.json({
+        from,
+        to,
+        male: placeRows(male),
+        female: placeRows(female),
+      })
+    } catch (error) {
+      console.error("time-leaders:", error)
+      res.status(500).json({ error: "Vaqt statistikasi yuklanmadi" })
     }
   })
 

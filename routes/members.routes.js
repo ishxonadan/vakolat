@@ -33,6 +33,7 @@ module.exports = (nazorat) => {
       INDEM_AMT_SUM: String,
       INDEM_CNT: String,
       INSERT_DATE: String,
+      REG_AT: Number,
       LIB_USE_LDATE: String,
       LOAN_CHECK: String,
       LOAN_CNT: String,
@@ -80,6 +81,43 @@ module.exports = (nazorat) => {
 
   const CacheUser = nazorat.model("CacheUser", cacheSchema)
 
+  function registrationSortPipeline(filter, dir, skip, limit, includePhoto) {
+    const hide = { PASSWORD: 0, _regSort: 0, _idNum: 0 }
+    if (!includePhoto) hide.PHOTO = 0
+    return [
+      { $match: filter },
+      {
+        $addFields: {
+          _regSort: "$REG_AT",
+          _idNum: {
+            $convert: {
+              input: {
+                $let: {
+                  vars: {
+                    found: {
+                      $regexFind: {
+                        input: { $ifNull: ["$USER_NO", ""] },
+                        regex: "\\d+",
+                      },
+                    },
+                  },
+                  in: "$$found.match",
+                },
+              },
+              to: "long",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+        },
+      },
+      { $sort: { _regSort: dir, _idNum: dir, USER_NO: dir } },
+      { $skip: skip },
+      { $limit: limit },
+      { $project: hide },
+    ]
+  }
+
   router.post("/uznel-id", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
       const userNo = await fetchNextUserMaskId()
@@ -102,6 +140,7 @@ module.exports = (nazorat) => {
         UZNEL_SYNCED: body.UZNEL_SYNCED || existing?.UZNEL_SYNCED,
         UZNEL_ORG_ROW: body.UZNEL_ORG_ROW || existing?.UZNEL_ORG_ROW,
       }
+      delete member.REG_AT
       const result = await registerUznelUser(member)
       if (result?.USER_NO && (result.USER_SEQ_NO || result.SEQUENCE_NO)) {
         await CacheUser.findOneAndUpdate(
@@ -149,18 +188,14 @@ module.exports = (nazorat) => {
         }
       }
 
-      // Build sort query (INSERT_DATE + _id so same-day rows order by time)
       const sortDir = req.query.sortOrder === "asc" ? 1 : -1
-      let sort = { INSERT_DATE: -1, _id: -1 }
-      if (req.query.sortField) {
-        sort = { [req.query.sortField]: sortDir }
-        if (req.query.sortField === "INSERT_DATE") {
-          sort._id = sortDir
-        }
-      }
+      const sortField = req.query.sortField || "INSERT_DATE"
+      const membersQuery = sortField === "INSERT_DATE"
+        ? CacheUser.aggregate(registrationSortPipeline(filter, sortDir, skip, limit, true))
+        : CacheUser.find(filter).sort({ [sortField]: sortDir }).skip(skip).limit(limit).lean()
 
       const [members, total] = await Promise.all([
-        CacheUser.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+        membersQuery,
         CacheUser.countDocuments(filter),
       ])
 
@@ -220,9 +255,14 @@ module.exports = (nazorat) => {
       const filter = buildMemberSearchFilter(req.body)
       const sort = parseSort(req.body)
       const includePhoto = req.body?.includePhoto === true || req.body?.includePhoto === "true"
+      const sortField = req.body?.sortField || "INSERT_DATE"
+      const sortDir = sort[sortField] || -1
+      const membersQuery = sortField === "INSERT_DATE"
+        ? CacheUser.aggregate(registrationSortPipeline(filter, sortDir, skip, limit, includePhoto))
+        : CacheUser.find(filter).select(listSelect({ includePhoto })).sort(sort).skip(skip).limit(limit).lean()
 
       const [members, total] = await Promise.all([
-        CacheUser.find(filter).select(listSelect({ includePhoto })).sort(sort).skip(skip).limit(limit).lean(),
+        membersQuery,
         CacheUser.countDocuments(filter),
       ])
 
@@ -247,6 +287,7 @@ module.exports = (nazorat) => {
       // Remove fields that shouldn't be updated directly
       delete updateData._id
       delete updateData.__v
+      delete updateData.REG_AT
 
       const result = await CacheUser.findOneAndUpdate(
         { USER_NO: userNo },
@@ -268,7 +309,11 @@ module.exports = (nazorat) => {
   // Create new member
   router.post("/", verifyToken, checkPermissions(["manage_members"]), async (req, res) => {
     try {
-      const newMember = new CacheUser(req.body)
+      const body = { ...req.body }
+      delete body._id
+      delete body.__v
+      delete body.REG_AT
+      const newMember = new CacheUser({ ...body, REG_AT: Date.now() })
       const savedMember = await newMember.save()
       res.status(201).json({ success: true, member: savedMember })
     } catch (error) {

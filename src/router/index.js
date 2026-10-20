@@ -163,7 +163,7 @@ const router = createRouter({
           },
         },
         {
-          path: "/qidiruv-statistika",
+          path: "/foydalanuvchilar-statistikasi",
           name: "qidiruv_statistika",
           component: () => import("@/views/pages/qidiruv_statistika.vue"),
           meta: {

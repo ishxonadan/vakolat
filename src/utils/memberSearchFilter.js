@@ -194,6 +194,11 @@ function buildMemberSearchFilter(body, searchFields = DEFAULT_SEARCH_FIELDS) {
     if (clause) clauses.push(clause)
   }
 
+  const userNoPrefix = String(body?.userNoPrefix || "").trim()
+  if (userNoPrefix) {
+    clauses.push({ USER_NO: new RegExp(`^${escapeRegex(userNoPrefix)}`) })
+  }
+
   if (clauses.length === 0) return {}
   if (clauses.length === 1) return clauses[0]
   return { $and: clauses }

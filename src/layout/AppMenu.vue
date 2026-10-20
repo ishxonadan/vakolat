@@ -51,7 +51,7 @@ const menuItems = [
           {
             label: "Statistika",
             icon: 'pi pi-fw pi-chart-line',
-            to: '/qidiruv-statistika',
+            to: '/foydalanuvchilar-statistikasi',
             requiredPermissions: ['view_statistics']
           },
 
