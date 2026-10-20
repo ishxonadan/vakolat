@@ -362,7 +362,7 @@ onMounted(() => {
       :closable="true"
       :style="{ width: 'min(1240px, 96vw)' }"
       :breakpoints="{ '960px': '96vw' }"
-      class="member-record-dialog"
+      class="member-record-dialog member-record-dialog-raised"
       @hide="closeDialog"
     >
       <TabView v-if="isEditMode && selectedMember" v-model:activeIndex="activeTab">
@@ -428,5 +428,16 @@ onMounted(() => {
 .visit-record-nav {
   display: flex;
   margin-top: 0.75rem;
+}
+</style>
+
+<style>
+.p-dialog-mask:has(.member-record-dialog-raised) {
+  align-items: flex-start;
+  padding-top: 3.25rem;
+}
+
+.member-record-dialog-raised.p-dialog {
+  max-height: calc(100vh - 4.5rem);
 }
 </style>

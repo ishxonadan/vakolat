@@ -1,7 +1,8 @@
 <template>
   <form class="member-form" autocomplete="off" @submit.prevent="onSaveMember" @paste="onScanPaste">
     <div class="member-form-layout">
-      <aside class="photo-card">
+      <aside class="photo-column">
+      <div class="photo-card">
         <div class="photo-card-label">Rasm</div>
         <div class="photo-preview">
           <img
@@ -50,6 +51,17 @@
             class="photo-btn"
             :disabled="!imageSource"
             @click="onDeleteImage"
+          />
+        </div>
+      </div>
+        <div v-if="recordOrder != null" class="photo-record-nav">
+          <MemberRecordNav
+            :order="recordOrder"
+            :can-prev="canRecordPrev"
+            :can-next="canRecordNext"
+            :busy="recordNavBusy"
+            @prev="emit('record-prev')"
+            @next="emit('record-next')"
           />
         </div>
       </aside>
@@ -317,26 +329,15 @@
     </div>
 
     <div class="form-actions">
-      <div class="form-actions-leading">
-        <Button
-          type="button"
-          class="form-actions-cancel"
-          label="Bekor qilish"
-          icon="pi pi-times"
-          outlined
-          severity="secondary"
-          @click="onCloseDialog"
-        />
-        <MemberRecordNav
-          v-if="recordOrder != null"
-          :order="recordOrder"
-          :can-prev="canRecordPrev"
-          :can-next="canRecordNext"
-          :busy="recordNavBusy"
-          @prev="emit('record-prev')"
-          @next="emit('record-next')"
-        />
-      </div>
+      <Button
+        type="button"
+        class="form-actions-cancel"
+        label="Bekor qilish"
+        icon="pi pi-times"
+        outlined
+        severity="secondary"
+        @click="onCloseDialog"
+      />
       <div class="form-actions-primary">
         <Button type="submit" v-if="canManageMembers" label="Saqlash" icon="pi pi-check" severity="success" />
         <Button
@@ -1032,7 +1033,20 @@ const dataURLtoFile = (dataurl, filename) => {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
+}
+
+.photo-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.photo-record-nav {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 1rem;
 }
 
 .photo-card {
@@ -1241,10 +1255,7 @@ const dataURLtoFile = (dataurl, filename) => {
   border-top: 1px solid var(--p-content-border-color, var(--surface-border));
 }
 
-.form-actions-leading {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
+.form-actions-cancel {
   margin-right: auto;
 }
 
