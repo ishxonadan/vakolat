@@ -52,6 +52,91 @@ function normalizeCategoryCode(value) {
   return digits.slice(0, 4).padStart(4, "0")
 }
 
+function categoryRows(categories) {
+  const source = Array.isArray(categories) && categories.length ? categories : DEFAULT_MEMBER_CATEGORIES
+  return source
+    .map((row) => ({
+      code: normalizeCategoryCode(row.code || row.value),
+      name: String(row.name || row.label || "").trim(),
+    }))
+    .filter((row) => row.code && row.name)
+}
+
+function asCategoryCode(value) {
+  const digits = String(value || "").trim()
+  if (!/^\d+$/.test(digits) || digits.length > 4) return ""
+  return digits.padStart(4, "0")
+}
+
+function findCategory(value, categories) {
+  const raw = String(value ?? "").trim()
+  if (!raw) return null
+  const rows = categoryRows(categories)
+  const byName = rows.find((row) => row.name === raw)
+  if (byName) return byName
+  const alias = LEGACY_POSITION_ALIASES[raw]
+  if (alias) {
+    const aliased = rows.find((row) => row.code === alias)
+    if (aliased) return aliased
+  }
+  const code = asCategoryCode(raw)
+  if (!code) return null
+  return rows.find((row) => row.code === code) || null
+}
+
+function positionName(value, categories) {
+  const raw = String(value ?? "").trim()
+  if (!raw || !/^\d+$/.test(raw)) return raw
+  const match = findCategory(raw, categories)
+  return match ? match.name : raw
+}
+
+function positionCode(value, categories) {
+  const raw = String(value ?? "").trim()
+  if (!raw) return ""
+  const match = findCategory(raw, categories)
+  if (match?.code) return match.code
+  if (/^\d{4}$/.test(raw)) return raw
+  return asCategoryCode(raw)
+}
+
+function expandPositionValues(values, categories) {
+  const out = []
+  const seen = new Set()
+  const push = (value) => {
+    const text = String(value ?? "").trim()
+    if (!text || seen.has(text)) return
+    seen.add(text)
+    out.push(text)
+  }
+  for (const value of values) {
+    push(value)
+    const match = findCategory(value, categories)
+    if (!match) continue
+    push(match.code)
+    push(match.name)
+  }
+  return out
+}
+
+async function readMemberCategories(MemberCategory) {
+  const defaults = DEFAULT_MEMBER_CATEGORIES.map((row) => ({ ...row }))
+  if (!MemberCategory) return { rows: defaults, fromDb: false }
+  const docs = await MemberCategory.find().select("code name kafedra").lean()
+  const byCode = new Map(defaults.map((row) => [row.code, row]))
+  for (const doc of docs) {
+    const code = normalizeCategoryCode(doc.code)
+    const name = String(doc.name || "").trim()
+    if (!code || !name) continue
+    byCode.set(code, {
+      code,
+      name,
+      kafedra: doc.kafedra ?? byCode.get(code)?.kafedra ?? 3,
+    })
+  }
+  return { rows: [...byCode.values()], fromDb: true }
+}
+
 module.exports = {
   DEFAULT_MEMBER_CATEGORIES,
   LEGACY_POSITION_ALIASES,
@@ -59,4 +144,9 @@ module.exports = {
   normalizeCategoryCode,
   normalizeKafedra,
   toClassCode,
+  findCategory,
+  positionName,
+  positionCode,
+  expandPositionValues,
+  readMemberCategories,
 }

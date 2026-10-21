@@ -10,6 +10,7 @@ import Button from 'primevue/button'
 import Calendar from 'primevue/calendar'
 import Tag from 'primevue/tag'
 import VisitUserDialog from '@/components/VisitUserDialog.vue'
+import { resolveMemberCategoryLabel } from '@/utils/memberCategories'
 import { pageSize, ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 
 const router = useRouter()
@@ -335,7 +336,7 @@ const formatTime = (time) => {
 }
 
 const positionLabel = (value) => {
-  const text = String(value || '').trim()
+  const text = resolveMemberCategoryLabel(value)
   if (!text || text === '-' || text === '—' || /^noma.?lum$/i.test(text)) return ''
   return text
 }
@@ -686,17 +687,18 @@ onUnmounted(() => {
 .visit-person {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.85rem;
   min-width: 0;
 }
 
 .visit-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 5.5rem;
+  height: 5.5rem;
   border-radius: 999px;
   object-fit: cover;
   flex-shrink: 0;
   background: #dbeafe;
+  border: 1px solid var(--p-content-border-color, var(--surface-border));
 }
 
 .visit-avatar-empty {
@@ -704,7 +706,7 @@ onUnmounted(() => {
   place-items: center;
   color: #1d4ed8;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1.75rem;
 }
 
 .visit-person-text {

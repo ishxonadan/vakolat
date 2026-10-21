@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue"
 import { useToast } from "primevue/usetoast"
 import VisitUserDialog from "@/components/VisitUserDialog.vue"
 import apiService from "@/service/api.service"
+import { resolveMemberCategoryLabel } from "@/utils/memberCategories"
 
 const toast = useToast()
 const loading = ref(false)
@@ -31,17 +32,24 @@ const stats = ref({
   to: null,
   page: "/search/tot/result",
 })
-const timeLeaders = ref({
-  from: null,
-  to: null,
+const emptyLeaders = () => ({
   all: [],
+  allMale: [],
+  allFemale: [],
   adults: [],
+  adultsMale: [],
+  adultsFemale: [],
   youth: [],
   youthMale: [],
   youthFemale: [],
 })
+const timeLeaders = ref({
+  from: null,
+  to: null,
+  ...emptyLeaders(),
+})
 const ageGroup = ref("all")
-const youthSex = ref("all")
+const sexFilter = ref("all")
 const ageGroups = [
   { label: "Barcha", value: "all" },
   { label: "Kattalar", value: "adults" },
@@ -105,13 +113,8 @@ const activePeriodLabel = computed(() => {
 })
 
 const activeRows = computed(() => {
-  if (ageGroup.value === "adults") return timeLeaders.value.adults
-  if (ageGroup.value === "youth") {
-    if (youthSex.value === "male") return timeLeaders.value.youthMale
-    if (youthSex.value === "female") return timeLeaders.value.youthFemale
-    return timeLeaders.value.youth
-  }
-  return timeLeaders.value.all
+  const suffix = sexFilter.value === "male" ? "Male" : sexFilter.value === "female" ? "Female" : ""
+  return timeLeaders.value[`${ageGroup.value}${suffix}`] || []
 })
 
 const ageNote = computed(() => {
@@ -143,7 +146,7 @@ const openMember = async (userNo) => {
     profile.value = {
       id: user?.USER_NO || userNo,
       userName: user?.USER_NAME || latest.userName || userNo,
-      userPosition: user?.USER_POSITION || latest.userPosition || "-",
+      userPosition: resolveMemberCategoryLabel(user?.USER_POSITION || latest.userPosition || "-"),
       userTel: user?.TEL_NO || null,
       userPhoto: user?.PHOTO || null,
       date: latest.date,
@@ -205,14 +208,14 @@ const fetchTimeLeaders = async (params) => {
   try {
     loading.value = true
     const data = await apiService.get("/visits/time-leaders", { params })
+    const lists = emptyLeaders()
+    for (const key of Object.keys(lists)) {
+      lists[key] = Array.isArray(data?.[key]) ? data[key] : []
+    }
     timeLeaders.value = {
       from: data?.from || null,
       to: data?.to || null,
-      all: Array.isArray(data?.all) ? data.all : [],
-      adults: Array.isArray(data?.adults) ? data.adults : [],
-      youth: Array.isArray(data?.youth) ? data.youth : [],
-      youthMale: Array.isArray(data?.youthMale) ? data.youthMale : [],
-      youthFemale: Array.isArray(data?.youthFemale) ? data.youthFemale : [],
+      ...lists,
     }
   } catch (error) {
     toast.add({
@@ -365,16 +368,16 @@ onMounted(() => {
             </div>
             <p v-if="ageNote" class="leader-note">{{ ageNote }}</p>
           </div>
-          <div v-if="ageGroup === 'youth'" class="sex-switch" role="group" aria-label="Yoshlar jinsi">
-            <button type="button" :class="{ 'is-active': youthSex === 'all' }" @click="youthSex = 'all'">Hamma</button>
-            <button type="button" :class="{ 'is-active': youthSex === 'female' }" @click="youthSex = 'female'">Ayol</button>
-            <button type="button" :class="{ 'is-active': youthSex === 'male' }" @click="youthSex = 'male'">Erkak</button>
+          <div class="sex-switch" role="group" aria-label="Jins">
+            <button type="button" :class="{ 'is-active': sexFilter === 'all' }" @click="sexFilter = 'all'">Hamma</button>
+            <button type="button" :class="{ 'is-active': sexFilter === 'female' }" @click="sexFilter = 'female'">Ayol</button>
+            <button type="button" :class="{ 'is-active': sexFilter === 'male' }" @click="sexFilter = 'male'">Erkak</button>
           </div>
         </div>
         <p v-if="loading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</p>
         <p v-else-if="activeRows.length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
         <ol v-else>
-          <li v-for="row in activeRows" :key="`${ageGroup}-${youthSex}-${row.place}`">
+          <li v-for="row in activeRows" :key="`${ageGroup}-${sexFilter}-${row.place}`">
               <button type="button" class="leader-row" @click="openMember(row.userNo)">
                 <span class="place" :data-place="row.place">{{ row.place }}</span>
                 <span class="leader-person">

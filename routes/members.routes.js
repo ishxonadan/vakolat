@@ -1,4 +1,4 @@
-module.exports = (nazorat) => {
+module.exports = (nazorat, vakolat) => {
   const express = require("express")
   const router = express.Router()
   const mongoose = require("mongoose") // Import mongoose to use Schema
@@ -10,7 +10,8 @@ module.exports = (nazorat) => {
     parseSort,
     userNoSortKey,
   } = require("../src/utils/memberSearchFilter")
-  const { fetchNextUserMaskId, registerUznelUser } = require("../src/services/uznel.service")
+  const { positionName, readMemberCategories } = require("../src/data/member-categories.defaults")
+  const { fetchNextUserMaskId, registerUznelUser, setPositionCatalog } = require("../src/services/uznel.service")
 
   const cacheSchema = new mongoose.Schema(
     {
@@ -76,8 +77,27 @@ module.exports = (nazorat) => {
   )
 
   const CacheUser = nazorat.model("CacheUser", cacheSchema)
+  const MemberCategory = vakolat ? vakolat.model("MemberCategory") : null
   const REG_SORT_INDEX = "cache_reg_sort"
   let regIndexReady = false
+  let positionCatalog = { at: 0, rows: null }
+
+  async function memberCategories() {
+    if (positionCatalog.rows && Date.now() - positionCatalog.at < 60_000) return positionCatalog.rows
+    try {
+      const { rows } = await readMemberCategories(MemberCategory)
+      positionCatalog = { at: Date.now(), rows }
+      setPositionCatalog(rows)
+      return rows
+    } catch (error) {
+      console.error("Member categories:", error.message)
+      return positionCatalog.rows
+    }
+  }
+
+  async function storedPosition(value) {
+    return positionName(value, await memberCategories())
+  }
 
   const listSelect = ({ includePhoto = false } = {}) => {
     const select = { PASSWORD: 0, UZNEL_ORG_ROW: 0, ID_NUM: 0 }
@@ -160,9 +180,49 @@ module.exports = (nazorat) => {
     )
   }
 
+  async function backfillPositionNames() {
+    const meta = nazorat.collection("cache_meta")
+    const state = await meta.findOne({ _id: "position_name_backfill" })
+    if (state?.done) return
+    const loaded = await readMemberCategories(MemberCategory)
+    if (!loaded.fromDb && MemberCategory) return
+    const rows = loaded.rows
+    positionCatalog = { at: Date.now(), rows }
+    setPositionCatalog(rows)
+    const cursor = CacheUser.find({ USER_POSITION: /^\s*\d+\s*$/ }).select("USER_POSITION").lean().cursor()
+    let batch = []
+    let updated = 0
+    const flush = async () => {
+      if (!batch.length) return
+      const result = await CacheUser.bulkWrite(batch, { ordered: false })
+      updated += result.modifiedCount || 0
+      batch = []
+    }
+    for await (const doc of cursor) {
+      const name = positionName(doc.USER_POSITION, rows)
+      const current = String(doc.USER_POSITION || "").trim()
+      if (!name || name === current) continue
+      batch.push({
+        updateOne: {
+          filter: { _id: doc._id, USER_POSITION: doc.USER_POSITION },
+          update: { $set: { USER_POSITION: name } },
+        },
+      })
+      if (batch.length >= 500) await flush()
+    }
+    await flush()
+    await meta.updateOne(
+      { _id: "position_name_backfill" },
+      { $set: { done: true, updated, at: new Date() } },
+      { upsert: true },
+    )
+    if (updated) console.log("[members] USER_POSITION names updated:", updated)
+  }
+
   const prepareMemberList = () => {
     ensureMemberIndexes()
       .then(() => backfillIdNum())
+      .then(() => backfillPositionNames())
       .catch((error) => console.error("Member list prepare failed:", error.message))
   }
   if (nazorat.readyState === 1) prepareMemberList()
@@ -191,6 +251,7 @@ module.exports = (nazorat) => {
         UZNEL_ORG_ROW: body.UZNEL_ORG_ROW || existing?.UZNEL_ORG_ROW,
       }
       delete member.REG_AT
+      await memberCategories()
       const result = await registerUznelUser(member)
       if (result?.USER_NO && (result.USER_SEQ_NO || result.SEQUENCE_NO)) {
         await CacheUser.findOneAndUpdate(
@@ -301,7 +362,7 @@ module.exports = (nazorat) => {
       const page = parsePage(req.body)
       const limit = parseLimit(req.body, { max: req.body.export ? 5000 : 500 })
       const skip = (page - 1) * limit
-      const filter = buildMemberSearchFilter(req.body)
+      const filter = buildMemberSearchFilter(req.body, undefined, await memberCategories())
       const sort = parseSort(req.body)
       const includePhoto = req.body?.includePhoto === true || req.body?.includePhoto === "true"
       const sortField = req.body?.sortField || "INSERT_DATE"
@@ -338,6 +399,9 @@ module.exports = (nazorat) => {
       delete updateData.__v
       delete updateData.REG_AT
       updateData.ID_NUM = userNoSortKey(updateData.USER_NO || userNo)
+      if (updateData.USER_POSITION != null) {
+        updateData.USER_POSITION = await storedPosition(updateData.USER_POSITION)
+      }
 
       const result = await CacheUser.findOneAndUpdate(
         { USER_NO: userNo },
@@ -364,6 +428,7 @@ module.exports = (nazorat) => {
       delete body.__v
       delete body.REG_AT
       delete body.ID_NUM
+      if (body.USER_POSITION != null) body.USER_POSITION = await storedPosition(body.USER_POSITION)
       const newMember = new CacheUser({
         ...body,
         REG_AT: Date.now(),

@@ -911,10 +911,54 @@ const createTicketsRoutes = () => {
     }
   }
 
+  Tickets.collection.createIndex({ date: 1, createdAt: -1 }, { name: "tickets_date_created" }).catch((error) => {
+    const alreadyExists = error.code === 85 || error.code === 86 || /already exists/i.test(error.message || "")
+    if (!alreadyExists) console.error("Ticket date index:", error.message)
+  })
+
+  const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+  const parseDayRange = (value) => {
+    const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (!match) return null
+    const start = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    if (Number.isNaN(start.getTime())) return null
+    const end = new Date(start)
+    end.setDate(end.getDate() + 1)
+    return { $gte: start, $lt: end }
+  }
+
   router.get("/", checkPermissions(["view_tickets"]), async (req, res) => {
     try {
-      const tickets = await Tickets.find().sort({ createdAt: -1 })
-      res.json(tickets)
+      const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1)
+      const limit = Math.min(300, Math.max(1, Number.parseInt(req.query.limit, 10) || 30))
+      const skip = (page - 1) * limit
+      const filter = {}
+      const day = parseDayRange(req.query.date)
+      if (day) filter.date = day
+
+      const search = String(req.query.search || "").trim().slice(0, 80)
+      if (search) {
+        const pattern = new RegExp(escapeRegex(search), "i")
+        filter.$or = [{ ticketId: pattern }, { fullname: pattern }, { passport: pattern }]
+      }
+
+      const [tickets, total] = await Promise.all([
+        Tickets.find(filter)
+          .select("ticketId fullname passport dailyOrderNumber date createdAt isUpdate nameChanged")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Tickets.countDocuments(filter),
+      ])
+
+      res.json({
+        tickets,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      })
     } catch (error) {
       console.error("Error fetching tickets:", error)
       res.status(500).json({ error: error.message })
@@ -1123,7 +1167,7 @@ const auditRoutes = require("./routes/audit.routes")(vakolat)
 const tvRoutes = require("./routes/tv.routes")(nazorat, vakolat)
 const videoRoutes = require("./routes/videos.routes")()
 const visitsRoutes = require("./routes/visits.routes")(nazorat)
-const membersRoutes = require("./routes/members.routes")(nazorat)
+const membersRoutes = require("./routes/members.routes")(nazorat, vakolat)
 const onlineRegistrantsRoutes = require("./routes/online-registrants.routes")(vakolat, nazorat)
 const membersPaymentRoutes = require("./routes/members-payment.routes")(nazorat, vakolat)
 const systemRoutes = require("./routes/system.routes")(vakolat)

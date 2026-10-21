@@ -1,3 +1,5 @@
+const { expandPositionValues } = require("../data/member-categories.defaults")
+
 const DEFAULT_SEARCH_FIELDS = [
   "USER_NO",
   "USER_NAME",
@@ -107,7 +109,7 @@ function dateRangeClause(field, from, to) {
   }
 }
 
-function compileFieldFilter(filter) {
+function compileFieldFilter(filter, categories) {
   if (!filter || !ALLOWED_FILTER_FIELDS.has(filter.field)) return null
   const mode = String(filter.matchMode || "contains")
 
@@ -120,7 +122,8 @@ function compileFieldFilter(filter) {
       ? filter.value.map((item) => String(item || "").trim()).filter(Boolean)
       : []
     if (!values.length) return null
-    return { [filter.field]: { $in: values } }
+    const matched = filter.field === "USER_POSITION" ? expandPositionValues(values, categories) : values
+    return { [filter.field]: { $in: matched } }
   }
 
   const raw = String(filter.value ?? "").trim()
@@ -182,7 +185,7 @@ function parseSort(body, defaultField = "INSERT_DATE") {
   return sort
 }
 
-function buildMemberSearchFilter(body, searchFields = DEFAULT_SEARCH_FIELDS) {
+function buildMemberSearchFilter(body, searchFields = DEFAULT_SEARCH_FIELDS, categories) {
   const clauses = []
   const searchTokens = tokenRegexes(body?.search)
   if (searchTokens.length === 1) {
@@ -195,7 +198,7 @@ function buildMemberSearchFilter(body, searchFields = DEFAULT_SEARCH_FIELDS) {
 
   const filters = Array.isArray(body?.filters) ? body.filters : []
   for (const filter of filters) {
-    const clause = compileFieldFilter(filter)
+    const clause = compileFieldFilter(filter, categories)
     if (clause) clauses.push(clause)
   }
 

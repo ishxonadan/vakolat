@@ -10,6 +10,7 @@ module.exports = (vakolat, nazorat) => {
     parseSort,
     userNoSortKey,
   } = require("../src/utils/memberSearchFilter")
+  const { positionName, readMemberCategories } = require("../src/data/member-categories.defaults")
 
   const listSelect = ({ includePhoto = false } = {}) => {
     const select = { PASSWORD: 0 }
@@ -146,6 +147,15 @@ module.exports = (vakolat, nazorat) => {
     // restore USER_NO after sanitize (create/update always have it)
     cachePayload.USER_NO = data.USER_NO
     cachePayload.ID_NUM = userNoSortKey(data.USER_NO)
+    if (cachePayload.USER_POSITION != null) {
+      let rows
+      try {
+        rows = (await readMemberCategories(vakolat.model("MemberCategory"))).rows
+      } catch (error) {
+        console.error("Member categories:", error.message)
+      }
+      cachePayload.USER_POSITION = positionName(cachePayload.USER_POSITION, rows)
+    }
     delete cachePayload._id
     await CacheUser.findOneAndUpdate(
       { USER_NO: cachePayload.USER_NO },
@@ -208,7 +218,13 @@ module.exports = (vakolat, nazorat) => {
       const page = parsePage(req.body)
       const limit = parseLimit(req.body, { max: req.body.export ? 5000 : 500 })
       const skip = (page - 1) * limit
-      const filter = buildMemberSearchFilter(req.body)
+      let rows
+      try {
+        rows = (await readMemberCategories(vakolat.model("MemberCategory"))).rows
+      } catch (error) {
+        console.error("Member categories:", error.message)
+      }
+      const filter = buildMemberSearchFilter(req.body, undefined, rows)
       const sort = parseSort(req.body)
       const includePhoto = req.body?.includePhoto === true || req.body?.includePhoto === "true"
 

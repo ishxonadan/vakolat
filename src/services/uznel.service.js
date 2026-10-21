@@ -8,6 +8,7 @@ const httpsAgent = new https.Agent({
 
 const {
   buildPositionCodeMap,
+  positionCode,
   toClassCode,
 } = require("../data/member-categories.defaults")
 
@@ -24,6 +25,11 @@ const DEFAULT_CARD_TYPE = "0001"
 const SYNC_DELAY_MS = 400
 
 const POSITION_CODES = buildPositionCodeMap()
+let positionCatalog = null
+
+function setPositionCatalog(rows) {
+  positionCatalog = Array.isArray(rows) && rows.length ? rows : null
+}
 
 const STUSER_COLUMNS = `		<ColumnInfo>
 			<Column id="ADDRS" type="STRING" size="200" prop="default" />
@@ -128,8 +134,9 @@ function mapSex(value) {
 }
 
 function mapPosition(value) {
+  const code = positionCode(value, positionCatalog || undefined)
+  if (code) return code
   const raw = String(value || "").trim()
-  if (/^\d{4}$/.test(raw)) return raw
   return POSITION_CODES[raw] || DEFAULT_GRADE
 }
 
@@ -720,6 +727,7 @@ module.exports = {
   addYearsYyyymmdd,
   mapSex,
   mapPosition,
+  setPositionCatalog,
   mapTelNo,
   parseUserSeqNo,
   normalizePhoto,

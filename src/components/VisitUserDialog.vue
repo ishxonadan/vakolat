@@ -38,7 +38,7 @@
 
         <div class="flex-1">
           <h3 class="text-2xl font-bold text-gray-900 dark:text-[var(--p-text-color)] mb-2">{{ user.userName }}</h3>
-          <p class="text-lg text-gray-600 dark:text-[var(--p-text-muted-color)] mb-4">{{ user.userPosition }}</p>
+          <p class="text-lg text-gray-600 dark:text-[var(--p-text-muted-color)] mb-4">{{ positionLabel(user.userPosition) }}</p>
           <div class="flex items-center gap-2">
             <Tag
               :value="getStatusText(user)"
@@ -196,6 +196,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
 import Timeline from 'primevue/timeline'
+import { resolveMemberCategoryLabel } from '@/utils/memberCategories'
 
 defineProps({
   visible: {
@@ -217,6 +218,8 @@ defineProps({
 })
 
 const emit = defineEmits(['update:visible'])
+
+const positionLabel = (value) => resolveMemberCategoryLabel(value) || '-'
 
 const formatLocalDate = (date) => {
   const year = date.getFullYear()

@@ -1,5 +1,6 @@
 const express = require("express")
 const { verifyToken, checkPermissions } = require("../src/middleware/auth.middleware")
+const { positionName } = require("../src/data/member-categories.defaults")
 
 module.exports = (nazoratConnection) => {
   const router = express.Router()
@@ -187,6 +188,7 @@ module.exports = (nazoratConnection) => {
         { projection: { PASSWORD: 0, UZNEL_ORG_ROW: 0 } },
       )
       if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" })
+      if (user.USER_POSITION) user.USER_POSITION = positionName(user.USER_POSITION)
       res.json(user)
     } catch (error) {
       console.error("visit member:", error)
@@ -286,7 +288,7 @@ module.exports = (nazoratConnection) => {
           ketdi: visit.ketdi || null,
           duration: calculateDuration(visit.keldi, visit.ketdi),
           userName: userCache?.USER_NAME || visit.userName || "Noma'lum",
-          userPosition: userCache?.USER_POSITION || visit.userPosition || "-",
+          userPosition: positionName(userCache?.USER_POSITION || visit.userPosition || "-"),
           userTel: userCache?.TEL_NO || null,
         }
       })
@@ -327,7 +329,7 @@ module.exports = (nazoratConnection) => {
         ketdi: visit.ketdi || null,
         duration: calculateDuration(visit.keldi, visit.ketdi),
         userName: userCache?.USER_NAME || userId,
-        userPosition: userCache?.USER_POSITION || "-",
+        userPosition: positionName(userCache?.USER_POSITION || "-"),
       }))
 
       res.json({
@@ -385,40 +387,43 @@ module.exports = (nazoratConnection) => {
       ]).toArray()
 
       const asOf = new Date(`${to}T12:00:00`)
-      const all = []
-      const adults = []
-      const youth = []
-      const youthMale = []
-      const youthFemale = []
+      const lists = {
+        all: [],
+        allMale: [],
+        allFemale: [],
+        adults: [],
+        adultsMale: [],
+        adultsFemale: [],
+        youth: [],
+        youthMale: [],
+        youthFemale: [],
+      }
+      const pushGroup = (key, item, sex) => {
+        lists[key].push(item)
+        if (sex === "male") lists[`${key}Male`].push(item)
+        else if (sex === "female") lists[`${key}Female`].push(item)
+      }
       for (const row of rows) {
-        const group = sexGroup(row.sex)
+        const sex = sexGroup(row.sex)
         const item = {
           userNo: row.userNo,
           name: row.name || row.userNo,
           seconds: Number(row.seconds || 0),
         }
-        all.push(item)
+        pushGroup("all", item, sex)
         const age = ageOn(row.birthday, asOf)
-        if (age != null && age >= 31) adults.push(item)
-        if (age != null && age >= 14 && age <= 30) {
-          youth.push(item)
-          if (group === "male") youthMale.push(item)
-          else if (group === "female") youthFemale.push(item)
-        }
+        if (age != null && age >= 31) pushGroup("adults", item, sex)
+        if (age != null && age >= 14 && age <= 30) pushGroup("youth", item, sex)
       }
-      for (const list of [all, adults, youth, youthMale, youthFemale]) {
+      for (const list of Object.values(lists)) {
         list.sort((a, b) => b.seconds - a.seconds)
       }
 
-      res.json({
-        from,
-        to,
-        all: placeRows(all),
-        adults: placeRows(adults),
-        youth: placeRows(youth),
-        youthMale: placeRows(youthMale),
-        youthFemale: placeRows(youthFemale),
-      })
+      const placed = {}
+      for (const [key, list] of Object.entries(lists)) {
+        placed[key] = placeRows(list)
+      }
+      res.json({ from, to, ...placed })
     } catch (error) {
       console.error("time-leaders:", error)
       res.status(500).json({ error: "Vaqt statistikasi yuklanmadi" })
@@ -530,7 +535,7 @@ module.exports = (nazoratConnection) => {
         const usersById = new Map(users.map((user) => [user.USER_NO, user]))
 
         for (const id of chunk) {
-          const position = usersById.get(id)?.USER_POSITION || "Noma'lum"
+          const position = positionName(usersById.get(id)?.USER_POSITION || "Noma'lum")
           positionCounts[position] = (positionCounts[position] || 0) + 1
         }
       }

@@ -71,7 +71,8 @@ export function toCategoryOptions(rows) {
 export function resolveMemberCategoryLabel(value, categories = FALLBACK) {
   const raw = String(value || "").trim()
   if (!raw) return ""
-  const match = categories.find((row) => row.value === raw || row.label === raw)
+  const code = /^\d+$/.test(raw) && raw.length <= 4 ? raw.padStart(4, "0") : raw
+  const match = categories.find((row) => row.value === raw || row.value === code || row.label === raw)
   return match?.label || raw
 }
 

@@ -66,15 +66,18 @@
     <DataTable 
       :value="tickets" 
       :loading="loading"
+      lazy
       paginator 
       :rows="pageSize"
+      :first="first"
+      :totalRecords="totalRecords"
       :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
       paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
       currentPageReportTemplate="{first} dan {last} gacha, jami {totalRecords} ta"
       responsiveLayout="scroll"
       @page="onTicketsPage"
     >
-      <Column field="ticketId" header="Chipta ID" sortable>
+      <Column field="ticketId" header="Chipta ID">
         <template #body="slotProps">
           <div class="flex items-center gap-2">
             <span class="font-mono font-semibold">{{ slotProps.data.ticketId }}</span>
@@ -83,23 +86,23 @@
           </div>
         </template>
       </Column>
-      <Column field="fullname" header="F.I.Sh" sortable />
-      <Column field="passport" header="Pasport" sortable>
+      <Column field="fullname" header="F.I.Sh" />
+      <Column field="passport" header="Pasport">
         <template #body="slotProps">
           <span class="font-mono">{{ slotProps.data.passport }}</span>
         </template>
       </Column>
-      <Column field="dailyOrderNumber" header="Tartib raqami" sortable>
+      <Column field="dailyOrderNumber" header="Tartib raqami">
         <template #body="slotProps">
           <span class="font-semibold text-blue-600 dark:text-blue-400">{{ slotProps.data.dailyOrderNumber }}</span>
         </template>
       </Column>
-      <Column field="date" header="Chipta sanasi" sortable>
+      <Column field="date" header="Chipta sanasi">
         <template #body="slotProps">
           {{ formatDate(slotProps.data.date) }}
         </template>
       </Column>
-      <Column field="createdAt" header="Yaratilgan/Yangilangan" sortable>
+      <Column field="createdAt" header="Yaratilgan/Yangilangan">
         <template #body="slotProps">
           <div class="text-sm">
             <div>{{ formatDateTime(slotProps.data.createdAt) }}</div>
@@ -209,12 +212,20 @@ import LibraryLogo from '@/components/LibraryLogo.vue';
 
 const toast = useToast();
 const canCreate = computed(() => authService.hasPermission('create_tickets'));
-const allTickets = ref([]);
 const tickets = ref([]);
 const loading = ref(false);
+const totalRecords = ref(0);
+const currentPage = ref(1);
 /** null = barcha kunlar; aks holda faqat shu kalendarkunidagi chiptalar */
-const filterDate = ref(null);
+const startOfToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+const filterDate = ref(startOfToday());
 const searchQuery = ref('');
+const first = computed(() => Math.max(0, (currentPage.value - 1) * pageSize.value));
+let searchTimer = null;
 const showTicketDialog = ref(false);
 const selectedTicket = ref(null);
 const qrCode = ref('');
@@ -223,9 +234,16 @@ const ticketCount = ref(0);
 const loadTickets = async () => {
   try {
     loading.value = true;
-    const data = await apiService.get('/tickets');
-    allTickets.value = data;
-    applyFilters();
+    const params = {
+      page: currentPage.value,
+      limit: pageSize.value,
+    };
+    if (filterDate.value) params.date = calendarDayKey(filterDate.value);
+    const query = searchQuery.value.trim();
+    if (query) params.search = query;
+    const data = await apiService.get('/tickets', { params });
+    tickets.value = Array.isArray(data?.tickets) ? data.tickets : [];
+    totalRecords.value = Number(data?.total || 0);
   } catch (error) {
     toast.add({ 
       severity: 'error', 
@@ -599,43 +617,41 @@ const calendarDayKey = (value) => {
   return `${y}-${m}-${d}`;
 };
 
-const matchesSearch = (ticket, query) => {
-  if (!query) return true;
-  if (ticket.ticketId && ticket.ticketId.toLowerCase().includes(query)) return true;
-  if (ticket.fullname && ticket.fullname.toLowerCase().includes(query)) return true;
-  if (ticket.passport && ticket.passport.toLowerCase().includes(query)) return true;
-  return false;
+const reloadFromStart = () => {
+  currentPage.value = 1;
+  loadTickets();
 };
 
 const applyFilters = () => {
-  const query = searchQuery.value.toLowerCase().trim();
-  const dayKey = filterDate.value ? calendarDayKey(filterDate.value) : null;
-
-  tickets.value = allTickets.value.filter((ticket) => {
-    if (dayKey && calendarDayKey(ticket.date) !== dayKey) return false;
-    return matchesSearch(ticket, query);
-  });
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(reloadFromStart, 300);
 };
 
 const setFilterToday = () => {
-  const t = new Date();
-  t.setHours(0, 0, 0, 0);
-  filterDate.value = t;
-  applyFilters();
+  if (searchTimer) clearTimeout(searchTimer);
+  filterDate.value = startOfToday();
+  reloadFromStart();
 };
 
 const clearDateFilter = () => {
+  if (searchTimer) clearTimeout(searchTimer);
   filterDate.value = null;
-  applyFilters();
+  reloadFromStart();
 };
 
 const clearSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer);
   searchQuery.value = '';
-  applyFilters();
+  reloadFromStart();
 };
 
 const onTicketsPage = (event) => {
-  if (event.rows != null) pageSize.value = event.rows;
+  currentPage.value = event.page + 1;
+  if (event.rows != null && event.rows !== pageSize.value) {
+    pageSize.value = event.rows;
+    currentPage.value = 1;
+  }
+  loadTickets();
 };
 
 onMounted(() => {
