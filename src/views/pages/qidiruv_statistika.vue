@@ -34,16 +34,17 @@ const stats = ref({
 const timeLeaders = ref({
   from: null,
   to: null,
-  male: [],
-  female: [],
+  all: [],
+  adults: [],
   youth: [],
   youthMale: [],
   youthFemale: [],
 })
+const ageGroup = ref("all")
 const youthSex = ref("all")
-const leaderGroups = [
-  { label: "Erkaklar", value: "male" },
-  { label: "Ayollar", value: "female" },
+const ageGroups = [
+  { label: "Barcha", value: "all" },
+  { label: "Kattalar", value: "adults" },
   { label: "Yoshlar", value: "youth" },
 ]
 const profileVisible = ref(false)
@@ -103,12 +104,21 @@ const activePeriodLabel = computed(() => {
   return activePresetLabel.value
 })
 
-const rowsFor = (group) => {
-  if (group !== "youth") return timeLeaders.value[group] || []
-  if (youthSex.value === "male") return timeLeaders.value.youthMale
-  if (youthSex.value === "female") return timeLeaders.value.youthFemale
-  return timeLeaders.value.youth
-}
+const activeRows = computed(() => {
+  if (ageGroup.value === "adults") return timeLeaders.value.adults
+  if (ageGroup.value === "youth") {
+    if (youthSex.value === "male") return timeLeaders.value.youthMale
+    if (youthSex.value === "female") return timeLeaders.value.youthFemale
+    return timeLeaders.value.youth
+  }
+  return timeLeaders.value.all
+})
+
+const ageNote = computed(() => {
+  if (ageGroup.value === "adults") return "31 yoshdan katta"
+  if (ageGroup.value === "youth") return "14–30 yosh"
+  return ""
+})
 
 const formatDuration = (seconds) => {
   const total = Math.max(0, Number(seconds || 0))
@@ -198,8 +208,8 @@ const fetchTimeLeaders = async (params) => {
     timeLeaders.value = {
       from: data?.from || null,
       to: data?.to || null,
-      male: Array.isArray(data?.male) ? data.male : [],
-      female: Array.isArray(data?.female) ? data.female : [],
+      all: Array.isArray(data?.all) ? data.all : [],
+      adults: Array.isArray(data?.adults) ? data.adults : [],
       youth: Array.isArray(data?.youth) ? data.youth : [],
       youthMale: Array.isArray(data?.youthMale) ? data.youthMale : [],
       youthFemale: Array.isArray(data?.youthFemale) ? data.youthFemale : [],
@@ -339,41 +349,32 @@ onMounted(() => {
         </article>
       </div>
 
-      <div v-else class="leader-grid">
-        <article v-for="group in leaderGroups" :key="group.value" class="leader-card">
-          <div class="leader-card-head">
-            <div>
-              <h2>{{ group.label }}</h2>
-              <p v-if="group.value === 'youth'" class="leader-note">14–30 yosh</p>
-            </div>
-            <div v-if="group.value === 'youth'" class="sex-switch" role="group" aria-label="Yoshlar jinsi">
+      <article v-else class="leader-card">
+        <div class="leader-card-head">
+          <div>
+            <div class="sex-switch" role="group" aria-label="Yosh guruhi">
               <button
+                v-for="group in ageGroups"
+                :key="group.value"
                 type="button"
-                :class="{ 'is-active': youthSex === 'all' }"
-                @click="youthSex = 'all'"
+                :class="{ 'is-active': ageGroup === group.value }"
+                @click="ageGroup = group.value"
               >
-                Hamma
-              </button>
-              <button
-                type="button"
-                :class="{ 'is-active': youthSex === 'female' }"
-                @click="youthSex = 'female'"
-              >
-                Ayol
-              </button>
-              <button
-                type="button"
-                :class="{ 'is-active': youthSex === 'male' }"
-                @click="youthSex = 'male'"
-              >
-                Erkak
+                {{ group.label }}
               </button>
             </div>
+            <p v-if="ageNote" class="leader-note">{{ ageNote }}</p>
           </div>
-          <p v-if="loading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</p>
-          <p v-else-if="rowsFor(group.value).length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
-          <ol v-else>
-            <li v-for="row in rowsFor(group.value)" :key="`${group.value}-${youthSex}-${row.place}`">
+          <div v-if="ageGroup === 'youth'" class="sex-switch" role="group" aria-label="Yoshlar jinsi">
+            <button type="button" :class="{ 'is-active': youthSex === 'all' }" @click="youthSex = 'all'">Hamma</button>
+            <button type="button" :class="{ 'is-active': youthSex === 'female' }" @click="youthSex = 'female'">Ayol</button>
+            <button type="button" :class="{ 'is-active': youthSex === 'male' }" @click="youthSex = 'male'">Erkak</button>
+          </div>
+        </div>
+        <p v-if="loading" class="leader-empty"><i class="pi pi-spin pi-spinner" /> Yuklanmoqda</p>
+        <p v-else-if="activeRows.length === 0" class="leader-empty">Bu davrda ma'lumot yo'q</p>
+        <ol v-else>
+          <li v-for="row in activeRows" :key="`${ageGroup}-${youthSex}-${row.place}`">
               <button type="button" class="leader-row" @click="openMember(row.userNo)">
                 <span class="place" :data-place="row.place">{{ row.place }}</span>
                 <span class="leader-person">
@@ -384,8 +385,7 @@ onMounted(() => {
               </button>
             </li>
           </ol>
-        </article>
-      </div>
+      </article>
     </section>
 
     <VisitUserDialog

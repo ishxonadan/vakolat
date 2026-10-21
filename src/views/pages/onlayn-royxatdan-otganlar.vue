@@ -38,6 +38,7 @@ const buildSearchBody = ({ page = currentPage.value, limit = pageSize.value, exp
   sortOrder: sortOrder.value === 1 ? 'asc' : 'desc',
   export: exportMode || undefined,
   includePhoto: Boolean(memberListRef.value?.includePhoto),
+  filters: memberListRef.value?.activeFilters || [],
 })
 
 const fetchMembers = async () => {

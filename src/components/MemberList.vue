@@ -379,10 +379,12 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
+import Calendar from 'primevue/calendar'
 import Checkbox from 'primevue/checkbox'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import InputText from 'primevue/inputtext'
+import MultiSelect from 'primevue/multiselect'
 import Popover from 'primevue/popover'
 import { ROWS_PER_PAGE_OPTIONS } from '@/service/pagination.service'
 import authService from '@/service/auth.service'
@@ -495,6 +497,79 @@ const selectedRow = ref(null)
 const visibleFields = ref([...defaultVisibleFields])
 const columnWidths = ref({})
 let searchDebounce = null
+
+const textMatchModeOptions = [
+  { label: "O'z ichiga oladi", value: 'contains' },
+  { label: 'Boshlanadi', value: 'startsWith' },
+  { label: 'Tugaydi', value: 'endsWith' },
+  { label: 'Teng', value: 'equals' },
+  { label: 'Teng emas', value: 'notEquals' },
+  { label: "O'z ichiga olmaydi", value: 'notContains' },
+]
+
+const columnFilterState = ref({
+  USER_NO: { value: null, matchMode: 'contains' },
+  USER_NAME: { value: null, matchMode: 'contains' },
+  USER_POSITION: { value: null, matchMode: 'in' },
+  CARD_NO: { value: null, matchMode: 'contains' },
+  TEL_NO: { value: null, matchMode: 'contains' },
+  BIRTHDAY: { value: null, matchMode: 'between' },
+  ADDRS: { value: null, matchMode: 'contains' },
+  EMAIL: { value: null, matchMode: 'contains' },
+  PASSPORT_NUMBER: { value: null, matchMode: 'contains' },
+  INSERT_DATE: { value: null, matchMode: 'between' },
+  STATUS_NAME: { value: null, matchMode: 'contains' },
+})
+
+function toLocalYmd(value) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function dateRangePart(filterModel, index) {
+  const value = filterModel?.value
+  if (!Array.isArray(value)) return null
+  return value[index] || null
+}
+
+function setDateRangePart(filterModel, index, value) {
+  const next = Array.isArray(filterModel.value) ? [...filterModel.value] : [null, null]
+  next[index] = value
+  filterModel.value = next
+}
+
+const activeFilters = computed(() => {
+  const filters = []
+  for (const [field, meta] of Object.entries(columnFilterState.value)) {
+    if (!meta) continue
+    if (meta.matchMode === 'between') {
+      const range = Array.isArray(meta.value) ? meta.value : []
+      const from = toLocalYmd(range[0])
+      const to = toLocalYmd(range[1])
+      if (!from && !to) continue
+      filters.push({ field, matchMode: 'between', from, to })
+      continue
+    }
+    if (meta.matchMode === 'in') {
+      const value = Array.isArray(meta.value) ? meta.value.filter(Boolean) : []
+      if (!value.length) continue
+      filters.push({ field, matchMode: 'in', value })
+      continue
+    }
+    const value = meta.value == null ? '' : String(meta.value).trim()
+    if (!value) continue
+    filters.push({ field, matchMode: meta.matchMode || 'contains', value })
+  }
+  return filters
+})
+
+function onFilter() {
+  emit('apply-search')
+}
 
 const first = computed(() => Math.max(0, (props.currentPage - 1) * props.rowsPerPage))
 
@@ -740,7 +815,7 @@ onMounted(() => {
   columnsHydrated = true
 })
 
-defineExpose({ downloadCsv, includePhoto })
+defineExpose({ downloadCsv, includePhoto, activeFilters })
 </script>
 
 <style scoped>
@@ -995,12 +1070,16 @@ defineExpose({ downloadCsv, includePhoto })
 :deep(.member-registry-table [data-pc-section="filtermenubutton"]),
 :deep(.member-registry-table [data-pc-section="filterbutton"]),
 :deep(.member-registry-table .p-datatable-column-filter-button) {
+  position: relative;
+  z-index: 3;
   margin-left: auto;
+  margin-right: 0.35rem;
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 8px;
   color: var(--text-color-secondary);
   opacity: 0.45;
+  pointer-events: auto;
   transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
@@ -1112,5 +1191,17 @@ defineExpose({ downloadCsv, includePhoto })
 :deep(.member-registry-table .p-datatable-paginator-bottom) {
   border-top: 1px solid var(--p-content-border-color, var(--surface-border));
   padding: 0.65rem 0.25rem;
+}
+
+.member-date-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 14rem;
+}
+
+.member-date-filter label {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
 }
 </style>

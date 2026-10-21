@@ -286,6 +286,10 @@ const fetchStatistics = async ({ includeSlow = true } = {}) => {
 const totalPages = computed(() => Math.ceil(totalRecords.value / pageSize.value))
 
 // Methods
+const onVisitRowClick = (event) => {
+  if (event?.data) showUserDetails(event.data)
+}
+
 const onPageChange = (event) => {
   console.log('📄 Page change event:', event)
   if (event.rows != null && event.rows !== pageSize.value) {
@@ -326,8 +330,14 @@ const clearFilters = () => {
 }
 
 const formatTime = (time) => {
-  if (!time) return '-'
+  if (!time) return '—'
   return time
+}
+
+const positionLabel = (value) => {
+  const text = String(value || '').trim()
+  if (!text || text === '-' || text === '—' || /^noma.?lum$/i.test(text)) return ''
+  return text
 }
 
 const formatDate = (date) => {
@@ -579,72 +589,61 @@ onUnmounted(() => {
         :lazy="true"
         :paginator="true"
         @page="onPageChange"
+        @row-click="onVisitRowClick"
         v-model:rows="pageSize"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
-        currentPageReportTemplate="{first} - {last} / {totalRecords}"
-        class="text-base"
+        currentPageReportTemplate="{first}–{last} / {totalRecords}"
+        class="tashriflar-table"
+        tableStyle="width: 100%"
       >
-        <Column field="id" header="ID" style="min-width: 120px">
+        <Column field="userName" header="Tashrif buyuruvchi" style="width: 38%">
           <template #body="{ data }">
-            <span class="font-mono font-bold text-gray-900 dark:text-[var(--p-text-color)] text-base">{{ data.id }}</span>
-          </template>
-        </Column>
-
-        <Column field="userName" header="F.I.O" style="min-width: 280px">
-          <template #body="{ data }">
-            <div 
-              class="flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-[var(--p-content-hover-background)] p-2 rounded-lg transition-colors"
-              @click="showUserDetails(data)"
-            >
+            <div class="visit-person">
               <img
                 v-if="data.userPhoto"
                 :src="getPhotoUrl(data.userPhoto)"
                 :alt="data.userName"
-                class="w-20 h-20 rounded-full object-cover border-3 border-gray-200 dark:border-[var(--p-content-border-color)] hover:border-blue-400 dark:hover:border-blue-500 transition-colors shadow-md"
-                @error="(e) => { e.target.style.display = 'none'; console.error('Photo load error for:', data.id) }"
+                class="visit-avatar"
               />
-              <div
-                v-else
-                class="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/85 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-2xl shadow-md"
-              >
+              <div v-else class="visit-avatar visit-avatar-empty">
                 {{ data.userName?.charAt(0) || '?' }}
               </div>
-              <div>
-                <div class="font-semibold text-gray-900 dark:text-[var(--p-text-color)] text-base">{{ data.userName }}</div>
-                <div class="text-sm text-gray-500 dark:text-[var(--p-text-muted-color)]">{{ data.userPosition }}</div>
+              <div class="visit-person-text">
+                <strong>{{ data.userName || data.id }}</strong>
+                <small>{{ data.id }}<template v-if="positionLabel(data.userPosition)"> · {{ positionLabel(data.userPosition) }}</template></small>
               </div>
             </div>
           </template>
         </Column>
 
-        <Column field="date" header="Sana" style="min-width: 130px">
+        <Column field="date" header="Sana" style="width: 12%">
           <template #body="{ data }">
-            <span class="text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ formatDate(data.date) }}</span>
+            <span class="visit-meta">{{ formatDate(data.date) }}</span>
           </template>
         </Column>
 
-        <Column field="keldi" header="Keldi" style="min-width: 110px">
+        <Column field="keldi" header="Keldi" style="width: 11%">
           <template #body="{ data }">
-            <span class="font-mono text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ formatTime(data.keldi) }}</span>
+            <span class="visit-time">{{ formatTime(data.keldi) }}</span>
           </template>
         </Column>
 
-        <Column field="ketdi" header="Ketdi" style="min-width: 110px">
+        <Column field="ketdi" header="Ketdi" style="width: 11%">
           <template #body="{ data }">
-            <span class="font-mono text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ formatTime(data.ketdi) }}</span>
+            <span class="visit-time">{{ formatTime(data.ketdi) }}</span>
           </template>
         </Column>
 
-        <Column field="duration" header="Davomiyligi" style="min-width: 130px">
+        <Column field="duration" header="Davomiyligi" style="width: 12%">
           <template #body="{ data }">
-            <span class="text-gray-700 dark:text-[var(--p-text-color)] text-base">{{ data.duration || '-' }}</span>
+            <span class="visit-meta">{{ data.duration || '—' }}</span>
           </template>
         </Column>
 
-        <Column field="status" header="Holat" style="min-width: 140px">
+        <Column field="status" header="Holat" style="width: 16%">
           <template #body="{ data }">
-            <Tag :value="getStatusText(data)" :severity="getStatusSeverity(data)" class="text-sm" />
+            <Tag :value="getStatusText(data)" :severity="getStatusSeverity(data)" />
           </template>
         </Column>
       </DataTable>
@@ -660,21 +659,79 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-:deep(.p-datatable .p-datatable-thead > tr > th) {
+:deep(.tashriflar-table .p-datatable-thead > tr > th) {
   background: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  padding: 1.25rem;
-  border-bottom: 2px solid #e2e8f0;
-  font-size: 1rem;
+  color: #64748b;
+  font-weight: 650;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr > td) {
-  padding: 1.25rem;
+:deep(.tashriflar-table .p-datatable-tbody > tr > td) {
+  padding: 0.55rem 0.85rem;
+  vertical-align: middle;
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr:hover) {
+:deep(.tashriflar-table .p-datatable-tbody > tr) {
+  cursor: pointer;
+}
+
+:deep(.tashriflar-table .p-datatable-tbody > tr:hover) {
   background: #f8fafc;
+}
+
+.visit-person {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.visit-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #dbeafe;
+}
+
+.visit-avatar-empty {
+  display: grid;
+  place-items: center;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.visit-person-text {
+  min-width: 0;
+}
+
+.visit-person-text strong,
+.visit-person-text small {
+  display: block;
+}
+
+.visit-person-text strong {
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--p-text-color, #0f172a);
+}
+
+.visit-person-text small,
+.visit-meta,
+.visit-time {
+  color: var(--p-text-muted-color, #64748b);
+  font-size: 0.8rem;
+}
+
+.visit-time {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 :deep(.p-paginator) {

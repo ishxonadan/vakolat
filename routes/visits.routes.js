@@ -385,8 +385,8 @@ module.exports = (nazoratConnection) => {
       ]).toArray()
 
       const asOf = new Date(`${to}T12:00:00`)
-      const male = []
-      const female = []
+      const all = []
+      const adults = []
       const youth = []
       const youthMale = []
       const youthFemale = []
@@ -397,24 +397,24 @@ module.exports = (nazoratConnection) => {
           name: row.name || row.userNo,
           seconds: Number(row.seconds || 0),
         }
-        if (group === "male") male.push(item)
-        else if (group === "female") female.push(item)
+        all.push(item)
         const age = ageOn(row.birthday, asOf)
+        if (age != null && age >= 31) adults.push(item)
         if (age != null && age >= 14 && age <= 30) {
           youth.push(item)
           if (group === "male") youthMale.push(item)
           else if (group === "female") youthFemale.push(item)
         }
       }
-      for (const list of [male, female, youth, youthMale, youthFemale]) {
+      for (const list of [all, adults, youth, youthMale, youthFemale]) {
         list.sort((a, b) => b.seconds - a.seconds)
       }
 
       res.json({
         from,
         to,
-        male: placeRows(male),
-        female: placeRows(female),
+        all: placeRows(all),
+        adults: placeRows(adults),
         youth: placeRows(youth),
         youthMale: placeRows(youthMale),
         youthFemale: placeRows(youthFemale),

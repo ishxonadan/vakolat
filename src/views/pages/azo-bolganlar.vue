@@ -46,6 +46,7 @@ const buildSearchBody = ({ page = currentPage.value, limit = pageSize.value, exp
   export: exportMode || undefined,
   includePhoto: Boolean(memberListRef.value?.includePhoto),
   userNoPrefix: 'AA',
+  filters: memberListRef.value?.activeFilters || [],
 })
 
 const fetchMembers = async () => {
