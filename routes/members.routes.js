@@ -456,5 +456,18 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
+  // UbiViewer / UZB card print config (plugin.jsp + JRF)
+  router.get("/card-print-config", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), (_req, res) => {
+    const actionUrl = process.env.UZNEL_URL || "https://uznel.natlib.uz:444/FN/Manager/action.do"
+    const fnBase = String(actionUrl).replace(/\/Manager\/action\.do(?:\?.*)?$/i, "/")
+    res.json({
+      enabled: process.env.UZNEL_UBI_CARD_PRINT !== "0",
+      actionUrl,
+      fnBase: fnBase.endsWith("/") ? fnBase : `${fnBase}/`,
+      jrf: process.env.UZNEL_UBI_CARD_JRF || "Print_UZB_CODE128.JRF",
+      pluginPath: "link/ubireport/plugin/plugin.jsp",
+    })
+  })
+
   return router
 }

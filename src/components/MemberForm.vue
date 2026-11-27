@@ -467,6 +467,7 @@ import {
   toClassCode,
 } from '@/utils/memberCategories'
 import { printMemberCard } from '@/utils/printMemberCard'
+import { openUznelUbiCardPrint } from '@/utils/uznelUbiCardPrint'
 
 const props = defineProps({
   selectedMember: {
@@ -1070,8 +1071,41 @@ function closeCardPreview() {
   showCardPreview.value = false
 }
 
-function onPrintCard() {
+async function onPrintCard() {
   if (!canOpenCardPreview.value) return
+
+  const member = {
+    ...props.selectedMember,
+    USER_NO: savedCard.value.userNo,
+    USER_NAME: savedCard.value.userName,
+    USER_POSITION: savedCard.value.position,
+    CARD_NO: props.selectedMember?.CARD_NO || savedCard.value.userNo,
+    LIB_USE_LDATE: savedCard.value.expiryYyyymmdd,
+    kafedra: savedCard.value.kafedra,
+  }
+
+  try {
+    const config = await apiService.get('/members/card-print-config')
+    if (config?.enabled !== false) {
+      const opened = openUznelUbiCardPrint(member, {
+        actionUrl: config.actionUrl,
+        fnBase: config.fnBase,
+        jrf: config.jrf,
+      })
+      if (opened) {
+        toast.add({
+          severity: 'info',
+          summary: 'UbiViewer',
+          detail: 'Uznel ID-karta hisoboti ochildi',
+          life: 2500,
+        })
+        return
+      }
+    }
+  } catch (error) {
+    console.warn('UbiViewer card print unavailable, falling back to browser print', error)
+  }
+
   printMemberCard(savedCard.value)
 }
 

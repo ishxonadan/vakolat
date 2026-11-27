@@ -1,4 +1,5 @@
 const fs = require("fs")
+const http = require("http")
 const multer = require("multer")
 const path = require("path")
 const express = require("express")
@@ -1336,15 +1337,126 @@ if (serveBuiltClient) {
   })
 } else {
   console.log("DEV")
-  const devProxy = createProxyMiddleware({ target: "http://localhost:7005", changeOrigin: true, ws: true })
-  app.use("/", (req, res, next) => {
-    const p = req.path || ""
-    const isBackendRoute =
-      p.startsWith("/api") || p.startsWith("/auth") || p.startsWith("/survey") || p.startsWith("/rolik")
-    if (isBackendRoute) {
-      return next()
+  const VITE_ORIGIN = "http://127.0.0.1:7005"
+  const VITE_READY_TTL_MS = 5000
+  let viteReadyUntil = 0
+
+  const isBackendRoute = (p) =>
+    p.startsWith("/api") || p.startsWith("/auth") || p.startsWith("/survey") || p.startsWith("/rolik")
+
+  const isHtmlNavigation = (req) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return false
+    const accept = String(req.headers.accept || "")
+    return accept.includes("text/html")
+  }
+
+  const probeVite = () =>
+    new Promise((resolve) => {
+      const req = http.get(VITE_ORIGIN + "/", { timeout: 300 }, (res) => {
+        res.resume()
+        resolve(true)
+      })
+      req.on("timeout", () => {
+        req.destroy()
+        resolve(false)
+      })
+      req.on("error", () => resolve(false))
+    })
+
+  const ensureViteReady = async () => {
+    if (Date.now() < viteReadyUntil) return true
+    const ok = await probeVite()
+    if (ok) viteReadyUntil = Date.now() + VITE_READY_TTL_MS
+    else viteReadyUntil = 0
+    return ok
+  }
+
+  const sendViteWaitPage = (res) => {
+    res.status(503).set("Retry-After", "2").type("html").send(`<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="2" />
+  <title>Profilaktika</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(160deg, #f3f6f9 0%, #e8eef4 55%, #f7f4ef 100%);
+      color: #1f2a33;
     }
-    return devProxy(req, res, next)
+    .card { width: min(440px, 92vw); text-align: center; padding: 2rem 1.5rem; }
+    h1 { font-size: 1.25rem; font-weight: 650; line-height: 1.45; margin: 0 0 0.75rem; }
+    .status { margin: 0 0 1.5rem; color: #5a6b78; font-size: 0.95rem; min-height: 1.4em; }
+    .bar {
+      height: 10px; border-radius: 999px; background: #d7e0e8; overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.06);
+    }
+    .fill {
+      height: 100%; width: 8%; border-radius: inherit;
+      background: linear-gradient(90deg, #2f6fed, #4aa3ff);
+      transition: width .35s ease;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Profilaktika ishlari ketmoqda, birozdan keyin ishga tushadi.</h1>
+    <p class="status" id="status">Tayyorlanmoqda…</p>
+    <div class="bar" aria-hidden="true"><div class="fill" id="fill"></div></div>
+  </main>
+  <script>
+    (function () {
+      var statuses = ["Tayyorlanmoqda…", "Yuklanmoqda…", "Deyarli tayyor…"];
+      var statusEl = document.getElementById("status");
+      var fill = document.getElementById("fill");
+      var pct = 8;
+      var i = 0;
+      setInterval(function () {
+        i = (i + 1) % statuses.length;
+        statusEl.textContent = statuses[i];
+      }, 1400);
+      setInterval(function () {
+        if (pct < 90) {
+          pct += Math.max(1, Math.round((90 - pct) * 0.08));
+          fill.style.width = pct + "%";
+        }
+      }, 400);
+      setTimeout(function () { location.reload(); }, 1500);
+    })();
+  </script>
+</body>
+</html>`)
+  }
+
+  const devProxy = createProxyMiddleware({
+    target: VITE_ORIGIN,
+    changeOrigin: true,
+    ws: true,
+    on: {
+      error(err, req, res) {
+        viteReadyUntil = 0
+        if (res && !res.headersSent && typeof res.writeHead === "function") {
+          if (isHtmlNavigation(req)) return sendViteWaitPage(res)
+          res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "2" })
+          return res.end("Vaqtincha mavjud emas")
+        }
+      },
+    },
+  })
+
+  app.use("/", async (req, res, next) => {
+    const p = req.path || ""
+    if (isBackendRoute(p)) return next()
+
+    const ready = await ensureViteReady()
+    if (ready) return devProxy(req, res, next)
+
+    if (isHtmlNavigation(req)) return sendViteWaitPage(res)
+    res.status(503).set("Retry-After", "2").type("text").send("Vaqtincha mavjud emas")
   })
 }
 

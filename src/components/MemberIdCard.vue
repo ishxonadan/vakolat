@@ -2,11 +2,11 @@
   <div class="member-id-card">
     <div class="id-card-header">
       <div class="id-card-logo">
-        <LibraryLogo />
+        <img src="/card-building-logo.png" alt="" />
       </div>
       <div class="id-card-title">
-        Alisher Navoiy nomidagi<br />
-        O‘zbekiston Milliy kutubxonasi
+        Alişer Navoiy nomidagi<br />
+        Özbekiston Milliy kutubxonasi
       </div>
     </div>
 
@@ -18,33 +18,30 @@
         <div class="id-value">{{ names.familiya || '—' }}</div>
         <div class="id-label">Ismi:</div>
         <div class="id-value">{{ names.ismi || '—' }}</div>
-        <div class="id-label">Sharifi:</div>
+        <div class="id-label">Şarifi:</div>
         <div class="id-value">{{ names.sharifi || '—' }}</div>
         <div class="id-label">Toifasi:</div>
-        <div class="id-value">{{ position || '—' }}</div>
+        <div class="id-value">{{ positionDisplay }}</div>
         <div class="id-label">Kafedrasi:</div>
         <div class="id-value">{{ kafedraDisplay }}</div>
       </div>
       <div class="id-photo">
         <img v-if="normalizedPhoto" :src="normalizedPhoto" alt="Foydalanuvchi rasmi" />
-        <div v-else class="id-photo-empty">Rasm yo'q</div>
       </div>
     </div>
 
     <div class="id-card-footer">
-      <div class="id-barcode">
-        <img v-if="barcodeSrc" :src="barcodeSrc" :alt="userNo" />
-      </div>
+      <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
       <div class="id-expiry">{{ expiryDisplay }}</div>
+      <div class="id-barcode-text">{{ userNo }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import LibraryLogo from './LibraryLogo.vue'
 import { generateBarcode } from '@/utils/barcode'
-import { formatExpiry, splitUserName } from '@/utils/printMemberCard'
+import { formatExpiry, splitUserName, toNewUzbekLatin } from '@/utils/printMemberCard'
 
 const props = defineProps({
   userNo: { type: String, default: '' },
@@ -57,10 +54,12 @@ const props = defineProps({
 
 const names = computed(() => splitUserName(props.userName))
 
+const positionDisplay = computed(() => toNewUzbekLatin(props.position).trim() || '—')
+
 const kafedraDisplay = computed(() => {
   const value = props.kafedra
   if (value === null || value === undefined || value === '') return '—'
-  return String(value)
+  return toNewUzbekLatin(value).trim() || '—'
 })
 
 const expiryDisplay = computed(() => formatExpiry(props.expiryYyyymmdd) || '—')
@@ -75,134 +74,155 @@ const normalizedPhoto = computed(() => {
 const barcodeSrc = computed(() => {
   const id = String(props.userNo || '').trim()
   if (!id) return ''
-  return generateBarcode(id)
+  return generateBarcode(id, {
+    displayValue: false,
+    height: 64,
+    width: 1.7,
+    margin: 0,
+    transparent: true,
+  })
 })
 </script>
 
 <style scoped>
 .member-id-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 520px;
   aspect-ratio: 86 / 54;
-  border: 1px solid #222;
-  border-radius: 12px;
+  border-radius: 2.6%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #e8edf2 0%, #f4f6f8 45%, #eef1f4 100%);
+  background: #fff;
   color: #111;
   font-family: Arial, Helvetica, sans-serif;
+  container-type: inline-size;
 }
 
 .id-card-header {
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.45rem 0.7rem 0.4rem;
-  border-bottom: 1px solid #111;
+  align-items: flex-end;
+  gap: 2.2cqw;
+  padding: 2.2cqw 3.4cqw 0.7cqw;
+  border-bottom: 0.28cqw solid #6b6b73;
 }
 
 .id-card-logo {
+  width: 36cqw;
   flex-shrink: 0;
   line-height: 0;
 }
 
-.id-card-logo :deep(svg) {
-  width: 72px;
-  height: 23px;
+.id-card-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .id-card-title {
-  font-size: 0.72rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 3.35cqw;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  padding-bottom: 0.35cqw;
 }
 
 .id-card-body {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 5.4rem;
-  gap: 0.55rem;
-  padding: 0.45rem 0.7rem;
-  border-bottom: 1px solid #111;
   min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 23.5cqw;
+  column-gap: 1.4cqw;
+  padding: 1.6cqw 3.4cqw 1.15cqw;
 }
 
 .id-rows {
   display: grid;
-  grid-template-columns: 7.2rem 1fr;
-  row-gap: 0.18rem;
-  column-gap: 0.35rem;
-  align-content: start;
-  font-size: 0.7rem;
-  line-height: 1.2;
+  grid-template-columns: 31cqw minmax(0, 1fr);
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  column-gap: 1.8cqw;
+  height: 100%;
+  font-size: 3.3cqw;
+  line-height: 1.05;
+}
+
+.id-label,
+.id-value {
+  align-self: center;
+  min-width: 0;
 }
 
 .id-label {
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .id-value {
   font-weight: 700;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .id-photo {
-  width: 5.4rem;
-  height: 5.9rem;
-  border: 1px solid #333;
-  background: #ddd;
+  width: 23.5cqw;
+  height: 100%;
   overflow: hidden;
-  justify-self: end;
-  align-self: start;
+  background: #fff;
+  align-self: stretch;
 }
 
 .id-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 18%;
   display: block;
   filter: grayscale(1);
 }
 
-.id-photo-empty {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  color: #666;
-  text-align: center;
-  padding: 0.25rem;
-}
-
 .id-card-footer {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0.7rem 0.45rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 2.4cqw;
+  align-items: end;
+  border-top: 0.32cqw solid #111;
+  padding: 1.05cqw 3.4cqw 1.35cqw;
 }
 
-.id-barcode {
-  flex: 1;
-  min-width: 0;
-}
-
-.id-barcode img {
-  max-width: 12rem;
-  height: 2.6rem;
-  object-fit: contain;
-  object-position: left bottom;
+.id-bars {
+  grid-column: 1;
+  grid-row: 1;
+  width: 52cqw;
+  height: auto;
   display: block;
 }
 
 .id-expiry {
-  font-size: 1rem;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: end;
+  font-size: 4.55cqw;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  line-height: 1;
   white-space: nowrap;
-  padding-bottom: 0.1rem;
+  padding-bottom: 0.1cqw;
+}
+
+.id-barcode-text {
+  grid-column: 1;
+  grid-row: 2;
+  width: 52cqw;
+  text-align: center;
+  font-size: 2.45cqw;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin-top: 0.35cqw;
 }
 </style>
