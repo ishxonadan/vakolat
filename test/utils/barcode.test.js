@@ -1,7 +1,12 @@
 const { expect } = require('chai')
-const { generateBarcode } = require('../../src/utils/barcode')
 
 describe('Barcode Utils', () => {
+  let generateBarcode
+
+  before(async () => {
+    ;({ generateBarcode } = await import('../../src/utils/barcode.js'))
+  })
+
   describe('generateBarcode', () => {
     it('should generate a barcode data URL', () => {
       const text = 'TEST123'

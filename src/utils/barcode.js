@@ -1,4 +1,4 @@
-const JsBarcode = require('jsbarcode')
+import JsBarcode from 'jsbarcode'
 
 const EMPTY_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
@@ -8,7 +8,7 @@ const EMPTY_PNG =
  * @param {string} text
  * @returns {string}
  */
-function generateBarcode(text) {
+export function generateBarcode(text) {
   const canvas = document.createElement('canvas')
   const value = String(text ?? '').trim() || ' '
 
@@ -44,4 +44,4 @@ function generateBarcode(text) {
   }
 }
 
-module.exports = { generateBarcode }
+export default { generateBarcode }
