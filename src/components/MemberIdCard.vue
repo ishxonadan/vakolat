@@ -1,49 +1,49 @@
 <template>
   <div class="member-id-card-frame">
-  <div class="member-id-card">
-    <div class="id-card-header">
-      <div class="id-card-logo">
-        <img src="/card-building-logo.png" alt="" />
+    <div class="member-id-card">
+      <div class="id-card-header">
+        <div class="id-card-logo">
+          <img src="/card-building-logo.png" alt="" />
+        </div>
+        <div class="id-card-title">
+          Alişer Navoiy nomidagi<br />
+          Özbekiston Milliy kutubxonasi
+        </div>
       </div>
-      <div class="id-card-title">
-        Alisher Navoiy nomidagi<br />
-        O‘zbekiston Milliy kutubxonasi
-      </div>
-    </div>
 
-    <div class="id-card-body">
-      <div class="id-rows">
-        <div class="id-label">ID-karta raqami:</div>
-        <div class="id-value">{{ userNo || '—' }}</div>
-        <div class="id-label">Familiyasi:</div>
-        <div class="id-value">{{ names.familiya || '—' }}</div>
-        <div class="id-label">Ismi:</div>
-        <div class="id-value">{{ names.ismi || '—' }}</div>
-        <div class="id-label">Sharifi:</div>
-        <div class="id-value">{{ names.sharifi || '—' }}</div>
-        <div class="id-label">Toifasi:</div>
-        <div class="id-value">{{ positionDisplay }}</div>
-        <div class="id-label">Kafedrasi:</div>
-        <div class="id-value">{{ kafedraDisplay }}</div>
+      <div class="id-card-body">
+        <div class="id-rows">
+          <div class="id-label">ID-karta raqami:</div>
+          <div class="id-value">{{ userNo || '—' }}</div>
+          <div class="id-label">Familyasi:</div>
+          <div class="id-value">{{ names.familiya || '—' }}</div>
+          <div class="id-label">Ismi:</div>
+          <div class="id-value">{{ names.ismi || '—' }}</div>
+          <div class="id-label">Şarifi:</div>
+          <div class="id-value">{{ names.sharifi || '—' }}</div>
+          <div class="id-label">Toifasi:</div>
+          <div class="id-value">{{ positionDisplay }}</div>
+          <div class="id-label">Kafedrasi:</div>
+          <div class="id-value">{{ kafedraDisplay }}</div>
+        </div>
+        <div class="id-photo">
+          <img v-if="normalizedPhoto" :src="normalizedPhoto" alt="" />
+        </div>
       </div>
-      <div class="id-photo">
-        <img v-if="normalizedPhoto" :src="normalizedPhoto" alt="Foydalanuvchi rasmi" />
-      </div>
-    </div>
 
-    <div class="id-card-footer">
-      <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
-      <div class="id-expiry">{{ expiryDisplay }}</div>
-      <div class="id-barcode-text">{{ barcodeValue }}</div>
+      <div class="id-card-footer">
+        <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
+        <div class="id-expiry">{{ expiryDisplay }}</div>
+        <div class="id-barcode-text">{{ barcodeValue }}</div>
+      </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { generateBarcode } from '@/utils/barcode'
-import { formatExpiry, splitUserName } from '@/utils/printMemberCard'
+import { formatExpiry, splitUserName, toNewUzbekLatin } from '@/utils/printMemberCard'
 
 const props = defineProps({
   userNo: { type: String, default: '' },
@@ -55,14 +55,14 @@ const props = defineProps({
   expiryYyyymmdd: { type: String, default: '' },
 })
 
-const names = computed(() => splitUserName(props.userName))
+const names = computed(() => splitUserName(toNewUzbekLatin(props.userName)))
 
-const positionDisplay = computed(() => String(props.position ?? '').trim() || '—')
+const positionDisplay = computed(() => toNewUzbekLatin(props.position).trim() || '—')
 
 const kafedraDisplay = computed(() => {
   const value = props.kafedra
   if (value === null || value === undefined || value === '') return '—'
-  return String(value).trim() || '—'
+  return toNewUzbekLatin(value).trim() || '—'
 })
 
 const barcodeValue = computed(() => String(props.cardNo || props.userNo || '').trim())
@@ -84,7 +84,6 @@ const barcodeSrc = computed(() => {
     height: 64,
     width: 1.7,
     margin: 0,
-    lineColor: '#1a237e',
     transparent: true,
   })
 })
@@ -100,8 +99,7 @@ const barcodeSrc = computed(() => {
 .member-id-card {
   width: 100%;
   height: 100%;
-  border: 1px solid #bdbdbd;
-  border-radius: 0;
+  border-radius: 2.6%;
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
@@ -136,7 +134,7 @@ const barcodeSrc = computed(() => {
   flex: 1;
   min-width: 0;
   font-size: 3.35cqw;
-  font-weight: 400;
+  font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.015em;
   padding-bottom: 0.35cqw;
@@ -168,18 +166,19 @@ const barcodeSrc = computed(() => {
 }
 
 .id-label {
-  font-weight: 700;
+  font-weight: 400;
   white-space: nowrap;
 }
 
 .id-value {
-  font-weight: 400;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .id-photo {
+  width: 23.5cqw;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -194,6 +193,7 @@ const barcodeSrc = computed(() => {
   object-fit: cover;
   object-position: center 22%;
   display: block;
+  filter: grayscale(1);
 }
 
 .id-card-footer {
@@ -210,8 +210,7 @@ const barcodeSrc = computed(() => {
   grid-column: 1;
   grid-row: 1;
   width: 52cqw;
-  height: 8.2cqw;
-  object-fit: fill;
+  height: auto;
   display: block;
 }
 
@@ -225,7 +224,6 @@ const barcodeSrc = computed(() => {
   letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
-  padding-bottom: 0.1cqw;
 }
 
 .id-barcode-text {
@@ -234,8 +232,7 @@ const barcodeSrc = computed(() => {
   width: 52cqw;
   text-align: center;
   font-size: 2.45cqw;
-  font-weight: 400;
-  color: #1e4fd8;
+  font-weight: 500;
   letter-spacing: 0.04em;
   line-height: 1;
   margin-top: 0.35cqw;

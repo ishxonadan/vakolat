@@ -373,7 +373,7 @@
           severity="secondary"
           outlined
           :disabled="!canOpenCardPreview"
-          :title="canOpenCardPreview ? 'ID-karta ko‘rinishi' : 'Avval oxirgi o‘zgarishlarni saqlang'"
+          :title="printButtonTitle"
           @click="toggleCardPreview"
         />
         <Button
@@ -417,6 +417,8 @@
         label="Chop etish"
         icon="pi pi-print"
         severity="success"
+        :disabled="!canOpenCardPreview"
+        :title="printButtonTitle"
         @click="onPrintCard"
       />
     </aside>
@@ -492,6 +494,10 @@ const props = defineProps({
     default: false
   },
   uznelSyncEnabled: {
+    type: Boolean,
+    default: false
+  },
+  requireUznelSyncBeforePrint: {
     type: Boolean,
     default: false
   },
@@ -641,8 +647,16 @@ const canShowPrintButton = computed(() => (
 ))
 
 const canOpenCardPreview = computed(() => (
-  canShowPrintButton.value && !hasUnsavedChanges.value
+  canShowPrintButton.value
+  && !hasUnsavedChanges.value
+  && !props.requireUznelSyncBeforePrint
 ))
+
+const printButtonTitle = computed(() => {
+  if (props.requireUznelSyncBeforePrint) return 'Avval Uznelga sinxronizatsiya qiling'
+  if (hasUnsavedChanges.value) return 'Avval oxirgi o‘zgarishlarni saqlang'
+  return 'ID-karta ko‘rinishi'
+})
 
 const savedCard = computed(() => {
   const member = props.selectedMember || {}
@@ -1060,8 +1074,10 @@ function toggleCardPreview() {
   if (!canOpenCardPreview.value) {
     toast.add({
       severity: 'warn',
-      summary: 'Saqlash kerak',
-      detail: "Chop etishdan oldin oxirgi o‘zgarishlarni saqlang",
+      summary: props.requireUznelSyncBeforePrint ? 'Sinxronizatsiya kerak' : 'Saqlash kerak',
+      detail: props.requireUznelSyncBeforePrint
+        ? 'Yangi foydalanuvchini chop etishdan oldin Uznelga sinxronizatsiya qiling'
+        : "Chop etishdan oldin oxirgi o‘zgarishlarni saqlang",
       life: 2500,
     })
     return

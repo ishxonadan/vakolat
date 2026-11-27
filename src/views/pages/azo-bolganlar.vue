@@ -33,6 +33,7 @@ const activeTab = ref(0)
 const userVisits = ref([])
 const loadingVisits = ref(false)
 const isEditMode = ref(false)
+const newMemberAwaitingUznelSync = ref(false)
 const uznelSyncEnabled = ref(false)
 const memberIndex = ref(-1)
 const recordNavBusy = ref(false)
@@ -123,6 +124,7 @@ const openMemberDialog = async (member, { keepTab = false } = {}) => {
   memberIndex.value = members.value.findIndex((row) => row.USER_NO && row.USER_NO === member.USER_NO)
   selectedMember.value = { ...member }
   isEditMode.value = true
+  newMemberAwaitingUznelSync.value = false
   uznelSyncEnabled.value = memberIsUznelSynced(member)
   if (!keepTab) activeTab.value = 0
   showDialog.value = true
@@ -191,6 +193,7 @@ const openAddMemberDialog = () => {
     FULL_CODE: '',
   }
   isEditMode.value = false
+  newMemberAwaitingUznelSync.value = true
   uznelSyncEnabled.value = false
   activeTab.value = 0
   showDialog.value = true
@@ -270,6 +273,7 @@ const saveMember = async (updatedMember) => {
         life: 3500
       })
       isEditMode.value = true
+      newMemberAwaitingUznelSync.value = true
     }
 
     selectedMember.value = { ...updatedMember }
@@ -289,11 +293,13 @@ const saveMember = async (updatedMember) => {
 const onUznelSynced = (member) => {
   selectedMember.value = { ...selectedMember.value, ...member }
   uznelSyncEnabled.value = true
+  newMemberAwaitingUznelSync.value = false
 }
 
 const closeDialog = () => {
   showDialog.value = false
   cardPreviewOpen.value = false
+  newMemberAwaitingUznelSync.value = false
   memberIndex.value = -1
   selectedMember.value = null
   userVisits.value = []
@@ -377,6 +383,7 @@ onMounted(() => {
             :is-edit-mode="true"
             :can-generate-uznel-id="true"
             :uznel-sync-enabled="uznelSyncEnabled"
+            :require-uznel-sync-before-print="newMemberAwaitingUznelSync"
             :record-order="recordOrder"
             :can-record-prev="canRecordPrev"
             :can-record-next="canRecordNext"
@@ -417,6 +424,7 @@ onMounted(() => {
         :is-edit-mode="false"
         :can-generate-uznel-id="true"
         :uznel-sync-enabled="uznelSyncEnabled"
+        :require-uznel-sync-before-print="newMemberAwaitingUznelSync"
         @close-dialog="closeDialog"
         @save-member="saveMember"
         @uznel-synced="onUznelSynced"
