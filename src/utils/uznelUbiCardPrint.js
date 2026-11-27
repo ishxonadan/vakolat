@@ -4,10 +4,12 @@
  * lon::formLabel_Photo4UserUZB.xfdl.
  */
 
+import { toNewUzbekLatin } from '@/utils/printMemberCard'
+
 const DEFAULT_FN_BASE = 'https://uznel.natlib.uz:444/FN/'
 const DEFAULT_JRF = 'Print_UZB_CODE128.JRF'
-const DEFAULT_CARD_WIDTH = '350'
-const DEFAULT_CARD_HEIGHT = '200'
+const DEFAULT_CARD_WIDTH = '245'
+const DEFAULT_CARD_HEIGHT = '154'
 
 const SQL1_COLUMNS = [
   'NAME',
@@ -24,106 +26,106 @@ const SQL1_COLUMNS = [
 ]
 
 /**
- * Default Print_UZB_CODE128.JRF layout (350×200). Uznel normally loads these
- * from registry LABEL_UZB_USER_*; without them the viewer shows only the
- * static logo/frame.
+ * Positions from Print_UZB_CODE128.JRF. The data band is 245×155;
+ * TEXT1–2 sit beside the logo (width 150), TEXT3–8 are the six labels,
+ * and photo / barcode / expiry must stay inside that band or they are clipped.
  */
 const DEFAULT_LAYOUT = {
   CARDWIDTH: DEFAULT_CARD_WIDTH,
   CARDHEIGHT: DEFAULT_CARD_HEIGHT,
-  LOGOTOP: '5',
-  LOGOLEFT: '5',
-  LOGOWIDTH: '60',
-  LOGOHEIGHT: '25',
-  IMGTOP: '35',
-  IMGLEFT: '250',
-  IMGWIDTH: '80',
-  IMGHEIGHT: '90',
-  BARCODETOP: '155',
-  BARCODELEFT: '10',
-  BARCODEWIDTH: '180',
-  BARCODEHEIGHT: '35',
-  TEXT1: 'ID-karta raqami:',
-  TEXT1TOP: '35',
-  TEXT1LEFT: '10',
-  TEXT1SIZE: '9',
+  LOGOTOP: '3',
+  LOGOLEFT: '3',
+  LOGOWIDTH: '87',
+  LOGOHEIGHT: '20',
+  IMGTOP: '30',
+  IMGLEFT: '176',
+  IMGWIDTH: '62',
+  IMGHEIGHT: '84',
+  BARCODETOP: '121',
+  BARCODELEFT: '4',
+  BARCODEWIDTH: '112',
+  BARCODEHEIGHT: '28',
+  TEXT1: 'Alişer Navoiy nomidagi',
+  TEXT1TOP: '2',
+  TEXT1LEFT: '96',
+  TEXT1SIZE: '8',
   TEXT1KIND: 'Arial',
-  TEXT1STYLE: '0',
-  TEXT2: 'Familiyasi:',
-  TEXT2TOP: '50',
-  TEXT2LEFT: '10',
-  TEXT2SIZE: '9',
+  TEXT1STYLE: '1',
+  TEXT2: 'Özbekiston Milliy kutubxonasi',
+  TEXT2TOP: '13',
+  TEXT2LEFT: '96',
+  TEXT2SIZE: '8',
   TEXT2KIND: 'Arial',
-  TEXT2STYLE: '0',
-  TEXT3: 'Ismi:',
-  TEXT3TOP: '65',
-  TEXT3LEFT: '10',
-  TEXT3SIZE: '9',
+  TEXT2STYLE: '1',
+  TEXT3: 'ID-karta raqami:',
+  TEXT3TOP: '32',
+  TEXT3LEFT: '6',
+  TEXT3SIZE: '8',
   TEXT3KIND: 'Arial',
   TEXT3STYLE: '0',
-  TEXT4: 'Sharifi:',
-  TEXT4TOP: '80',
-  TEXT4LEFT: '10',
-  TEXT4SIZE: '9',
+  TEXT4: 'Familyasi:',
+  TEXT4TOP: '45',
+  TEXT4LEFT: '6',
+  TEXT4SIZE: '8',
   TEXT4KIND: 'Arial',
   TEXT4STYLE: '0',
-  TEXT5: 'Toifasi:',
-  TEXT5TOP: '95',
-  TEXT5LEFT: '10',
-  TEXT5SIZE: '9',
+  TEXT5: 'Ismi:',
+  TEXT5TOP: '58',
+  TEXT5LEFT: '6',
+  TEXT5SIZE: '8',
   TEXT5KIND: 'Arial',
   TEXT5STYLE: '0',
-  TEXT6: 'Kafedrasi:',
-  TEXT6TOP: '110',
-  TEXT6LEFT: '10',
-  TEXT6SIZE: '9',
+  TEXT6: 'Şarifi:',
+  TEXT6TOP: '71',
+  TEXT6LEFT: '6',
+  TEXT6SIZE: '8',
   TEXT6KIND: 'Arial',
   TEXT6STYLE: '0',
-  TEXT7: 'Alisher Navoiy nomidagi',
-  TEXT7TOP: '8',
-  TEXT7LEFT: '70',
-  TEXT7SIZE: '10',
+  TEXT7: 'Toifasi:',
+  TEXT7TOP: '84',
+  TEXT7LEFT: '6',
+  TEXT7SIZE: '8',
   TEXT7KIND: 'Arial',
-  TEXT7STYLE: '1',
-  TEXT8: "O'zbekiston Milliy kutubxonasi",
-  TEXT8TOP: '20',
-  TEXT8LEFT: '70',
-  TEXT8SIZE: '10',
+  TEXT7STYLE: '0',
+  TEXT8: 'Kafedrasi:',
+  TEXT8TOP: '97',
+  TEXT8LEFT: '6',
+  TEXT8SIZE: '8',
   TEXT8KIND: 'Arial',
-  TEXT8STYLE: '1',
-  DATA1TOP: '35',
-  DATA1LEFT: '110',
-  DATA1SIZE: '9',
+  TEXT8STYLE: '0',
+  DATA1TOP: '32',
+  DATA1LEFT: '108',
+  DATA1SIZE: '8',
   DATA1KIND: 'Arial',
   DATA1STYLE: '1',
-  DATA2TOP: '50',
-  DATA2LEFT: '110',
-  DATA2SIZE: '9',
+  DATA2TOP: '45',
+  DATA2LEFT: '108',
+  DATA2SIZE: '8',
   DATA2KIND: 'Arial',
   DATA2STYLE: '1',
-  DATA3TOP: '65',
-  DATA3LEFT: '110',
-  DATA3SIZE: '9',
+  DATA3TOP: '58',
+  DATA3LEFT: '108',
+  DATA3SIZE: '8',
   DATA3KIND: 'Arial',
   DATA3STYLE: '1',
-  DATA4TOP: '80',
-  DATA4LEFT: '110',
-  DATA4SIZE: '9',
+  DATA4TOP: '71',
+  DATA4LEFT: '108',
+  DATA4SIZE: '8',
   DATA4KIND: 'Arial',
   DATA4STYLE: '1',
-  DATA5TOP: '95',
-  DATA5LEFT: '110',
-  DATA5SIZE: '9',
+  DATA5TOP: '84',
+  DATA5LEFT: '108',
+  DATA5SIZE: '8',
   DATA5KIND: 'Arial',
   DATA5STYLE: '1',
-  DATA6TOP: '110',
-  DATA6LEFT: '110',
-  DATA6SIZE: '9',
+  DATA6TOP: '97',
+  DATA6LEFT: '108',
+  DATA6SIZE: '8',
   DATA6KIND: 'Arial',
   DATA6STYLE: '1',
-  DATA7TOP: '170',
-  DATA7LEFT: '250',
-  DATA7SIZE: '12',
+  DATA7TOP: '126',
+  DATA7LEFT: '148',
+  DATA7SIZE: '11',
   DATA7KIND: 'Arial',
   DATA7STYLE: '1',
 }
@@ -149,12 +151,19 @@ export function deriveUznelFnBase(actionUrl) {
 }
 
 function splitUserName(fullName) {
-  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean)
+  const parts = toNewUzbekLatin(fullName).trim().split(/\s+/).filter(Boolean)
   return {
     first: parts[0] || '',
     middle: parts[1] || '',
     last: parts.slice(2).join(' '),
   }
+}
+
+/** PHOTO is a BLOB column. Stream data must be raw base64, not a URL. */
+function photoBase64(member) {
+  const raw = String(member?.PHOTO || member?.photo || member?.photoSrc || '').trim()
+  if (!raw || /^https?:\/\//i.test(raw)) return ''
+  return raw.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '').replace(/\s+/g, '')
 }
 
 function formatExpiry(yyyymmdd) {
@@ -212,16 +221,17 @@ export function buildUznelCardPayload(member, config = {}) {
   const sequenceNo = String(
     member?.USER_SEQ_NO || member?.SEQUENCE_NO || member?.sequenceNo || '',
   ).trim()
-  const position = String(member?.USER_POSITION || member?.position || '').trim()
-  const kafedra = String(member?.kafedra ?? member?.DATA2 ?? '').trim()
+  const position = toNewUzbekLatin(member?.USER_POSITION || member?.position || '').trim()
+  const kafedra = toNewUzbekLatin(member?.kafedra ?? member?.DATA2 ?? '').trim()
   const expiry = formatExpiry(member?.LIB_USE_LDATE || member?.expiryYyyymmdd || '')
   const names = splitUserName(userName)
+  const photo = photoBase64(member) || buildPhotoUrl(fnBase, sequenceNo)
 
   const row = {
-    NAME: userName,
+    NAME: toNewUzbekLatin(userName),
     USER_ID: cardNo,
     BARCODE_NO: cardNo,
-    PHOTO: buildPhotoUrl(fnBase, sequenceNo),
+    PHOTO: photo,
     USER_NO: userNo,
     FIRST_NAME: names.first,
     MIDDLE_NAME: names.middle,

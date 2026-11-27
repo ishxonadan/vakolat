@@ -1085,6 +1085,7 @@ async function onPrintCard() {
     LIB_USE_LDATE: savedCard.value.expiryYyyymmdd,
     kafedra: savedCard.value.kafedra,
     DATA2: savedCard.value.kafedra,
+    PHOTO: savedCard.value.photoSrc || props.selectedMember?.PHOTO || '',
   }
 
   try {
