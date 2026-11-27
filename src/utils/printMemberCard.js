@@ -163,7 +163,7 @@ export function printMemberCard(member) {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center 18%;
+      object-position: center 22%;
       display: block;
       filter: grayscale(1);
     }
@@ -180,7 +180,8 @@ export function printMemberCard(member) {
       grid-column: 1;
       grid-row: 1;
       width: 44.7mm;
-      height: auto;
+      height: 7mm;
+      object-fit: fill;
       display: block;
     }
     .id-expiry {

@@ -1,4 +1,5 @@
 <template>
+  <div class="member-id-card-frame">
   <div class="member-id-card">
     <div class="id-card-header">
       <div class="id-card-logo">
@@ -35,6 +36,7 @@
       <div class="id-expiry">{{ expiryDisplay }}</div>
       <div class="id-barcode-text">{{ userNo }}</div>
     </div>
+  </div>
   </div>
 </template>
 
@@ -85,10 +87,15 @@ const barcodeSrc = computed(() => {
 </script>
 
 <style scoped>
-.member-id-card {
+.member-id-card-frame {
   width: 100%;
   max-width: 520px;
   aspect-ratio: 86 / 54;
+}
+
+.member-id-card {
+  width: 100%;
+  height: 100%;
   border-radius: 2.6%;
   overflow: hidden;
   display: flex;
@@ -167,7 +174,7 @@ const barcodeSrc = computed(() => {
 }
 
 .id-photo {
-  width: 23.5cqw;
+  min-height: 0;
   height: 100%;
   overflow: hidden;
   background: #fff;
@@ -177,8 +184,9 @@ const barcodeSrc = computed(() => {
 .id-photo img {
   width: 100%;
   height: 100%;
+  max-width: none;
   object-fit: cover;
-  object-position: center 18%;
+  object-position: center 22%;
   display: block;
   filter: grayscale(1);
 }
@@ -197,7 +205,8 @@ const barcodeSrc = computed(() => {
   grid-column: 1;
   grid-row: 1;
   width: 52cqw;
-  height: auto;
+  height: 8.2cqw;
+  object-fit: fill;
   display: block;
 }
 

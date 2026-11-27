@@ -321,21 +321,20 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  // Get single member by ID
-  router.get("/:id", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
-    try {
-      const member = await CacheUser.findById(req.params.id)
-      if (!member) {
-        return res.status(404).json({ error: "Member not found" })
-      }
-      res.json(member)
-    } catch (error) {
-      console.error("Error fetching member:", error)
-      res.status(500).json({ error: "Error fetching member", details: error.message })
-    }
+  // UbiViewer / UZB card print config (must be before /:id)
+  router.get("/card-print-config", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), (_req, res) => {
+    const actionUrl = process.env.UZNEL_URL || "https://uznel.natlib.uz:444/FN/Manager/action.do"
+    const fnBase = String(actionUrl).replace(/\/Manager\/action\.do(?:\?.*)?$/i, "/")
+    res.json({
+      enabled: process.env.UZNEL_UBI_CARD_PRINT !== "0",
+      actionUrl,
+      fnBase: fnBase.endsWith("/") ? fnBase : `${fnBase}/`,
+      jrf: process.env.UZNEL_UBI_CARD_JRF || "Print_UZB_CODE128.JRF",
+      pluginPath: "link/ubireport/plugin/plugin.jsp",
+    })
   })
 
-  // Get statistics
+  // Get statistics (must be before /:id)
   router.get("/stats/summary", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
     try {
       const total = await CacheUser.countDocuments()
@@ -456,17 +455,18 @@ module.exports = (nazorat, vakolat) => {
     }
   })
 
-  // UbiViewer / UZB card print config (plugin.jsp + JRF)
-  router.get("/card-print-config", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), (_req, res) => {
-    const actionUrl = process.env.UZNEL_URL || "https://uznel.natlib.uz:444/FN/Manager/action.do"
-    const fnBase = String(actionUrl).replace(/\/Manager\/action\.do(?:\?.*)?$/i, "/")
-    res.json({
-      enabled: process.env.UZNEL_UBI_CARD_PRINT !== "0",
-      actionUrl,
-      fnBase: fnBase.endsWith("/") ? fnBase : `${fnBase}/`,
-      jrf: process.env.UZNEL_UBI_CARD_JRF || "Print_UZB_CODE128.JRF",
-      pluginPath: "link/ubireport/plugin/plugin.jsp",
-    })
+  // Get single member by Mongo ID (keep after concrete GET paths)
+  router.get("/:id", verifyToken, checkAnyPermissions(["view_members", "manage_members"]), async (req, res) => {
+    try {
+      const member = await CacheUser.findById(req.params.id)
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" })
+      }
+      res.json(member)
+    } catch (error) {
+      console.error("Error fetching member:", error)
+      res.status(500).json({ error: "Error fetching member", details: error.message })
+    }
   })
 
   return router

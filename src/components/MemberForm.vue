@@ -1085,7 +1085,13 @@ async function onPrintCard() {
   }
 
   try {
-    const config = await apiService.get('/members/card-print-config')
+    let config = { enabled: true }
+    try {
+      config = await apiService.get('/members/card-print-config')
+    } catch (configError) {
+      console.warn('card-print-config failed, using defaults', configError)
+    }
+
     if (config?.enabled !== false) {
       const opened = openUznelUbiCardPrint(member, {
         actionUrl: config.actionUrl,
@@ -1101,6 +1107,12 @@ async function onPrintCard() {
         })
         return
       }
+      toast.add({
+        severity: 'warn',
+        summary: 'UbiViewer',
+        detail: 'Oyna ochilmadi (popup bloklangan bo‘lishi mumkin). Brauzer chop etishiga o‘tildi',
+        life: 3500,
+      })
     }
   } catch (error) {
     console.warn('UbiViewer card print unavailable, falling back to browser print', error)
