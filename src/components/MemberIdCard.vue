@@ -88,15 +88,17 @@ const barcodeSrc = computed(() => {
 
 <style scoped>
 .member-id-card-frame {
-  width: 100%;
-  max-width: 520px;
+  width: min(86mm, 100%);
   aspect-ratio: 86 / 54;
+  flex-shrink: 0;
 }
 
 .member-id-card {
   width: 100%;
   height: 100%;
-  border-radius: 2.6%;
+  border: 1px solid #bdbdbd;
+  border-radius: 0;
+  box-sizing: border-box;
   overflow: hidden;
   display: flex;
   flex-direction: column;

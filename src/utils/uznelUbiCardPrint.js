@@ -23,27 +23,112 @@ const SQL1_COLUMNS = [
   'LIB_USE_LDATE',
 ]
 
-const LAYOUT_ARG_KEYS = [
-  'CARDWIDTH', 'CARDHEIGHT',
-  'LOGOTOP', 'LOGOLEFT', 'LOGOWIDTH', 'LOGOHEIGHT',
-  'IMGTOP', 'IMGLEFT', 'IMGWIDTH', 'IMGHEIGHT',
-  'BARCODETOP', 'BARCODELEFT', 'BARCODEWIDTH', 'BARCODEHEIGHT',
-  'TEXT1', 'TEXT1TOP', 'TEXT1LEFT', 'TEXT1SIZE', 'TEXT1KIND', 'TEXT1STYLE',
-  'TEXT2', 'TEXT2TOP', 'TEXT2LEFT', 'TEXT2SIZE', 'TEXT2KIND', 'TEXT2STYLE',
-  'TEXT3', 'TEXT3TOP', 'TEXT3LEFT', 'TEXT3SIZE', 'TEXT3KIND', 'TEXT3STYLE',
-  'TEXT4', 'TEXT4TOP', 'TEXT4LEFT', 'TEXT4SIZE', 'TEXT4KIND', 'TEXT4STYLE',
-  'TEXT5', 'TEXT5TOP', 'TEXT5LEFT', 'TEXT5SIZE', 'TEXT5KIND', 'TEXT5STYLE',
-  'TEXT6', 'TEXT6TOP', 'TEXT6LEFT', 'TEXT6SIZE', 'TEXT6KIND', 'TEXT6STYLE',
-  'TEXT7', 'TEXT7TOP', 'TEXT7LEFT', 'TEXT7SIZE', 'TEXT7KIND', 'TEXT7STYLE',
-  'TEXT8', 'TEXT8TOP', 'TEXT8LEFT', 'TEXT8SIZE', 'TEXT8KIND', 'TEXT8STYLE',
-  'DATA1TOP', 'DATA1LEFT', 'DATA1SIZE', 'DATA1KIND', 'DATA1STYLE',
-  'DATA2TOP', 'DATA2LEFT', 'DATA2SIZE', 'DATA2KIND', 'DATA2STYLE',
-  'DATA3TOP', 'DATA3LEFT', 'DATA3SIZE', 'DATA3KIND', 'DATA3STYLE',
-  'DATA4TOP', 'DATA4LEFT', 'DATA4SIZE', 'DATA4KIND', 'DATA4STYLE',
-  'DATA5TOP', 'DATA5LEFT', 'DATA5SIZE', 'DATA5KIND', 'DATA5STYLE',
-  'DATA6TOP', 'DATA6LEFT', 'DATA6SIZE', 'DATA6KIND', 'DATA6STYLE',
-  'DATA7TOP', 'DATA7LEFT', 'DATA7SIZE', 'DATA7KIND', 'DATA7STYLE',
-]
+/**
+ * Default Print_UZB_CODE128.JRF layout (350×200). Uznel normally loads these
+ * from registry LABEL_UZB_USER_*; without them the viewer shows only the
+ * static logo/frame.
+ */
+const DEFAULT_LAYOUT = {
+  CARDWIDTH: DEFAULT_CARD_WIDTH,
+  CARDHEIGHT: DEFAULT_CARD_HEIGHT,
+  LOGOTOP: '5',
+  LOGOLEFT: '5',
+  LOGOWIDTH: '60',
+  LOGOHEIGHT: '25',
+  IMGTOP: '35',
+  IMGLEFT: '250',
+  IMGWIDTH: '80',
+  IMGHEIGHT: '90',
+  BARCODETOP: '155',
+  BARCODELEFT: '10',
+  BARCODEWIDTH: '180',
+  BARCODEHEIGHT: '35',
+  TEXT1: 'ID-karta raqami:',
+  TEXT1TOP: '35',
+  TEXT1LEFT: '10',
+  TEXT1SIZE: '9',
+  TEXT1KIND: 'Arial',
+  TEXT1STYLE: '0',
+  TEXT2: 'Familiyasi:',
+  TEXT2TOP: '50',
+  TEXT2LEFT: '10',
+  TEXT2SIZE: '9',
+  TEXT2KIND: 'Arial',
+  TEXT2STYLE: '0',
+  TEXT3: 'Ismi:',
+  TEXT3TOP: '65',
+  TEXT3LEFT: '10',
+  TEXT3SIZE: '9',
+  TEXT3KIND: 'Arial',
+  TEXT3STYLE: '0',
+  TEXT4: 'Sharifi:',
+  TEXT4TOP: '80',
+  TEXT4LEFT: '10',
+  TEXT4SIZE: '9',
+  TEXT4KIND: 'Arial',
+  TEXT4STYLE: '0',
+  TEXT5: 'Toifasi:',
+  TEXT5TOP: '95',
+  TEXT5LEFT: '10',
+  TEXT5SIZE: '9',
+  TEXT5KIND: 'Arial',
+  TEXT5STYLE: '0',
+  TEXT6: 'Kafedrasi:',
+  TEXT6TOP: '110',
+  TEXT6LEFT: '10',
+  TEXT6SIZE: '9',
+  TEXT6KIND: 'Arial',
+  TEXT6STYLE: '0',
+  TEXT7: 'Alisher Navoiy nomidagi',
+  TEXT7TOP: '8',
+  TEXT7LEFT: '70',
+  TEXT7SIZE: '10',
+  TEXT7KIND: 'Arial',
+  TEXT7STYLE: '1',
+  TEXT8: "O'zbekiston Milliy kutubxonasi",
+  TEXT8TOP: '20',
+  TEXT8LEFT: '70',
+  TEXT8SIZE: '10',
+  TEXT8KIND: 'Arial',
+  TEXT8STYLE: '1',
+  DATA1TOP: '35',
+  DATA1LEFT: '110',
+  DATA1SIZE: '9',
+  DATA1KIND: 'Arial',
+  DATA1STYLE: '1',
+  DATA2TOP: '50',
+  DATA2LEFT: '110',
+  DATA2SIZE: '9',
+  DATA2KIND: 'Arial',
+  DATA2STYLE: '1',
+  DATA3TOP: '65',
+  DATA3LEFT: '110',
+  DATA3SIZE: '9',
+  DATA3KIND: 'Arial',
+  DATA3STYLE: '1',
+  DATA4TOP: '80',
+  DATA4LEFT: '110',
+  DATA4SIZE: '9',
+  DATA4KIND: 'Arial',
+  DATA4STYLE: '1',
+  DATA5TOP: '95',
+  DATA5LEFT: '110',
+  DATA5SIZE: '9',
+  DATA5KIND: 'Arial',
+  DATA5STYLE: '1',
+  DATA6TOP: '110',
+  DATA6LEFT: '110',
+  DATA6SIZE: '9',
+  DATA6KIND: 'Arial',
+  DATA6STYLE: '1',
+  DATA7TOP: '170',
+  DATA7LEFT: '250',
+  DATA7SIZE: '12',
+  DATA7KIND: 'Arial',
+  DATA7STYLE: '1',
+}
+
+const LAYOUT_ARG_KEYS = Object.keys(DEFAULT_LAYOUT)
 
 function trimSlash(url) {
   return String(url || '').replace(/\/+$/, '')
@@ -79,13 +164,16 @@ function formatExpiry(yyyymmdd) {
 }
 
 function buildArgs(layout = {}) {
-  const values = {
-    CARDWIDTH: layout.cardWidth || DEFAULT_CARD_WIDTH,
-    CARDHEIGHT: layout.cardHeight || DEFAULT_CARD_HEIGHT,
+  const merged = {
+    ...DEFAULT_LAYOUT,
+    ...layout,
   }
+  if (layout.cardWidth != null) merged.CARDWIDTH = String(layout.cardWidth)
+  if (layout.cardHeight != null) merged.CARDHEIGHT = String(layout.cardHeight)
+
   let out = ''
   for (const key of LAYOUT_ARG_KEYS) {
-    const value = values[key] != null ? values[key] : (layout[key] ?? '')
+    const value = merged[key] != null ? merged[key] : ''
     out += `${key}#${value}#`
   }
   return out

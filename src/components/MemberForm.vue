@@ -1080,8 +1080,11 @@ async function onPrintCard() {
     USER_NAME: savedCard.value.userName,
     USER_POSITION: savedCard.value.position,
     CARD_NO: props.selectedMember?.CARD_NO || savedCard.value.userNo,
+    USER_SEQ_NO: props.selectedMember?.USER_SEQ_NO || props.selectedMember?.SEQUENCE_NO || '',
+    SEQUENCE_NO: props.selectedMember?.SEQUENCE_NO || props.selectedMember?.USER_SEQ_NO || '',
     LIB_USE_LDATE: savedCard.value.expiryYyyymmdd,
     kafedra: savedCard.value.kafedra,
+    DATA2: savedCard.value.kafedra,
   }
 
   try {
@@ -1097,6 +1100,7 @@ async function onPrintCard() {
         actionUrl: config.actionUrl,
         fnBase: config.fnBase,
         jrf: config.jrf,
+        layout: config.layout,
       })
       if (opened) {
         toast.add({
@@ -1274,7 +1278,7 @@ const dataURLtoFile = (dataurl, filename) => {
 }
 
 .card-preview-pane {
-  width: min(440px, 100%);
+  width: min(100%, calc(86mm + 1.8rem));
   flex-shrink: 0;
   border: 1px solid var(--p-content-border-color, var(--surface-border));
   background: var(--p-content-background, var(--surface-card));
@@ -1282,6 +1286,7 @@ const dataURLtoFile = (dataurl, filename) => {
   padding: 0.9rem;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 0.85rem;
   position: sticky;
   top: 0;
@@ -1566,8 +1571,7 @@ const dataURLtoFile = (dataurl, filename) => {
   }
 
   .card-preview-pane {
-    width: 100%;
-    max-width: 420px;
+    width: min(100%, calc(86mm + 1.8rem));
     margin: 0 auto;
     position: static;
   }
