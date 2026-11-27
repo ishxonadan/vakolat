@@ -6,8 +6,8 @@
         <img src="/card-building-logo.png" alt="" />
       </div>
       <div class="id-card-title">
-        Alişer Navoiy nomidagi<br />
-        Özbekiston Milliy kutubxonasi
+        Alisher Navoiy nomidagi<br />
+        O‘zbekiston Milliy kutubxonasi
       </div>
     </div>
 
@@ -15,11 +15,11 @@
       <div class="id-rows">
         <div class="id-label">ID-karta raqami:</div>
         <div class="id-value">{{ userNo || '—' }}</div>
-        <div class="id-label">Familyasi:</div>
+        <div class="id-label">Familiyasi:</div>
         <div class="id-value">{{ names.familiya || '—' }}</div>
         <div class="id-label">Ismi:</div>
         <div class="id-value">{{ names.ismi || '—' }}</div>
-        <div class="id-label">Şarifi:</div>
+        <div class="id-label">Sharifi:</div>
         <div class="id-value">{{ names.sharifi || '—' }}</div>
         <div class="id-label">Toifasi:</div>
         <div class="id-value">{{ positionDisplay }}</div>
@@ -34,7 +34,7 @@
     <div class="id-card-footer">
       <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
       <div class="id-expiry">{{ expiryDisplay }}</div>
-      <div class="id-barcode-text">{{ userNo }}</div>
+      <div class="id-barcode-text">{{ barcodeValue }}</div>
     </div>
   </div>
   </div>
@@ -43,10 +43,11 @@
 <script setup>
 import { computed } from 'vue'
 import { generateBarcode } from '@/utils/barcode'
-import { formatExpiry, splitUserName, toNewUzbekLatin } from '@/utils/printMemberCard'
+import { formatExpiry, splitUserName } from '@/utils/printMemberCard'
 
 const props = defineProps({
   userNo: { type: String, default: '' },
+  cardNo: { type: String, default: '' },
   userName: { type: String, default: '' },
   position: { type: String, default: '' },
   kafedra: { type: [String, Number], default: '' },
@@ -56,13 +57,15 @@ const props = defineProps({
 
 const names = computed(() => splitUserName(props.userName))
 
-const positionDisplay = computed(() => toNewUzbekLatin(props.position).trim() || '—')
+const positionDisplay = computed(() => String(props.position ?? '').trim() || '—')
 
 const kafedraDisplay = computed(() => {
   const value = props.kafedra
   if (value === null || value === undefined || value === '') return '—'
-  return toNewUzbekLatin(value).trim() || '—'
+  return String(value).trim() || '—'
 })
+
+const barcodeValue = computed(() => String(props.cardNo || props.userNo || '').trim())
 
 const expiryDisplay = computed(() => formatExpiry(props.expiryYyyymmdd) || '—')
 
@@ -74,13 +77,14 @@ const normalizedPhoto = computed(() => {
 })
 
 const barcodeSrc = computed(() => {
-  const id = String(props.userNo || '').trim()
+  const id = barcodeValue.value
   if (!id) return ''
   return generateBarcode(id, {
     displayValue: false,
     height: 64,
     width: 1.7,
     margin: 0,
+    lineColor: '#1a237e',
     transparent: true,
   })
 })
@@ -132,7 +136,7 @@ const barcodeSrc = computed(() => {
   flex: 1;
   min-width: 0;
   font-size: 3.35cqw;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.15;
   letter-spacing: -0.015em;
   padding-bottom: 0.35cqw;
@@ -164,12 +168,12 @@ const barcodeSrc = computed(() => {
 }
 
 .id-label {
-  font-weight: 400;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .id-value {
-  font-weight: 700;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -190,7 +194,6 @@ const barcodeSrc = computed(() => {
   object-fit: cover;
   object-position: center 22%;
   display: block;
-  filter: grayscale(1);
 }
 
 .id-card-footer {
@@ -231,7 +234,8 @@ const barcodeSrc = computed(() => {
   width: 52cqw;
   text-align: center;
   font-size: 2.45cqw;
-  font-weight: 500;
+  font-weight: 400;
+  color: #1e4fd8;
   letter-spacing: 0.04em;
   line-height: 1;
   margin-top: 0.35cqw;

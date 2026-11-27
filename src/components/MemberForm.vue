@@ -404,6 +404,7 @@
       </div>
       <MemberIdCard
         :user-no="savedCard.userNo"
+        :card-no="savedCard.cardNo"
         :user-name="savedCard.userName"
         :position="savedCard.position"
         :kafedra="savedCard.kafedra"
@@ -652,6 +653,7 @@ const savedCard = computed(() => {
       : '')
   return {
     userNo: String(member.USER_NO || userNo.value || '').trim(),
+    cardNo: String(member.CARD_NO || '').trim(),
     userName: String(member.USER_NAME || userName.value || '').trim(),
     position: String(member.USER_POSITION || userPosition.value || '').trim(),
     kafedra: classCodeToKafedra(member.CLASS_CODE) ?? kafedra.value ?? '',
@@ -1079,7 +1081,7 @@ async function onPrintCard() {
     USER_NO: savedCard.value.userNo,
     USER_NAME: savedCard.value.userName,
     USER_POSITION: savedCard.value.position,
-    CARD_NO: props.selectedMember?.CARD_NO || savedCard.value.userNo,
+    CARD_NO: savedCard.value.cardNo || savedCard.value.userNo,
     USER_SEQ_NO: props.selectedMember?.USER_SEQ_NO || props.selectedMember?.SEQUENCE_NO || '',
     SEQUENCE_NO: props.selectedMember?.SEQUENCE_NO || props.selectedMember?.USER_SEQ_NO || '',
     LIB_USE_LDATE: savedCard.value.expiryYyyymmdd,
@@ -1093,7 +1095,7 @@ async function onPrintCard() {
     try {
       config = await apiService.get('/members/card-print-config')
     } catch (configError) {
-      console.warn('card-print-config failed, using defaults', configError)
+      console.warn('card-print-config failed, using browser print', configError)
     }
 
     if (config?.enabled !== false) {
@@ -1115,7 +1117,7 @@ async function onPrintCard() {
       toast.add({
         severity: 'warn',
         summary: 'UbiViewer',
-        detail: 'Oyna ochilmadi (popup bloklangan bo‘lishi mumkin). Brauzer chop etishiga o‘tildi',
+        detail: 'Uznel ochilmadi. Brauzer chop etishiga o‘tildi',
         life: 3500,
       })
     }

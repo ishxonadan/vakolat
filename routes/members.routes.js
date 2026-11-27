@@ -326,6 +326,8 @@ module.exports = (nazorat, vakolat) => {
     const actionUrl = process.env.UZNEL_URL || "https://uznel.natlib.uz:444/FN/Manager/action.do"
     const fnBase = String(actionUrl).replace(/\/Manager\/action\.do(?:\?.*)?$/i, "/")
     res.json({
+      // UbiViewer needs Uznel's UbiForm gateway for the JRF. Set
+      // UZNEL_UBI_CARD_PRINT=0 to force browser print only.
       enabled: process.env.UZNEL_UBI_CARD_PRINT !== "0",
       actionUrl,
       fnBase: fnBase.endsWith("/") ? fnBase : `${fnBase}/`,

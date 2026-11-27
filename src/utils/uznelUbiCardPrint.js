@@ -4,8 +4,6 @@
  * lon::formLabel_Photo4UserUZB.xfdl.
  */
 
-import { toNewUzbekLatin } from '@/utils/printMemberCard'
-
 const DEFAULT_FN_BASE = 'https://uznel.natlib.uz:444/FN/'
 const DEFAULT_JRF = 'Print_UZB_CODE128.JRF'
 const DEFAULT_CARD_WIDTH = '245'
@@ -45,85 +43,85 @@ const DEFAULT_LAYOUT = {
   BARCODELEFT: '6',
   BARCODEWIDTH: '140',
   BARCODEHEIGHT: '34',
-  TEXT1: 'Alişer Navoiy nomidagi',
+  TEXT1: 'Alisher Navoiy nomidagi',
   TEXT1TOP: '0',
   TEXT1LEFT: '94',
   TEXT1SIZE: '9',
   TEXT1KIND: 'Arial',
-  TEXT1STYLE: '2',
-  TEXT2: 'Özbekiston Milliy kutubxonasi',
+  TEXT1STYLE: '0',
+  TEXT2: 'O‘zbekiston Milliy kutubxonasi',
   TEXT2TOP: '12',
 
   TEXT2LEFT: '94',
   TEXT2SIZE: '9',
   TEXT2KIND: 'Arial',
-  TEXT2STYLE: '2',
+  TEXT2STYLE: '0',
   TEXT3: 'ID-karta raqami:',
   TEXT3TOP: '29',
   TEXT3LEFT: '6',
   TEXT3SIZE: '9',
   TEXT3KIND: 'Arial',
-  TEXT3STYLE: '0',
-  TEXT4: 'Familyasi:',
+  TEXT3STYLE: '2',
+  TEXT4: 'Familiyasi:',
   TEXT4TOP: '44',
   TEXT4LEFT: '6',
   TEXT4SIZE: '9',
   TEXT4KIND: 'Arial',
-  TEXT4STYLE: '0',
+  TEXT4STYLE: '2',
   TEXT5: 'Ismi:',
   TEXT5TOP: '59',
   TEXT5LEFT: '6',
   TEXT5SIZE: '9',
   TEXT5KIND: 'Arial',
-  TEXT5STYLE: '0',
-  TEXT6: 'Şarifi:',
+  TEXT5STYLE: '2',
+  TEXT6: 'Sharifi:',
   TEXT6TOP: '74',
   TEXT6LEFT: '6',
   TEXT6SIZE: '9',
   TEXT6KIND: 'Arial',
-  TEXT6STYLE: '0',
+  TEXT6STYLE: '2',
   TEXT7: 'Toifasi:',
   TEXT7TOP: '89',
   TEXT7LEFT: '6',
   TEXT7SIZE: '9',
   TEXT7KIND: 'Arial',
-  TEXT7STYLE: '0',
+  TEXT7STYLE: '2',
   TEXT8: 'Kafedrasi:',
   TEXT8TOP: '104',
   TEXT8LEFT: '6',
   TEXT8SIZE: '9',
   TEXT8KIND: 'Arial',
-  TEXT8STYLE: '0',
+  TEXT8STYLE: '2',
   DATA1TOP: '29',
   DATA1LEFT: '94',
   DATA1SIZE: '9',
   DATA1KIND: 'Arial',
-  DATA1STYLE: '2',
+  DATA1STYLE: '0',
   DATA2TOP: '44',
   DATA2LEFT: '94',
   DATA2SIZE: '9',
   DATA2KIND: 'Arial',
-  DATA2STYLE: '2',
+  DATA2STYLE: '0',
   DATA3TOP: '59',
   DATA3LEFT: '94',
   DATA3SIZE: '9',
   DATA3KIND: 'Arial',
-  DATA3STYLE: '2',
+  DATA3STYLE: '0',
   DATA4TOP: '74',
   DATA4LEFT: '94',
   DATA4SIZE: '9',
   DATA4KIND: 'Arial',
-  DATA4STYLE: '2',
+  DATA4STYLE: '0',
   DATA5TOP: '89',
   DATA5LEFT: '94',
   DATA5SIZE: '9',
   DATA5KIND: 'Arial',
-  DATA5STYLE: '2',
+  DATA5STYLE: '0',
   DATA6TOP: '104',
   DATA6LEFT: '94',
   DATA6SIZE: '9',
   DATA6KIND: 'Arial',
-  DATA6STYLE: '2',
+  DATA6STYLE: '0',
   DATA7TOP: '124',
   DATA7LEFT: '168',
   DATA7SIZE: '13',
@@ -152,7 +150,7 @@ export function deriveUznelFnBase(actionUrl) {
 }
 
 function splitUserName(fullName) {
-  const parts = toNewUzbekLatin(fullName).trim().split(/\s+/).filter(Boolean)
+  const parts = String(fullName ?? '').trim().split(/\s+/).filter(Boolean)
   return {
     first: parts[0] || '',
     middle: parts[1] || '',
@@ -231,14 +229,14 @@ export function buildUznelCardPayload(member, config = {}) {
     || member?.UZNEL_ORG_ROW?.USER_SEQ_NO
     || '',
   ).trim()
-  const position = toNewUzbekLatin(member?.USER_POSITION || member?.position || '').trim()
-  const kafedra = toNewUzbekLatin(member?.kafedra ?? member?.DATA2 ?? '').trim()
+  const position = String(member?.USER_POSITION || member?.position || '').trim()
+  const kafedra = String(member?.kafedra ?? member?.DATA2 ?? '').trim()
   const expiry = formatExpiry(member?.LIB_USE_LDATE || member?.expiryYyyymmdd || '')
   const names = splitUserName(userName)
   const photo = buildPhotoUrl(fnBase, sequenceNo) || member?.PHOTO_URL || photoDataUri(member)
 
   const row = {
-    NAME: toNewUzbekLatin(userName),
+    NAME: userName,
     USER_ID: cardNo,
     BARCODE_NO: cardNo,
     PHOTO: photo,

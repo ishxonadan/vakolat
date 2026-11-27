@@ -26,7 +26,7 @@ export function toNewUzbekLatin(value) {
 }
 
 function splitUserName(fullName) {
-  const parts = toNewUzbekLatin(fullName).trim().split(/\s+/).filter(Boolean)
+  const parts = String(fullName ?? '').trim().split(/\s+/).filter(Boolean)
   return {
     familiya: parts[0] || '',
     ismi: parts[1] || '',
@@ -47,6 +47,9 @@ function normalizePhotoSrc(photoSrc) {
   return `data:image/jpeg;base64,${raw}`
 }
 
+const BARCODE_COLOR = '#1a237e'
+const BARCODE_TEXT_COLOR = '#1e4fd8'
+
 function logoUrl() {
   return new URL('/card-building-logo.png', window.location.origin).href
 }
@@ -64,16 +67,18 @@ function logoUrl() {
  */
 export function printMemberCard(member) {
   const userNo = String(member?.userNo || '').trim()
+  const cardNo = String(member?.cardNo || '').trim() || userNo
   const names = splitUserName(member?.userName)
-  const position = toNewUzbekLatin(member?.position).trim()
-  const kafedra = toNewUzbekLatin(member?.kafedra).trim()
+  const position = String(member?.position ?? '').trim()
+  const kafedra = String(member?.kafedra ?? '').trim()
   const expiry = formatExpiry(member?.expiryYyyymmdd)
   const photoSrc = normalizePhotoSrc(member?.photoSrc)
-  const barcodeSrc = generateBarcode(userNo, {
+  const barcodeSrc = generateBarcode(cardNo, {
     displayValue: false,
     height: 64,
     width: 1.7,
     margin: 0,
+    lineColor: BARCODE_COLOR,
     transparent: true,
   })
 
@@ -108,6 +113,8 @@ export function printMemberCard(member) {
       page-break-inside: avoid;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      /* Card printers feed inverted; flip only for print, not the form preview. */
+      transform: rotate(180deg);
     }
     .id-card-header {
       display: flex;
@@ -122,7 +129,7 @@ export function printMemberCard(member) {
       flex: 1;
       min-width: 0;
       font-size: 2.9mm;
-      font-weight: 700;
+      font-weight: 400;
       line-height: 1.15;
       letter-spacing: -0.015em;
       padding-bottom: 0.3mm;
@@ -145,9 +152,9 @@ export function printMemberCard(member) {
       line-height: 1.05;
     }
     .id-label, .id-value { align-self: center; min-width: 0; }
-    .id-label { font-weight: 400; white-space: nowrap; }
+    .id-label { font-weight: 700; white-space: nowrap; }
     .id-value {
-      font-weight: 700;
+      font-weight: 400;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -165,7 +172,6 @@ export function printMemberCard(member) {
       object-fit: cover;
       object-position: center 22%;
       display: block;
-      filter: grayscale(1);
     }
     .id-card-footer {
       display: grid;
@@ -202,7 +208,8 @@ export function printMemberCard(member) {
       width: 44.7mm;
       text-align: center;
       font-size: 2.1mm;
-      font-weight: 500;
+      font-weight: 400;
+      color: ${BARCODE_TEXT_COLOR};
       letter-spacing: 0.04em;
       line-height: 1;
       margin-top: 0.3mm;
@@ -221,14 +228,14 @@ export function printMemberCard(member) {
   <div class="id-card">
     <div class="id-card-header">
       <div class="logo"><img src="${logoUrl()}" alt="" /></div>
-      <div class="id-card-title">Alişer Navoiy nomidagi<br/>Özbekiston Milliy kutubxonasi</div>
+      <div class="id-card-title">Alisher Navoiy nomidagi<br/>O‘zbekiston Milliy kutubxonasi</div>
     </div>
     <div class="id-card-body">
       <div class="id-rows">
         <div class="id-label">ID-karta raqami:</div><div class="id-value">${escapeHtml(userNo)}</div>
-        <div class="id-label">Familyasi:</div><div class="id-value">${escapeHtml(names.familiya)}</div>
+        <div class="id-label">Familiyasi:</div><div class="id-value">${escapeHtml(names.familiya)}</div>
         <div class="id-label">Ismi:</div><div class="id-value">${escapeHtml(names.ismi)}</div>
-        <div class="id-label">Şarifi:</div><div class="id-value">${escapeHtml(names.sharifi)}</div>
+        <div class="id-label">Sharifi:</div><div class="id-value">${escapeHtml(names.sharifi)}</div>
         <div class="id-label">Toifasi:</div><div class="id-value">${escapeHtml(position)}</div>
         <div class="id-label">Kafedrasi:</div><div class="id-value">${escapeHtml(kafedra)}</div>
       </div>
@@ -239,7 +246,7 @@ export function printMemberCard(member) {
     <div class="id-card-footer">
       <img class="id-bars" src="${barcodeSrc}" alt="" />
       <div class="id-expiry">${escapeHtml(expiry)}</div>
-      <div class="id-barcode-text">${escapeHtml(userNo)}</div>
+      <div class="id-barcode-text">${escapeHtml(cardNo)}</div>
     </div>
   </div>
 </body>
