@@ -4,6 +4,8 @@
  * lon::formLabel_Photo4UserUZB.xfdl.
  */
 
+import { toNewUzbekLatin } from '@/utils/printMemberCard'
+
 const DEFAULT_FN_BASE = 'https://uznel.natlib.uz:444/FN/'
 const DEFAULT_JRF = 'Print_UZB_CODE128.JRF'
 const DEFAULT_CARD_WIDTH = '245'
@@ -43,13 +45,13 @@ const DEFAULT_LAYOUT = {
   BARCODELEFT: '6',
   BARCODEWIDTH: '140',
   BARCODEHEIGHT: '34',
-  TEXT1: 'Alisher Navoiy nomidagi',
+  TEXT1: 'Alişer Navoiy nomidagi',
   TEXT1TOP: '0',
   TEXT1LEFT: '94',
   TEXT1SIZE: '9',
   TEXT1KIND: 'Arial',
   TEXT1STYLE: '0',
-  TEXT2: 'O‘zbekiston Milliy kutubxonasi',
+  TEXT2: 'Özbekiston Milliy kutubxonasi',
   TEXT2TOP: '12',
 
   TEXT2LEFT: '94',
@@ -62,7 +64,7 @@ const DEFAULT_LAYOUT = {
   TEXT3SIZE: '9',
   TEXT3KIND: 'Arial',
   TEXT3STYLE: '2',
-  TEXT4: 'Familiyasi:',
+  TEXT4: 'Familyasi:',
   TEXT4TOP: '44',
   TEXT4LEFT: '6',
   TEXT4SIZE: '9',
@@ -74,7 +76,7 @@ const DEFAULT_LAYOUT = {
   TEXT5SIZE: '9',
   TEXT5KIND: 'Arial',
   TEXT5STYLE: '2',
-  TEXT6: 'Sharifi:',
+  TEXT6: 'Şarifi:',
   TEXT6TOP: '74',
   TEXT6LEFT: '6',
   TEXT6SIZE: '9',
@@ -150,7 +152,7 @@ export function deriveUznelFnBase(actionUrl) {
 }
 
 function splitUserName(fullName) {
-  const parts = String(fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  const parts = toNewUzbekLatin(fullName).trim().split(/\s+/).filter(Boolean)
   return {
     first: parts[0] || '',
     middle: parts[1] || '',
@@ -219,7 +221,7 @@ export function buildUznelCardPayload(member, config = {}) {
   const fnBase = deriveUznelFnBase(config.fnBase || config.actionUrl || DEFAULT_FN_BASE)
   const jrf = config.jrf || DEFAULT_JRF
   const userNo = String(member?.USER_NO || member?.userNo || '').trim()
-  const userName = String(member?.USER_NAME || member?.userName || '').trim()
+  const userName = toNewUzbekLatin(member?.USER_NAME || member?.userName || '').trim()
   const cardNo = String(member?.CARD_NO || member?.cardNo || userNo).trim()
   const sequenceNo = String(
     member?.USER_SEQ_NO
@@ -229,8 +231,8 @@ export function buildUznelCardPayload(member, config = {}) {
     || member?.UZNEL_ORG_ROW?.USER_SEQ_NO
     || '',
   ).trim()
-  const position = String(member?.USER_POSITION || member?.position || '').trim()
-  const kafedra = String(member?.kafedra ?? member?.DATA2 ?? '').trim()
+  const position = toNewUzbekLatin(member?.USER_POSITION || member?.position || '').trim()
+  const kafedra = toNewUzbekLatin(member?.kafedra ?? member?.DATA2 ?? '').trim()
   const expiry = formatExpiry(member?.LIB_USE_LDATE || member?.expiryYyyymmdd || '')
   const names = splitUserName(userName)
   const photo = buildPhotoUrl(fnBase, sequenceNo) || member?.PHOTO_URL || photoDataUri(member)
