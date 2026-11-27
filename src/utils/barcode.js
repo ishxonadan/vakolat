@@ -1,36 +1,47 @@
-// Simple barcode generator for Code 128
-export const generateBarcode = (text) => {
-  // This is a simplified barcode representation
-  // In a real implementation, you'd use a proper barcode library
-  const canvas = document.createElement("canvas")
-  const ctx = canvas.getContext("2d")
+const JsBarcode = require('jsbarcode')
 
-  canvas.width = 200
-  canvas.height = 40
+const EMPTY_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
-  ctx.fillStyle = "#FFFFFF"
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+/**
+ * Generate a Code 128 barcode as a canvas data URL.
+ * @param {string} text
+ * @returns {string}
+ */
+function generateBarcode(text) {
+  const canvas = document.createElement('canvas')
+  const value = String(text ?? '').trim() || ' '
 
-  ctx.fillStyle = "#000000"
-  ctx.font = "8px monospace"
-
-  // Simple pattern generation (not actual Code 128)
-  let x = 10
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i)
-    const pattern = charCode % 8 // Simple pattern based on char code
-
-    for (let j = 0; j < 8; j++) {
-      if ((pattern >> j) & 1) {
-        ctx.fillRect(x, 5, 2, 25)
+  try {
+    JsBarcode(canvas, value, {
+      format: 'CODE128',
+      width: 1.6,
+      height: 42,
+      displayValue: true,
+      fontSize: 11,
+      textMargin: 2,
+      margin: 4,
+      background: '#ffffff',
+      lineColor: '#000000',
+    })
+    return canvas.toDataURL('image/png')
+  } catch {
+    try {
+      const ctx = canvas.getContext('2d')
+      canvas.width = 200
+      canvas.height = 40
+      if (ctx) {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = '#000000'
+        ctx.font = '10px monospace'
+        ctx.fillText(String(text ?? ''), 8, 24)
       }
-      x += 2
+      return canvas.toDataURL('image/png')
+    } catch {
+      return EMPTY_PNG
     }
-    x += 1 // Space between characters
   }
-
-  // Add text below barcode
-  ctx.fillText(text, (canvas.width - ctx.measureText(text).width) / 2, 38)
-
-  return canvas.toDataURL()
 }
+
+module.exports = { generateBarcode }

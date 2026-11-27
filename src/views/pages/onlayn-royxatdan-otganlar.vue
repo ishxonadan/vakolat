@@ -24,6 +24,7 @@ const sortField = ref('INSERT_DATE')
 const sortOrder = ref(-1)
 
 const showDialog = ref(false)
+const cardPreviewOpen = ref(false)
 const selectedMember = ref(null)
 const activeTab = ref(0)
 const userVisits = ref([])
@@ -226,6 +227,7 @@ const saveMember = async (updatedMember) => {
 
 const closeDialog = () => {
   showDialog.value = false
+  cardPreviewOpen.value = false
   selectedMember.value = null
   userVisits.value = []
   memberImagePreview.value = null
@@ -294,7 +296,7 @@ onMounted(() => {
       :header="isEditMode ? 'Foydalanuvchi ma\'lumotlari' : 'Yangi foydalanuvchi'"
       :modal="true"
       :closable="true"
-      :style="{ width: 'min(1240px, 96vw)' }"
+      :style="{ width: cardPreviewOpen ? 'min(1680px, 98vw)' : 'min(1240px, 96vw)' }"
       :breakpoints="{ '960px': '96vw' }"
       class="member-record-dialog"
       @hide="closeDialog"
@@ -305,10 +307,12 @@ onMounted(() => {
             :selected-member="selectedMember"
             :categories="categories"
             :image-source="imageSource"
+            :is-edit-mode="true"
             @close-dialog="closeDialog"
             @save-member="saveMember"
             @image-select="onImageSelect"
             @delete-image="deleteImage"
+            @card-preview="cardPreviewOpen = $event"
           />
         </TabPanel>
         <TabPanel header="Tashriflar tarixi">
@@ -323,10 +327,12 @@ onMounted(() => {
         :selected-member="selectedMember"
         :categories="categories"
         :image-source="imageSource"
+        :is-edit-mode="false"
         @close-dialog="closeDialog"
         @save-member="saveMember"
         @image-select="onImageSelect"
         @delete-image="deleteImage"
+        @card-preview="cardPreviewOpen = $event"
       />
     </Dialog>
   </div>

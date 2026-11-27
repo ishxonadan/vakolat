@@ -1,5 +1,7 @@
 <template>
   <form class="member-form" autocomplete="off" @submit.prevent="onSaveMember" @paste="onScanPaste">
+    <div class="member-form-shell" :class="{ 'with-card-preview': showCardPreview }">
+    <div class="member-form-main">
     <div class="member-form-layout">
       <aside class="photo-column">
       <div class="photo-card">
@@ -244,6 +246,19 @@
                 class="w-full"
               />
             </div>
+
+            <div class="form-field">
+              <label class="field-label" for="libUseLdate">Amal qilish muddati</label>
+              <Calendar
+                id="libUseLdate"
+                v-model="libUseLdate"
+                dateFormat="dd.mm.yy"
+                placeholder="kk.oo.yyyy"
+                showIcon
+                showButtonBar
+                class="w-full"
+              />
+            </div>
           </div>
         </section>
 
@@ -351,6 +366,17 @@
           @click="syncToUznel"
         />
         <Button
+          v-if="canShowPrintButton"
+          type="button"
+          label="Chop etish"
+          icon="pi pi-print"
+          severity="secondary"
+          outlined
+          :disabled="!canOpenCardPreview"
+          :title="canOpenCardPreview ? 'ID-karta ko‘rinishi' : 'Avval oxirgi o‘zgarishlarni saqlang'"
+          @click="toggleCardPreview"
+        />
+        <Button
           v-if="canStartNewMember"
           type="button"
           label="Yangi foydalanuvchi"
@@ -360,6 +386,39 @@
           @click="requestNewMember"
         />
       </div>
+    </div>
+    </div>
+
+    <aside v-if="showCardPreview" class="card-preview-pane">
+      <div class="card-preview-header">
+        <h3>ID-karta</h3>
+        <Button
+          type="button"
+          icon="pi pi-times"
+          text
+          rounded
+          severity="secondary"
+          aria-label="Yopish"
+          @click="closeCardPreview"
+        />
+      </div>
+      <MemberIdCard
+        :user-no="savedCard.userNo"
+        :user-name="savedCard.userName"
+        :position="savedCard.position"
+        :kafedra="savedCard.kafedra"
+        :photo-src="savedCard.photoSrc"
+        :expiry-yyyymmdd="savedCard.expiryYyyymmdd"
+      />
+      <Button
+        type="button"
+        class="card-preview-print"
+        label="Chop etish"
+        icon="pi pi-print"
+        severity="success"
+        @click="onPrintCard"
+      />
+    </aside>
     </div>
 
     <ConfirmDialog />
@@ -374,7 +433,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import Calendar from 'primevue/calendar'
 import Dropdown from 'primevue/dropdown'
@@ -385,6 +444,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useConfirm } from 'primevue/useconfirm'
 import WebcamCapture from './WebcamCapture.vue'
 import MemberRecordNav from './MemberRecordNav.vue'
+import MemberIdCard from './MemberIdCard.vue'
 import apiService from '@/service/api.service'
 import authService from '@/service/auth.service'
 import { isMrzCharsetKey, normalizeSex, parseIdMrz, sexFromPinfl } from '@/utils/parseIdMrz'
@@ -406,6 +466,7 @@ import {
   resolveKafedraForCategory,
   toClassCode,
 } from '@/utils/memberCategories'
+import { printMemberCard } from '@/utils/printMemberCard'
 
 const props = defineProps({
   selectedMember: {
@@ -450,17 +511,30 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close-dialog', 'save-member', 'image-select', 'delete-image', 'uznel-synced', 'new-member', 'record-prev', 'record-next'])
+const emit = defineEmits([
+  'close-dialog',
+  'save-member',
+  'image-select',
+  'delete-image',
+  'uznel-synced',
+  'new-member',
+  'record-prev',
+  'record-next',
+  'card-preview',
+])
 const toast = useToast()
 const confirm = useConfirm()
 const canManageMembers = computed(() => authService.hasPermission('manage_members'))
 
 const fileInput = ref(null)
 const showWebcamDialog = ref(false)
+const showCardPreview = ref(false)
 const submitted = ref(false)
 const fetchingUserNo = ref(false)
 const syncingUznel = ref(false)
 const didSyncUznel = ref(false)
+const cleanSignature = ref('')
+const suppressDirtyReset = ref(false)
 
 const sexOptions = [
   { label: 'Ayol', value: 'F' },
@@ -500,6 +574,7 @@ const phoneCode = ref('+998')
 const customPhoneCode = ref('+')
 const phoneLocal = ref('')
 const birthday = ref(null)
+const libUseLdate = ref(null)
 const addrs = ref('')
 const email = ref('')
 const zipCode = ref('')
@@ -535,15 +610,75 @@ const activeDialCode = computed(() => (
 const phoneLocalDisplay = computed(() => formatLocalNumber(activeDialCode.value, phoneLocal.value))
 const phoneLocalPlaceholder = computed(() => (activeDialCode.value === '+998' ? '90 123 45 67' : 'Raqam'))
 
+const formSignature = computed(() => JSON.stringify({
+  USER_NO: userNo.value.trim(),
+  PASSWORD: uznelPassword.value.trim(),
+  USER_NAME: userName.value.trim(),
+  USER_POSITION: userPosition.value,
+  kafedra: kafedra.value,
+  PINFL: pinfl.value.trim(),
+  TEL_NO: composePhoneNumber(activeDialCode.value, phoneLocal.value),
+  BIRTHDAY: toLocalYyyymmdd(birthday.value),
+  LIB_USE_LDATE: toLocalYyyymmdd(libUseLdate.value),
+  ADDRS: addrs.value.trim(),
+  EMAIL: email.value.trim(),
+  ZIP_CODE: zipCode.value.trim().toUpperCase(),
+  SEX: sex.value || '',
+  NATIONALITY: nationality.value || '',
+  CMPNY_CODE: cmpnyCode.value || '',
+  PHOTO: props.selectedMember?.PHOTO || '',
+  imageSource: props.imageSource || '',
+}))
+
+const hasUnsavedChanges = computed(() => (
+  Boolean(cleanSignature.value) && formSignature.value !== cleanSignature.value
+))
+
+const canShowPrintButton = computed(() => (
+  canManageMembers.value && props.isEditMode && Boolean(userNo.value.trim())
+))
+
+const canOpenCardPreview = computed(() => (
+  canShowPrintButton.value && !hasUnsavedChanges.value
+))
+
+const savedCard = computed(() => {
+  const member = props.selectedMember || {}
+  const expiry = toLocalYyyymmdd(member.LIB_USE_LDATE) || toLocalYyyymmdd(libUseLdate.value)
+  const photo = props.imageSource
+    || (member.PHOTO
+      ? (String(member.PHOTO).startsWith('data:') ? member.PHOTO : `data:image/jpeg;base64,${member.PHOTO}`)
+      : '')
+  return {
+    userNo: String(member.USER_NO || userNo.value || '').trim(),
+    userName: String(member.USER_NAME || userName.value || '').trim(),
+    position: String(member.USER_POSITION || userPosition.value || '').trim(),
+    kafedra: classCodeToKafedra(member.CLASS_CODE) ?? kafedra.value ?? '',
+    photoSrc: photo,
+    expiryYyyymmdd: expiry,
+  }
+})
+
 let scanBuffer = ''
 let scanLastAt = 0
 let scanSnapshot = null
 const SCAN_GAP_MS = 120
 
+function defaultLibUseLdate() {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + 3)
+  return d
+}
+
+function markFormClean() {
+  cleanSignature.value = formSignature.value
+}
+
 watch(() => props.selectedMember, (newVal) => {
   submitted.value = false
   if (!newVal) return
   if (!newVal.USER_NO) didSyncUznel.value = false
+  suppressDirtyReset.value = true
   userNo.value = newVal.USER_NO || ''
   uznelPassword.value = newVal.PASSWORD || newVal.USER_NO || ''
   userName.value = newVal.USER_NAME || ''
@@ -553,6 +688,7 @@ watch(() => props.selectedMember, (newVal) => {
   pinfl.value = newVal.PINFL || ''
   applyParsedPhone(parsePhoneNumber(newVal.TEL_NO))
   birthday.value = parseBirthday(newVal.BIRTHDAY)
+  libUseLdate.value = parseBirthday(newVal.LIB_USE_LDATE) || defaultLibUseLdate()
   addrs.value = newVal.ADDRS || ''
   email.value = newVal.EMAIL || ''
   zipCode.value = newVal.ZIP_CODE || ''
@@ -562,7 +698,27 @@ watch(() => props.selectedMember, (newVal) => {
   ensureNationalityOption(nationality.value)
   scannedPassportSeries.value = newVal.PASSPORT_SERIES || ''
   scannedPassportNumber.value = newVal.PASSPORT_NUMBER || ''
+  nextTick(() => {
+    markFormClean()
+    suppressDirtyReset.value = false
+  })
 }, { immediate: true })
+
+watch(() => props.imageSource, () => {
+  if (suppressDirtyReset.value) return
+  // Photo changes after save/load should refresh the clean baseline when member props just hydrated.
+  if (!hasUnsavedChanges.value) {
+    nextTick(() => markFormClean())
+  }
+})
+
+watch(showCardPreview, (open) => {
+  emit('card-preview', open)
+})
+
+watch(hasUnsavedChanges, (dirty) => {
+  if (dirty && showCardPreview.value) closeCardPreview()
+})
 
 watch(() => props.categories, () => {
   if (!userPosition.value) return
@@ -749,6 +905,10 @@ async function loadCompanies() {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onScanKeydown, true)
+  if (showCardPreview.value) {
+    showCardPreview.value = false
+    emit('card-preview', false)
+  }
 })
 
 function pad2(value) {
@@ -861,6 +1021,7 @@ function onPhoneLocalInput(value) {
 }
 
 function onCloseDialog() {
+  closeCardPreview()
   emit('close-dialog')
 }
 
@@ -876,6 +1037,7 @@ function buildMemberPayload() {
     PINFL: pinfl.value.trim(),
     TEL_NO: composePhoneNumber(activeDialCode.value, phoneLocal.value),
     BIRTHDAY: toLocalYyyymmdd(birthday.value),
+    LIB_USE_LDATE: toLocalYyyymmdd(libUseLdate.value),
     INSERT_DATE: resolveInsertDate(),
     ADDRS: addrs.value.trim(),
     EMAIL: email.value.trim(),
@@ -889,6 +1051,28 @@ function buildMemberPayload() {
     PASSWORD: uznelPassword.value.trim() || maskId,
     PHOTO: props.selectedMember?.PHOTO || undefined,
   }
+}
+
+function toggleCardPreview() {
+  if (!canOpenCardPreview.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Saqlash kerak',
+      detail: "Chop etishdan oldin oxirgi o‘zgarishlarni saqlang",
+      life: 2500,
+    })
+    return
+  }
+  showCardPreview.value = !showCardPreview.value
+}
+
+function closeCardPreview() {
+  showCardPreview.value = false
+}
+
+function onPrintCard() {
+  if (!canOpenCardPreview.value) return
+  printMemberCard(savedCard.value)
 }
 
 const onSaveMember = () => {
@@ -1027,6 +1211,51 @@ const dataURLtoFile = (dataurl, filename) => {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.member-form-shell {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.member-form-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card-preview-pane {
+  width: min(440px, 100%);
+  flex-shrink: 0;
+  border: 1px solid var(--p-content-border-color, var(--surface-border));
+  background: var(--p-content-background, var(--surface-card));
+  border-radius: 12px;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: sticky;
+  top: 0;
+}
+
+.card-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-preview-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.card-preview-print {
+  width: 100%;
 }
 
 .member-form-layout {
@@ -1283,6 +1512,19 @@ const dataURLtoFile = (dataurl, filename) => {
 .uznel-sync-btn:disabled {
   opacity: 0.5;
   color: #7aa3c9 !important;
+}
+
+@media (max-width: 1100px) {
+  .member-form-shell.with-card-preview {
+    flex-direction: column;
+  }
+
+  .card-preview-pane {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    position: static;
+  }
 }
 
 @media (max-width: 768px) {

@@ -27,6 +27,7 @@ const sortField = ref('INSERT_DATE')
 const sortOrder = ref(-1)
 
 const showDialog = ref(false)
+const cardPreviewOpen = ref(false)
 const selectedMember = ref(null)
 const activeTab = ref(0)
 const userVisits = ref([])
@@ -292,6 +293,7 @@ const onUznelSynced = (member) => {
 
 const closeDialog = () => {
   showDialog.value = false
+  cardPreviewOpen.value = false
   memberIndex.value = -1
   selectedMember.value = null
   userVisits.value = []
@@ -361,7 +363,7 @@ onMounted(() => {
       :header="isEditMode ? 'Foydalanuvchi ma\'lumotlari' : 'Yangi foydalanuvchi'"
       :modal="true"
       :closable="true"
-      :style="{ width: 'min(1240px, 96vw)' }"
+      :style="{ width: cardPreviewOpen ? 'min(1680px, 98vw)' : 'min(1240px, 96vw)' }"
       :breakpoints="{ '960px': '96vw' }"
       class="member-record-dialog member-record-dialog-raised"
       @hide="closeDialog"
@@ -387,6 +389,7 @@ onMounted(() => {
             @delete-image="deleteImage"
             @record-prev="stepMember(-1)"
             @record-next="stepMember(1)"
+            @card-preview="cardPreviewOpen = $event"
           />
         </TabPanel>
         <TabPanel header="Tashriflar tarixi">
@@ -420,6 +423,7 @@ onMounted(() => {
         @new-member="openAddMemberDialog"
         @image-select="onImageSelect"
         @delete-image="deleteImage"
+        @card-preview="cardPreviewOpen = $event"
       />
     </Dialog>
   </div>

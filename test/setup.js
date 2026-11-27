@@ -33,21 +33,45 @@ if (typeof HTMLCanvasElement !== 'undefined') {
     if (contextType === '2d') {
       return {
         fillStyle: '',
+        strokeStyle: '',
+        lineWidth: 1,
+        font: '',
+        textAlign: 'left',
+        textBaseline: 'alphabetic',
         fillRect: function() {},
+        clearRect: function() {},
+        strokeRect: function() {},
         fillText: function() {},
+        strokeText: function() {},
+        beginPath: function() {},
+        moveTo: function() {},
+        lineTo: function() {},
+        stroke: function() {},
+        fill: function() {},
+        save: function() {},
+        restore: function() {},
+        translate: function() {},
+        scale: function() {},
+        drawImage: function() {},
         measureText: function(text) {
-          return { width: text.length * 8 }
+          return { width: String(text || '').length * 8 }
+        },
+        getImageData: function(sx, sy, sw, sh) {
+          return { data: new Uint8ClampedArray(Math.max(sw, 1) * Math.max(sh, 1) * 4), width: sw, height: sh }
+        },
+        putImageData: function() {},
+        createImageData: function(w, h) {
+          return { data: new Uint8ClampedArray(w * h * 4), width: w, height: h }
         },
       }
     }
     return null
   }
-  
+
   // Track canvas instances to generate unique data URLs
   let canvasCounter = 0
-  
-  HTMLCanvasElement.prototype.toDataURL = function(type) {
-    // Return a mock base64 image data URL with unique counter
+
+  HTMLCanvasElement.prototype.toDataURL = function() {
     canvasCounter++
     const uniqueId = canvasCounter.toString(36).padStart(8, '0')
     return `data:image/png;base64,iVBORw0KGgoAAAANSUh${uniqueId}EUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==`

@@ -125,6 +125,10 @@ function addYearsYyyymmdd(yyyymmdd, years) {
   return toYyyymmdd(date)
 }
 
+function resolveLibUseLdate(member) {
+  return toYyyymmdd(member?.LIB_USE_LDATE) || addYearsYyyymmdd(todayYyyymmdd(), 3)
+}
+
 function mapSex(value) {
   const raw = String(value || "").trim().toUpperCase()
   if (raw === "0001" || raw === "0002") return raw
@@ -192,7 +196,7 @@ function buildUserCols(member) {
     xmlCol("CMPNY_CODE", member.CMPNY_CODE || ""),
     xmlCol("SMS_CHECK", member.SMS_CHECK || "Y"),
     xmlCol("MAIL_CHECK", member.MAIL_CHECK || "Y"),
-    xmlCol("LIB_USE_LDATE", addYearsYyyymmdd(todayYyyymmdd(), 3)),
+    xmlCol("LIB_USE_LDATE", resolveLibUseLdate(member)),
     xmlCol("CLASS_CODE", mapClassCode(member.CLASS_CODE)),
   ].join("")
 }
@@ -495,7 +499,7 @@ function snapshotModFields(member, userSeqNo) {
     SMS_CHECK: member.SMS_CHECK || "Y",
     MAIL_CHECK: member.MAIL_CHECK || "Y",
     CLASS_CODE: mapClassCode(member.CLASS_CODE),
-    LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
+    LIB_USE_LDATE: resolveLibUseLdate(member),
     UN_AGREE_FLAG: member.UN_AGREE_FLAG || "9999",
   }
 }
@@ -687,7 +691,7 @@ async function registerUznelUser(member) {
       SEQUENCE_NO: existingSeq,
       UZNEL_SYNCED: true,
       UZNEL_ORG_ROW: snapshotModFields(payload, existingSeq),
-      LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
+      LIB_USE_LDATE: resolveLibUseLdate(payload),
       updated: true,
       ...extras,
     }
@@ -709,7 +713,7 @@ async function registerUznelUser(member) {
     SEQUENCE_NO: userSeqNo || "",
     UZNEL_SYNCED: Boolean(userSeqNo),
     UZNEL_ORG_ROW: snapshotModFields(payload, userSeqNo),
-    LIB_USE_LDATE: addYearsYyyymmdd(todayYyyymmdd(), 3),
+    LIB_USE_LDATE: resolveLibUseLdate(payload),
     updated: false,
     ...extras,
   }
