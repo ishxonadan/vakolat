@@ -37,95 +37,95 @@ const DEFAULT_LAYOUT = {
   LOGOLEFT: '3',
   LOGOWIDTH: '87',
   LOGOHEIGHT: '20',
-  IMGTOP: '30',
-  IMGLEFT: '176',
-  IMGWIDTH: '62',
-  IMGHEIGHT: '84',
+  IMGTOP: '27',
+  IMGLEFT: '168',
+  IMGWIDTH: '70',
+  IMGHEIGHT: '90',
   BARCODETOP: '121',
-  BARCODELEFT: '4',
-  BARCODEWIDTH: '112',
-  BARCODEHEIGHT: '28',
+  BARCODELEFT: '6',
+  BARCODEWIDTH: '128',
+  BARCODEHEIGHT: '30',
   TEXT1: 'Alişer Navoiy nomidagi',
-  TEXT1TOP: '2',
-  TEXT1LEFT: '96',
-  TEXT1SIZE: '8',
+  TEXT1TOP: '1',
+  TEXT1LEFT: '94',
+  TEXT1SIZE: '9',
   TEXT1KIND: 'Arial',
   TEXT1STYLE: '1',
   TEXT2: 'Özbekiston Milliy kutubxonasi',
-  TEXT2TOP: '13',
-  TEXT2LEFT: '96',
-  TEXT2SIZE: '8',
+  TEXT2TOP: '12',
+  TEXT2LEFT: '94',
+  TEXT2SIZE: '9',
   TEXT2KIND: 'Arial',
   TEXT2STYLE: '1',
   TEXT3: 'ID-karta raqami:',
-  TEXT3TOP: '32',
+  TEXT3TOP: '28',
   TEXT3LEFT: '6',
-  TEXT3SIZE: '8',
+  TEXT3SIZE: '9',
   TEXT3KIND: 'Arial',
   TEXT3STYLE: '0',
   TEXT4: 'Familyasi:',
-  TEXT4TOP: '45',
+  TEXT4TOP: '42',
   TEXT4LEFT: '6',
-  TEXT4SIZE: '8',
+  TEXT4SIZE: '9',
   TEXT4KIND: 'Arial',
   TEXT4STYLE: '0',
   TEXT5: 'Ismi:',
-  TEXT5TOP: '58',
+  TEXT5TOP: '56',
   TEXT5LEFT: '6',
-  TEXT5SIZE: '8',
+  TEXT5SIZE: '9',
   TEXT5KIND: 'Arial',
   TEXT5STYLE: '0',
   TEXT6: 'Şarifi:',
-  TEXT6TOP: '71',
+  TEXT6TOP: '70',
   TEXT6LEFT: '6',
-  TEXT6SIZE: '8',
+  TEXT6SIZE: '9',
   TEXT6KIND: 'Arial',
   TEXT6STYLE: '0',
   TEXT7: 'Toifasi:',
   TEXT7TOP: '84',
   TEXT7LEFT: '6',
-  TEXT7SIZE: '8',
+  TEXT7SIZE: '9',
   TEXT7KIND: 'Arial',
   TEXT7STYLE: '0',
   TEXT8: 'Kafedrasi:',
-  TEXT8TOP: '97',
+  TEXT8TOP: '98',
   TEXT8LEFT: '6',
-  TEXT8SIZE: '8',
+  TEXT8SIZE: '9',
   TEXT8KIND: 'Arial',
   TEXT8STYLE: '0',
-  DATA1TOP: '32',
-  DATA1LEFT: '108',
-  DATA1SIZE: '8',
+  DATA1TOP: '28',
+  DATA1LEFT: '92',
+  DATA1SIZE: '9',
   DATA1KIND: 'Arial',
   DATA1STYLE: '1',
-  DATA2TOP: '45',
-  DATA2LEFT: '108',
-  DATA2SIZE: '8',
+  DATA2TOP: '42',
+  DATA2LEFT: '92',
+  DATA2SIZE: '9',
   DATA2KIND: 'Arial',
   DATA2STYLE: '1',
-  DATA3TOP: '58',
-  DATA3LEFT: '108',
-  DATA3SIZE: '8',
+  DATA3TOP: '56',
+  DATA3LEFT: '92',
+  DATA3SIZE: '9',
   DATA3KIND: 'Arial',
   DATA3STYLE: '1',
-  DATA4TOP: '71',
-  DATA4LEFT: '108',
-  DATA4SIZE: '8',
+  DATA4TOP: '70',
+  DATA4LEFT: '92',
+  DATA4SIZE: '9',
   DATA4KIND: 'Arial',
   DATA4STYLE: '1',
   DATA5TOP: '84',
-  DATA5LEFT: '108',
-  DATA5SIZE: '8',
+  DATA5LEFT: '92',
+  DATA5SIZE: '9',
   DATA5KIND: 'Arial',
   DATA5STYLE: '1',
-  DATA6TOP: '97',
-  DATA6LEFT: '108',
-  DATA6SIZE: '8',
+  DATA6TOP: '98',
+  DATA6LEFT: '92',
+  DATA6SIZE: '9',
   DATA6KIND: 'Arial',
   DATA6STYLE: '1',
-  DATA7TOP: '126',
-  DATA7LEFT: '148',
-  DATA7SIZE: '11',
+  DATA7TOP: '124',
+  DATA7LEFT: '150',
+  DATA7SIZE: '14',
   DATA7KIND: 'Arial',
   DATA7STYLE: '1',
 }
@@ -159,11 +159,15 @@ function splitUserName(fullName) {
   }
 }
 
-/** PHOTO is a BLOB column. Stream data must be raw base64, not a URL. */
-function photoBase64(member) {
+/**
+ * The report image item loads a URL (same as Uznel's LnkUserPhotoQry value).
+ * A raw base64 string is not drawn. Data URIs are only a last resort.
+ */
+function photoDataUri(member) {
   const raw = String(member?.PHOTO || member?.photo || member?.photoSrc || '').trim()
   if (!raw || /^https?:\/\//i.test(raw)) return ''
-  return raw.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '').replace(/\s+/g, '')
+  if (/^data:image\//i.test(raw)) return raw.replace(/\s+/g, '')
+  return `data:image/jpeg;base64,${raw.replace(/\s+/g, '')}`
 }
 
 function formatExpiry(yyyymmdd) {
@@ -219,13 +223,18 @@ export function buildUznelCardPayload(member, config = {}) {
   const userName = String(member?.USER_NAME || member?.userName || '').trim()
   const cardNo = String(member?.CARD_NO || member?.cardNo || userNo).trim()
   const sequenceNo = String(
-    member?.USER_SEQ_NO || member?.SEQUENCE_NO || member?.sequenceNo || '',
+    member?.USER_SEQ_NO
+    || member?.SEQUENCE_NO
+    || member?.sequenceNo
+    || member?.UZNEL_ORG_ROW?.SEQUENCE_NO
+    || member?.UZNEL_ORG_ROW?.USER_SEQ_NO
+    || '',
   ).trim()
   const position = toNewUzbekLatin(member?.USER_POSITION || member?.position || '').trim()
   const kafedra = toNewUzbekLatin(member?.kafedra ?? member?.DATA2 ?? '').trim()
   const expiry = formatExpiry(member?.LIB_USE_LDATE || member?.expiryYyyymmdd || '')
   const names = splitUserName(userName)
-  const photo = photoBase64(member) || buildPhotoUrl(fnBase, sequenceNo)
+  const photo = buildPhotoUrl(fnBase, sequenceNo) || member?.PHOTO_URL || photoDataUri(member)
 
   const row = {
     NAME: toNewUzbekLatin(userName),
