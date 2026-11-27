@@ -34,7 +34,7 @@
     <div class="id-card-footer">
       <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
       <div class="id-expiry">{{ expiryDisplay }}</div>
-      <div class="id-barcode-text">{{ userNo }}</div>
+      <div class="id-barcode-text">{{ barcodeValue }}</div>
     </div>
   </div>
   </div>
@@ -47,6 +47,7 @@ import { formatExpiry, splitUserName, toNewUzbekLatin } from '@/utils/printMembe
 
 const props = defineProps({
   userNo: { type: String, default: '' },
+  cardNo: { type: String, default: '' },
   userName: { type: String, default: '' },
   position: { type: String, default: '' },
   kafedra: { type: [String, Number], default: '' },
@@ -64,6 +65,8 @@ const kafedraDisplay = computed(() => {
   return toNewUzbekLatin(value).trim() || '—'
 })
 
+const barcodeValue = computed(() => String(props.cardNo || props.userNo || '').trim())
+
 const expiryDisplay = computed(() => formatExpiry(props.expiryYyyymmdd) || '—')
 
 const normalizedPhoto = computed(() => {
@@ -74,7 +77,7 @@ const normalizedPhoto = computed(() => {
 })
 
 const barcodeSrc = computed(() => {
-  const id = String(props.userNo || '').trim()
+  const id = barcodeValue.value
   if (!id) return ''
   return generateBarcode(id, {
     displayValue: false,

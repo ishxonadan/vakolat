@@ -64,12 +64,13 @@ function logoUrl() {
  */
 export function printMemberCard(member) {
   const userNo = String(member?.userNo || '').trim()
+  const cardNo = String(member?.cardNo || '').trim() || userNo
   const names = splitUserName(member?.userName)
   const position = toNewUzbekLatin(member?.position).trim()
   const kafedra = toNewUzbekLatin(member?.kafedra).trim()
   const expiry = formatExpiry(member?.expiryYyyymmdd)
   const photoSrc = normalizePhotoSrc(member?.photoSrc)
-  const barcodeSrc = generateBarcode(userNo, {
+  const barcodeSrc = generateBarcode(cardNo, {
     displayValue: false,
     height: 64,
     width: 1.7,
@@ -108,6 +109,8 @@ export function printMemberCard(member) {
       page-break-inside: avoid;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      /* Card printers feed inverted; flip only for print, not the form preview. */
+      transform: rotate(180deg);
     }
     .id-card-header {
       display: flex;
@@ -239,7 +242,7 @@ export function printMemberCard(member) {
     <div class="id-card-footer">
       <img class="id-bars" src="${barcodeSrc}" alt="" />
       <div class="id-expiry">${escapeHtml(expiry)}</div>
-      <div class="id-barcode-text">${escapeHtml(userNo)}</div>
+      <div class="id-barcode-text">${escapeHtml(cardNo)}</div>
     </div>
   </div>
 </body>
