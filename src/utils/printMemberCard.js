@@ -252,4 +252,4 @@ export function printMemberCard(member) {
   }, 500)
 }
 
-export { splitUserName, formatExpiry, toNewUzbekLatin }
+export { splitUserName, formatExpiry }

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <title>ID-karta</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f4f5f7;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .member-id-card {
+      width: min(860px, calc(100vw - 32px));
+      aspect-ratio: 86 / 54;
+      border-radius: 2.6%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      color: #111;
+      container-type: inline-size;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+    }
+    .id-card-header {
+      display: flex;
+      align-items: flex-end;
+      gap: 2.2cqw;
+      padding: 2.2cqw 3.4cqw 0.7cqw;
+      border-bottom: 0.28cqw solid #6b6b73;
+    }
+    .id-card-logo { width: 36cqw; flex-shrink: 0; line-height: 0; }
+    .id-card-logo img { display: block; width: 100%; height: auto; }
+    .id-card-title {
+      flex: 1;
+      min-width: 0;
+      font-size: 3.35cqw;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+      padding-bottom: 0.35cqw;
+    }
+    .id-card-body {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 23.5cqw;
+      column-gap: 1.4cqw;
+      padding: 1.6cqw 3.4cqw 1.15cqw;
+    }
+    .id-rows {
+      display: grid;
+      grid-template-columns: 31cqw minmax(0, 1fr);
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      column-gap: 1.8cqw;
+      height: 100%;
+      font-size: 3.3cqw;
+      line-height: 1.05;
+    }
+    .id-label, .id-value { align-self: center; min-width: 0; }
+    .id-label { font-weight: 400; white-space: nowrap; }
+    .id-value { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .id-photo { width: 23.5cqw; height: 100%; overflow: hidden; background: #fff; }
+    .id-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 22%;
+      display: block;
+      filter: grayscale(1);
+    }
+    .id-card-footer {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      column-gap: 2.4cqw;
+      align-items: end;
+      border-top: 0.32cqw solid #111;
+      padding: 1.05cqw 3.4cqw 1.35cqw;
+    }
+    .id-bars {
+      grid-column: 1;
+      grid-row: 1;
+      width: 52cqw;
+      height: auto;
+      display: block;
+    }
+    .id-expiry {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: end;
+      align-self: end;
+      font-size: 4.55cqw;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .id-barcode-text {
+      grid-column: 1;
+      grid-row: 2;
+      width: 52cqw;
+      text-align: center;
+      font-size: 2.45cqw;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      margin-top: 0.35cqw;
+    }
+  </style>
+</head>
+<body>
+  <div class="member-id-card">
+    <div class="id-card-header">
+      <div class="id-card-logo">
+        <img src="public/card-building-logo.png" alt="" />
+      </div>
+      <div class="id-card-title">
+        Alişer Navoiy nomidagi<br />
+        Özbekiston Milliy kutubxonasi
+      </div>
+    </div>
+    <div class="id-card-body">
+      <div class="id-rows">
+        <div class="id-label">ID-karta raqami:</div>
+        <div class="id-value">AAA260901643</div>
+        <div class="id-label">Familyasi:</div>
+        <div class="id-value">Törabekova</div>
+        <div class="id-label">Ismi:</div>
+        <div class="id-value">Zahro</div>
+        <div class="id-label">Şarifi:</div>
+        <div class="id-value">Otabek qizi</div>
+        <div class="id-label">Toifasi:</div>
+        <div class="id-value">Talaba</div>
+        <div class="id-label">Kafedrasi:</div>
+        <div class="id-value">3</div>
+      </div>
+      <div class="id-photo">
+        <img src="tmp-ref-photo.png?v=2" alt="" />
+      </div>
+    </div>
+    <div class="id-card-footer">
+      <img class="id-bars" src="tmp-barcode.png?v=2" alt="" />
+      <div class="id-expiry">21/09/2029</div>
+      <div class="id-barcode-text">AAA260901643</div>
+    </div>
+  </div>
+</body>
+</html>
