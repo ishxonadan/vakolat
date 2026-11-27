@@ -26,7 +26,7 @@ export function toNewUzbekLatin(value) {
 }
 
 function splitUserName(fullName) {
-  const parts = String(fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  const parts = toNewUzbekLatin(fullName).trim().split(/\s+/).filter(Boolean)
   return {
     familiya: parts[0] || '',
     ismi: parts[1] || '',
@@ -64,18 +64,16 @@ function logoUrl() {
  */
 export function printMemberCard(member) {
   const userNo = String(member?.userNo || '').trim()
-  const cardNo = String(member?.cardNo || '').trim() || userNo
-  const names = splitUserName(toNewUzbekLatin(member?.userName))
+  const names = splitUserName(member?.userName)
   const position = toNewUzbekLatin(member?.position).trim()
   const kafedra = toNewUzbekLatin(member?.kafedra).trim()
   const expiry = formatExpiry(member?.expiryYyyymmdd)
   const photoSrc = normalizePhotoSrc(member?.photoSrc)
-  const barcodeSrc = generateBarcode(cardNo, {
+  const barcodeSrc = generateBarcode(userNo, {
     displayValue: false,
     height: 64,
     width: 1.7,
     margin: 0,
-    lineColor: '#000000',
     transparent: true,
   })
 
@@ -96,63 +94,71 @@ export function printMemberCard(member) {
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      padding: 8px;
       color: #111;
     }
-    .member-id-card {
+    .id-card {
       width: 86mm;
-      aspect-ratio: 86 / 54;
-      border-radius: 2.6%;
+      height: 54mm;
+      border-radius: 3.2mm;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       background: #fff;
-      color: #111;
-      font-family: Arial, Helvetica, sans-serif;
-      container-type: inline-size;
       page-break-inside: avoid;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      transform: rotate(180deg);
     }
     .id-card-header {
       display: flex;
       align-items: flex-end;
-      gap: 2.2cqw;
-      padding: 2.2cqw 3.4cqw 0.7cqw;
-      border-bottom: 0.28cqw solid #6b6b73;
+      gap: 1.9mm;
+      padding: 1.9mm 2.9mm 0.6mm;
+      border-bottom: 0.25mm solid #6b6b73;
     }
-    .id-card-logo { width: 36cqw; flex-shrink: 0; line-height: 0; }
-    .id-card-logo img { display: block; width: 100%; height: auto; }
+    .id-card-header .logo { width: 31mm; flex-shrink: 0; line-height: 0; }
+    .id-card-header .logo img { display: block; width: 100%; height: auto; }
     .id-card-title {
       flex: 1;
       min-width: 0;
-      font-size: 3.35cqw;
+      font-size: 2.9mm;
       font-weight: 700;
       line-height: 1.15;
       letter-spacing: -0.015em;
-      padding-bottom: 0.35cqw;
+      padding-bottom: 0.3mm;
     }
     .id-card-body {
       flex: 1;
-      min-height: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 23.5cqw;
-      column-gap: 1.4cqw;
-      padding: 1.6cqw 3.4cqw 1.15cqw;
+      grid-template-columns: minmax(0, 1fr) 20.2mm;
+      column-gap: 1.2mm;
+      padding: 1.4mm 2.9mm 1mm;
+      min-height: 0;
     }
     .id-rows {
       display: grid;
-      grid-template-columns: 31cqw minmax(0, 1fr);
+      grid-template-columns: 26.6mm minmax(0, 1fr);
       grid-template-rows: repeat(6, minmax(0, 1fr));
-      column-gap: 1.8cqw;
+      column-gap: 1.5mm;
       height: 100%;
-      font-size: 3.3cqw;
+      font-size: 2.85mm;
       line-height: 1.05;
     }
     .id-label, .id-value { align-self: center; min-width: 0; }
     .id-label { font-weight: 400; white-space: nowrap; }
-    .id-value { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .id-photo { width: 23.5cqw; height: 100%; overflow: hidden; background: #fff; }
+    .id-value {
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .id-photo {
+      width: 20.2mm;
+      height: 100%;
+      background: #fff;
+      overflow: hidden;
+      align-self: stretch;
+    }
     .id-photo img {
       width: 100%;
       height: 100%;
@@ -165,44 +171,56 @@ export function printMemberCard(member) {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       grid-template-rows: auto auto;
-      column-gap: 2.4cqw;
+      column-gap: 2mm;
       align-items: end;
-      border-top: 0.32cqw solid #111;
-      padding: 1.05cqw 3.4cqw 1.35cqw;
+      border-top: 0.28mm solid #111;
+      padding: 0.9mm 2.9mm 1.15mm;
     }
-    .id-bars { grid-column: 1; grid-row: 1; width: 52cqw; height: auto; display: block; }
+    .id-bars {
+      grid-column: 1;
+      grid-row: 1;
+      width: 44.7mm;
+      height: 7mm;
+      object-fit: fill;
+      display: block;
+    }
     .id-expiry {
       grid-column: 2;
       grid-row: 1;
       justify-self: end;
       align-self: end;
-      font-size: 4.55cqw;
+      font-size: 3.9mm;
       font-weight: 800;
       letter-spacing: 0.01em;
       line-height: 1;
       white-space: nowrap;
+      padding-bottom: 0.1mm;
     }
     .id-barcode-text {
       grid-column: 1;
       grid-row: 2;
-      width: 52cqw;
+      width: 44.7mm;
       text-align: center;
-      font-size: 2.45cqw;
+      font-size: 2.1mm;
       font-weight: 500;
       letter-spacing: 0.04em;
       line-height: 1;
-      margin-top: 0.35cqw;
+      margin-top: 0.3mm;
     }
     @media print {
-      body { min-height: auto; }
-      @page { size: 86mm 54mm; margin: 0; }
+      body { padding: 0; min-height: auto; background: #fff; }
+      .id-card { border-radius: 0; }
+      @page {
+        size: 86mm 54mm;
+        margin: 0;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="member-id-card">
+  <div class="id-card">
     <div class="id-card-header">
-      <div class="id-card-logo"><img src="${logoUrl()}" alt="" /></div>
+      <div class="logo"><img src="${logoUrl()}" alt="" /></div>
       <div class="id-card-title">Alişer Navoiy nomidagi<br/>Özbekiston Milliy kutubxonasi</div>
     </div>
     <div class="id-card-body">
@@ -214,12 +232,14 @@ export function printMemberCard(member) {
         <div class="id-label">Toifasi:</div><div class="id-value">${escapeHtml(position)}</div>
         <div class="id-label">Kafedrasi:</div><div class="id-value">${escapeHtml(kafedra)}</div>
       </div>
-      <div class="id-photo">${photoSrc ? `<img src="${photoSrc}" alt="" />` : ''}</div>
+      <div class="id-photo">
+        ${photoSrc ? `<img src="${photoSrc}" alt="" />` : ''}
+      </div>
     </div>
     <div class="id-card-footer">
       <img class="id-bars" src="${barcodeSrc}" alt="" />
       <div class="id-expiry">${escapeHtml(expiry)}</div>
-      <div class="id-barcode-text">${escapeHtml(cardNo)}</div>
+      <div class="id-barcode-text">${escapeHtml(userNo)}</div>
     </div>
   </div>
 </body>

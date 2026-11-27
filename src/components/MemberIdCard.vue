@@ -1,42 +1,42 @@
 <template>
   <div class="member-id-card-frame">
-    <div class="member-id-card">
-      <div class="id-card-header">
-        <div class="id-card-logo">
-          <img src="/card-building-logo.png" alt="" />
-        </div>
-        <div class="id-card-title">
-          Alişer Navoiy nomidagi<br />
-          Özbekiston Milliy kutubxonasi
-        </div>
+  <div class="member-id-card">
+    <div class="id-card-header">
+      <div class="id-card-logo">
+        <img src="/card-building-logo.png" alt="" />
       </div>
-
-      <div class="id-card-body">
-        <div class="id-rows">
-          <div class="id-label">ID-karta raqami:</div>
-          <div class="id-value">{{ userNo || '—' }}</div>
-          <div class="id-label">Familyasi:</div>
-          <div class="id-value">{{ names.familiya || '—' }}</div>
-          <div class="id-label">Ismi:</div>
-          <div class="id-value">{{ names.ismi || '—' }}</div>
-          <div class="id-label">Şarifi:</div>
-          <div class="id-value">{{ names.sharifi || '—' }}</div>
-          <div class="id-label">Toifasi:</div>
-          <div class="id-value">{{ positionDisplay }}</div>
-          <div class="id-label">Kafedrasi:</div>
-          <div class="id-value">{{ kafedraDisplay }}</div>
-        </div>
-        <div class="id-photo">
-          <img v-if="normalizedPhoto" :src="normalizedPhoto" alt="" />
-        </div>
-      </div>
-
-      <div class="id-card-footer">
-        <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
-        <div class="id-expiry">{{ expiryDisplay }}</div>
-        <div class="id-barcode-text">{{ barcodeValue }}</div>
+      <div class="id-card-title">
+        Alişer Navoiy nomidagi<br />
+        Özbekiston Milliy kutubxonasi
       </div>
     </div>
+
+    <div class="id-card-body">
+      <div class="id-rows">
+        <div class="id-label">ID-karta raqami:</div>
+        <div class="id-value">{{ userNo || '—' }}</div>
+        <div class="id-label">Familyasi:</div>
+        <div class="id-value">{{ names.familiya || '—' }}</div>
+        <div class="id-label">Ismi:</div>
+        <div class="id-value">{{ names.ismi || '—' }}</div>
+        <div class="id-label">Şarifi:</div>
+        <div class="id-value">{{ names.sharifi || '—' }}</div>
+        <div class="id-label">Toifasi:</div>
+        <div class="id-value">{{ positionDisplay }}</div>
+        <div class="id-label">Kafedrasi:</div>
+        <div class="id-value">{{ kafedraDisplay }}</div>
+      </div>
+      <div class="id-photo">
+        <img v-if="normalizedPhoto" :src="normalizedPhoto" alt="Foydalanuvchi rasmi" />
+      </div>
+    </div>
+
+    <div class="id-card-footer">
+      <img v-if="barcodeSrc" class="id-bars" :src="barcodeSrc" alt="" />
+      <div class="id-expiry">{{ expiryDisplay }}</div>
+      <div class="id-barcode-text">{{ userNo }}</div>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -47,7 +47,6 @@ import { formatExpiry, splitUserName, toNewUzbekLatin } from '@/utils/printMembe
 
 const props = defineProps({
   userNo: { type: String, default: '' },
-  cardNo: { type: String, default: '' },
   userName: { type: String, default: '' },
   position: { type: String, default: '' },
   kafedra: { type: [String, Number], default: '' },
@@ -55,7 +54,7 @@ const props = defineProps({
   expiryYyyymmdd: { type: String, default: '' },
 })
 
-const names = computed(() => splitUserName(toNewUzbekLatin(props.userName)))
+const names = computed(() => splitUserName(props.userName))
 
 const positionDisplay = computed(() => toNewUzbekLatin(props.position).trim() || '—')
 
@@ -64,8 +63,6 @@ const kafedraDisplay = computed(() => {
   if (value === null || value === undefined || value === '') return '—'
   return toNewUzbekLatin(value).trim() || '—'
 })
-
-const barcodeValue = computed(() => String(props.cardNo || props.userNo || '').trim())
 
 const expiryDisplay = computed(() => formatExpiry(props.expiryYyyymmdd) || '—')
 
@@ -77,7 +74,7 @@ const normalizedPhoto = computed(() => {
 })
 
 const barcodeSrc = computed(() => {
-  const id = barcodeValue.value
+  const id = String(props.userNo || '').trim()
   if (!id) return ''
   return generateBarcode(id, {
     displayValue: false,
@@ -99,7 +96,8 @@ const barcodeSrc = computed(() => {
 .member-id-card {
   width: 100%;
   height: 100%;
-  border-radius: 2.6%;
+  border: 1px solid #bdbdbd;
+  border-radius: 0;
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
@@ -178,7 +176,6 @@ const barcodeSrc = computed(() => {
 }
 
 .id-photo {
-  width: 23.5cqw;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -210,7 +207,8 @@ const barcodeSrc = computed(() => {
   grid-column: 1;
   grid-row: 1;
   width: 52cqw;
-  height: auto;
+  height: 8.2cqw;
+  object-fit: fill;
   display: block;
 }
 
@@ -224,6 +222,7 @@ const barcodeSrc = computed(() => {
   letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
+  padding-bottom: 0.1cqw;
 }
 
 .id-barcode-text {
